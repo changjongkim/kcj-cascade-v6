@@ -2,7 +2,7 @@
 \label{sec:evaluation}
 
 We evaluate \Cascade on NERSC's Perlmutter supercomputer, comparing against four state-of-the-art KV cache storage systems.
-Our experiments demonstrate that \Cascade achieves \textbf{5.7$\times$ higher write throughput} than LMCache and PDC, enabling efficient KV cache storage for HPC-scale LLM inference.
+Our experiments demonstrate that \Cascade achieves \textbf{$\sim$5$\times$ higher write throughput} than LMCache and PDC, enabling efficient KV cache storage for HPC-scale LLM inference.
 
 \subsection{Experimental Setup}
 
@@ -32,8 +32,8 @@ We compare against four real implementations (no simulation):
 
 \begin{table}[t]
 \centering
-\caption{\textbf{Real C++ implementation benchmarks} on Perlmutter (4 nodes, 16 ranks, 16GB data, Job 48413611). 
-\Cascade achieves \textbf{5.7$\times$ faster writes} than LMCache/PDC through SSE2 streaming stores and mmap optimization.}
+\caption{\textbf{Real C++ implementation benchmarks} on Perlmutter (4 nodes, 16 ranks, 16GB data, Job 48414315). 
+\Cascade achieves \textbf{$\sim$5$\times$ faster writes} than LMCache/PDC through SSE2 streaming stores and mmap optimization.}
 \label{tab:main-results}
 \renewcommand{\arraystretch}{1.15}
 \begin{tabular}{l|rr|rr|l}
@@ -42,11 +42,11 @@ We compare against four real implementations (no simulation):
  & \textbf{(GB/s)} & \textbf{(GB/s)} & \textbf{(GB/s)} & \textbf{(GB/s)} & \\
 \midrule
 \rowcolor{green!15}
-\textbf{\Cascade} & \textbf{5.01} & \textbf{80.14} & 3.58 & 57.25 & ShmBackend + Lustre \\
-LMCache & 0.87 & 13.96 & 7.37 & 117.95 & local\_disk\_backend \\
-PDC & 0.84 & 13.49 & 7.93 & 126.80 & pdc\_server \\
-Redis & 0.10 & 1.59 & 0.14 & 2.20 & redis-server \\
-HDF5 & 0.05 & 0.85 & 1.31 & 20.91 & h5py + gzip \\
+\textbf{\Cascade} & \textbf{4.25} & \textbf{68.02} & 3.49 & 55.86 & ShmBackend + Lustre \\
+LMCache & 0.86 & 13.79 & 7.52 & 120.29 & local\_disk\_backend \\
+PDC & 0.84 & 13.45 & 8.20 & 131.21 & pdc\_server \\
+Redis & 0.10 & 1.62 & 0.17 & 2.65 & redis-server \\
+HDF5 & 0.05 & 0.85 & 1.32 & 21.07 & h5py + gzip \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -69,10 +69,10 @@ HDF5 & 0.05 & 0.85 & 1.31 & 20.91 & h5py + gzip \\
     every node near coord/.append style={font=\footnotesize},
     legend pos=north east,
 ]
-\addplot[fill=blue!70] coordinates {(Cascade,80.14) (LMCache,13.96) (PDC,13.49) (Redis,1.59) (HDF5,0.85)};
+\addplot[fill=blue!70] coordinates {(Cascade,68.02) (LMCache,13.79) (PDC,13.45) (Redis,1.62) (HDF5,0.85)};
 \end{axis}
 \end{tikzpicture}
-\caption{\textbf{Write throughput comparison (16 ranks, 4 nodes).} \Cascade achieves 80.14 GB/s total write throughput, which is \textbf{5.7$\times$ faster} than LMCache (13.96 GB/s) and PDC (13.49 GB/s).}
+\caption{\textbf{Write throughput comparison (16 ranks, 4 nodes).} \Cascade achieves 68.02 GB/s total write throughput, which is \textbf{$\sim$5$\times$ faster} than LMCache (13.79 GB/s) and PDC (13.45 GB/s).}
 \label{fig:write-throughput}
 \end{figure}
 
@@ -89,7 +89,7 @@ The ShmBackend allocates shared memory via \texttt{mmap} with \texttt{MADV\_HUGE
 reducing TLB misses and improving memory access efficiency.
 
 \begin{tcolorbox}[colback=green!5,colframe=green!50!black,title=Key Finding]
-\textbf{\Cascade achieves 5.7$\times$ faster writes than LMCache/PDC.}
+\textbf{\Cascade achieves $\sim$5$\times$ faster writes than LMCache/PDC.}
 This enables rapid ingestion of KV cache blocks during LLM inference,
 reducing the overhead of caching newly computed attention states.
 \end{tcolorbox}
@@ -283,16 +283,16 @@ achieving 7.16 GB/s per-rank read throughput---a blend of memory-speed and stora
 
 \begin{table}[t]
 \centering
-\caption{Summary: \Cascade vs. baselines on key metrics (4 nodes, 16 ranks, Job 48413611).}
+\caption{Summary: \Cascade vs. baselines on key metrics (4 nodes, 16 ranks, Job 48414315).}
 \label{tab:summary}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{l|c|c|c}
 \toprule
 \textbf{Metric} & \textbf{\Cascade} & \textbf{Best Baseline} & \textbf{Improvement} \\
 \midrule
-Write Throughput (Total) & 80.14 GB/s & 13.96 GB/s (LMCache) & \textbf{5.7$\times$} \\
-Write Throughput (Per Rank) & 5.01 GB/s & 0.87 GB/s (LMCache) & \textbf{5.7$\times$} \\
-Read Throughput (Total)* & 57.25 GB/s & 126.80 GB/s (PDC) & --- \\
+Write Throughput (Total) & 68.02 GB/s & 13.79 GB/s (LMCache) & \textbf{$\sim$5$\times$} \\
+Write Throughput (Per Rank) & 4.25 GB/s & 0.86 GB/s (LMCache) & \textbf{$\sim$5$\times$} \\
+Read Throughput (Total)* & 55.86 GB/s & 131.21 GB/s (PDC) & --- \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -302,7 +302,7 @@ In production cold-read scenarios, \Cascade's SHM tier would be 10--100$\times$ 
 
 \begin{tcolorbox}[colback=blue!5,colframe=blue!50!black,title=Evaluation Highlights]
 \begin{itemize}[leftmargin=*,nosep]
-    \item \textbf{5.7$\times$} higher write throughput than LMCache/PDC (80.14 vs 13.96 GB/s)
+    \item \textbf{$\sim$5$\times$} higher write throughput than LMCache/PDC (68.02 vs 13.79 GB/s)
     \item \textbf{SSE2 streaming stores} bypass CPU cache for write-dominated workloads
     \item \textbf{mmap + MADV\_HUGEPAGE} optimize memory access patterns
     \item All benchmarks verified with \textbf{real implementations} (no simulation)

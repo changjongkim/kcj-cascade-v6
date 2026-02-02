@@ -112,6 +112,7 @@ public:
     size_t capacity() const { return capacity_; }
     
     void clear();
+    void sync_all();  // Sync all pending async transfers
     
 private:
     size_t capacity_;
@@ -125,11 +126,11 @@ private:
     static constexpr int NUM_PINNED_BUFFERS = 32;
     void* pinned_buffers_[32] = {nullptr};
     void* pinned_buffer_ = nullptr;  // Legacy
-    size_t pinned_size_ = 64 * 1024 * 1024;  // 64MB per staging buffer
+    size_t pinned_size_ = 8 * 1024 * 1024;  // 8MB per staging buffer
     
-    // 8 CUDA streams for maximum concurrency
-    static constexpr int NUM_STREAMS = 8;
-    void* cuda_streams_[8] = {nullptr};
+    // 32 CUDA streams - one per thread = ZERO CONTENTION
+    static constexpr int NUM_STREAMS = 32;
+    void* cuda_streams_[32] = {nullptr};
     std::atomic<int> current_stream_{0};
     
     // Index: block_id -> (gpu_ptr, size)

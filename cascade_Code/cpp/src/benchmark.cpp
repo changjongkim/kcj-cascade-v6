@@ -13,6 +13,7 @@
 #include <vector>
 #include <omp.h>
 #include <thread>
+#include <cuda_runtime.h>
 
 using namespace cascade;
 using namespace std::chrono;
@@ -49,6 +50,48 @@ std::vector<uint8_t> generate_random_data(size_t size) {
     return data;
 }
 
+// GPU-specific write benchmark with sync_all() at end
+double benchmark_write_gpu(GPUBackend& backend, const std::vector<std::vector<uint8_t>>& blocks,
+                           const std::vector<BlockId>& ids, int num_threads = 8) {
+    auto start = high_resolution_clock::now();
+    
+    #pragma omp parallel for num_threads(num_threads) schedule(dynamic, 64)
+    for (size_t i = 0; i < blocks.size(); i++) {
+        backend.put(ids[i], blocks[i].data(), blocks[i].size());
+    }
+    
+    // CRITICAL: Sync all async transfers before timing ends
+    backend.sync_all();
+    
+    auto end = high_resolution_clock::now();
+    double elapsed = duration<double>(end - start).count();
+    
+    size_t total_bytes = blocks.size() * blocks[0].size();
+    return total_bytes / elapsed / (1024.0 * 1024 * 1024);  // GB/s
+}
+
+// GPU Write with pre-pinned input buffers - TRUE ZERO COPY
+double benchmark_write_pinned(GPUBackend& backend, 
+                               std::vector<uint8_t*>& pinned_inputs,
+                               const std::vector<BlockId>& ids, 
+                               size_t block_size,
+                               int num_threads = 8) {
+    auto start = high_resolution_clock::now();
+    
+    #pragma omp parallel for num_threads(num_threads) schedule(dynamic, 64)
+    for (size_t i = 0; i < ids.size(); i++) {
+        backend.put(ids[i], pinned_inputs[i], block_size);
+    }
+    
+    backend.sync_all();
+    
+    auto end = high_resolution_clock::now();
+    double elapsed = duration<double>(end - start).count();
+    
+    size_t total_bytes = ids.size() * block_size;
+    return total_bytes / elapsed / (1024.0 * 1024 * 1024);
+}
+
 template<typename T>
 double benchmark_write(T& backend, const std::vector<std::vector<uint8_t>>& blocks,
                        const std::vector<BlockId>& ids, int num_threads = 8) {
@@ -81,6 +124,27 @@ double benchmark_read(T& backend, std::vector<std::vector<uint8_t>>& out_blocks,
     double elapsed = duration<double>(end - start).count();
     
     size_t total_bytes = out_blocks.size() * out_blocks[0].size();
+    return total_bytes / elapsed / (1024.0 * 1024 * 1024);
+}
+
+// GPU Read with pre-registered pinned output buffers - TRUE ZERO COPY
+double benchmark_read_pinned(GPUBackend& backend, 
+                             std::vector<uint8_t*>& pinned_outputs,
+                             const std::vector<BlockId>& ids, 
+                             size_t block_size,
+                             int num_threads = 8) {
+    auto start = high_resolution_clock::now();
+    
+    #pragma omp parallel for num_threads(num_threads) schedule(dynamic, 64)
+    for (size_t i = 0; i < ids.size(); i++) {
+        size_t size;
+        backend.get(ids[i], pinned_outputs[i], &size);
+    }
+    
+    auto end = high_resolution_clock::now();
+    double elapsed = duration<double>(end - start).count();
+    
+    size_t total_bytes = ids.size() * block_size;
     return total_bytes / elapsed / (1024.0 * 1024 * 1024);
 }
 
@@ -160,27 +224,60 @@ int main(int argc, char** argv) {
         
         GPUBackend gpu(config.gpu_capacity, 0);
         
+        // Allocate pinned I/O buffers for true zero-copy
+        std::vector<uint8_t*> pinned_inputs(config.num_blocks);
+        std::vector<uint8_t*> pinned_outputs(config.num_blocks);
+        for (size_t i = 0; i < config.num_blocks; i++) {
+            cudaHostAlloc(&pinned_inputs[i], config.block_size, cudaHostAllocDefault);
+            cudaHostAlloc(&pinned_outputs[i], config.block_size, cudaHostAllocDefault);
+            // Copy test data to pinned inputs
+            memcpy(pinned_inputs[i], blocks[i].data(), config.block_size);
+        }
+        
         double write_total = 0, read_total = 0;
+        double write_pinned_total = 0, read_pinned_total = 0;
+        
         for (size_t iter = 0; iter < config.num_iterations; iter++) {
             gpu.clear();
             
-            double write_rate = benchmark_write(gpu, blocks, ids);
-            double read_rate = benchmark_read(gpu, out_blocks, ids);
+            // Standard write/read (pageable buffers)
+            double write_rate = benchmark_write_gpu(gpu, blocks, ids, config.num_threads);
+            double read_rate = benchmark_read(gpu, out_blocks, ids, config.num_threads);
+            
+            gpu.clear();
+            
+            // Pinned write/read (zero-copy)
+            double write_pinned_rate = benchmark_write_pinned(gpu, pinned_inputs, ids, 
+                                                               config.block_size, config.num_threads);
+            double read_pinned_rate = benchmark_read_pinned(gpu, pinned_outputs, ids, 
+                                                             config.block_size, config.num_threads);
             
             std::cout << "  Iter " << iter + 1 << ": Write " << std::fixed << std::setprecision(2)
-                      << write_rate << " GB/s, Read " << read_rate << " GB/s\n";
+                      << write_rate << "/" << write_pinned_rate << " GB/s, Read " 
+                      << read_rate << "/" << read_pinned_rate << " GB/s (pageable/pinned)\n";
             
             write_total += write_rate;
             read_total += read_rate;
+            write_pinned_total += write_pinned_rate;
+            read_pinned_total += read_pinned_rate;
+        }
+        
+        // Free pinned buffers
+        for (size_t i = 0; i < config.num_blocks; i++) {
+            cudaFreeHost(pinned_inputs[i]);
+            cudaFreeHost(pinned_outputs[i]);
         }
         
         std::cout << "  ─────────────────────────────────────────────────────────\n";
-        std::cout << "  Average: Write " << std::fixed << std::setprecision(2)
+        std::cout << "  Average (Pageable): Write " << std::fixed << std::setprecision(2)
                   << write_total / config.num_iterations << " GB/s, Read "
                   << read_total / config.num_iterations << " GB/s\n";
-        std::cout << "  PCIe Efficiency: Write " 
-                  << (write_total / config.num_iterations / 32.0 * 100) << "%, Read "
-                  << (read_total / config.num_iterations / 32.0 * 100) << "%\n\n";
+        std::cout << "  Average (Pinned):   Write " << std::fixed << std::setprecision(2)
+                  << write_pinned_total / config.num_iterations << " GB/s, Read "
+                  << read_pinned_total / config.num_iterations << " GB/s\n";
+        std::cout << "  PCIe Efficiency (Pinned): Write " 
+                  << (write_pinned_total / config.num_iterations / 24.94 * 100) << "%, Read "
+                  << (read_pinned_total / config.num_iterations / 24.54 * 100) << "%\n\n";
     }
     
     // ========================================================================
