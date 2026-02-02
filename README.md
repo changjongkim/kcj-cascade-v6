@@ -4,9 +4,10 @@
 [![Perlmutter](https://img.shields.io/badge/Platform-NERSC%20Perlmutter-green.svg)](https://docs.nersc.gov/systems/perlmutter/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Cascade** is a **4-tier hierarchical KV cache storage system** designed for HPC-scale LLM inference. It achieves **1.77× higher read throughput** than LMCache and **eliminates the 85% data loss** observed in GPU-only systems like vLLM.
+**Cascade** is a **4-tier hierarchical KV cache storage system** designed for HPC-scale LLM inference.
 
-> 📝 **Paper Status**: SC'26 submission in progress
+> 📝 **Paper Status**: SC'26 submission in progress  
+> ⚠️ **Benchmark Status**: Real benchmarks running - results pending
 
 ---
 
@@ -14,29 +15,9 @@
 
 LLM inference is **memory-bound**: 80% of time is spent loading KV cache from memory. Current solutions fail at HPC scale:
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                     WHY EXISTING SYSTEMS FAIL                               │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  vLLM (GPU-only):     ████████████████████████████░░░░  85% DATA LOSS!     │
-│                       Only 30 blocks fit in GPU, 170 blocks EVICTED         │
-│                       → Forces expensive KV recomputation                   │
-│                                                                             │
-│  LMCache (per-file):  ████████░░░░░░░░░░░░░░░░░░░░░░░░  Metadata overhead  │
-│                       Creates thousands of small files on Lustre            │
-│                       → 0.2-1.3 GB/s (10× slower than aggregated I/O)       │
-│                                                                             │
-│  Redis (in-memory):   ████░░░░░░░░░░░░░░░░░░░░░░░░░░░░  Network bottleneck │
-│                       Serialization + TCP overhead                          │
-│                       → 1.22 GB/s read (6× slower than Lustre)              │
-│                                                                             │
-│  HDF5 (single-file):  ██████░░░░░░░░░░░░░░░░░░░░░░░░░░  No tiered caching  │
-│                       All I/O goes to Lustre                                │
-│                       → 3.38 GB/s read (2× slower than Cascade)             │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+- **GPU-only systems** (vLLM): Limited to ~40GB per GPU, causing evictions
+- **Per-file storage** (LMCache): Metadata overhead on parallel filesystems
+- **In-memory stores** (Redis): Network serialization bottleneck
 
 ---
 
@@ -44,95 +25,62 @@ LLM inference is **memory-bound**: 80% of time is spent loading KV cache from me
 
 ### 1. **Tiered Storage Hierarchy** (GPU → SHM → Lustre)
 
-```
-                    BANDWIDTH COMPARISON
-     ┌────────────────────────────────────────────────────────┐
-     │                                                        │
-  GPU│████████████████████████████████████████  1,555 GB/s   │ ← Hot data
- HBM │                                                        │
-     │                                                        │
- SHM │████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░    33-45 GB/s │ ← Warm data
-DRAM │                                                        │
-     │                                                        │
-Lus- │██████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░    6.8-8 GB/s │ ← Cold data
-tre  │                                                        │
-     │                                                        │
-Per- │█░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0.2-1.3 GB/s │ ← LMCache
-file │                                                        │
-     └────────────────────────────────────────────────────────┘
-       0        500       1000      1500     GB/s
-```
-
-**Why it matters:** vLLM loses 85% of data because it only uses GPU. Cascade spills to SHM (46× faster than Lustre) and Lustre (persistent), retaining **100% of data**.
+| Tier | Bandwidth | Capacity | Latency |
+|------|-----------|----------|---------|
+| GPU HBM | ~1,500 GB/s | 40GB × 4 = 160GB/node | μs |
+| Shared Memory | ~30-50 GB/s | 128GB/node | μs |
+| Lustre (aggregated) | ~5-10 GB/s | 44PB | ms |
+| Lustre (per-file) | ~0.5-2 GB/s | — | 10s ms |
 
 ### 2. **Content-Addressed Deduplication**
 
 ```python
-# Session-based ID (LMCache, vLLM):       Content-based ID (Cascade):
-block_id = f"session_{user_id}_{seq}"  →  block_id = sha256(key + value)[:32]
+# Session-based ID (existing):           Content-based ID (Cascade):
+block_id = f"session_{user_id}_{seq}"  → block_id = sha256(key + value)[:32]
 
-# Result:
-# 50 users × same system prompt = 50 blocks    →    1 block (98% reduction)
+# 50 users × same prompt = 50 blocks   → 1 block (deduplication)
 ```
-
-**Why it matters:** In LLM serving, system prompts are shared across users. With 50 sessions using the same prompt, Cascade stores **1 block** instead of 50.
 
 ### 3. **Aggregated Lustre I/O**
 
-```
-LMCache:   session_001_block_000.bin   ──┐
-           session_001_block_001.bin     │──→ 3,200 files = 3,200 metadata ops
-           session_002_block_000.bin     │
-           ...                         ──┘
-
-Cascade:   agg_rank000_000000.bin  ───────→ 16 files = 16 metadata ops (200× less)
-           agg_rank001_000000.bin
-           ...
-```
-
-**Why it matters:** Lustre metadata operations are expensive. Cascade uses `lfs setstripe -c 16 -S 4m` for optimal striping.
+Multiple blocks per file with `lfs setstripe -c 16 -S 4m` for optimal striping.
 
 ---
 
-## 📊 Benchmark Results (4 nodes, 16 GPUs, 530GB data)
+## 📊 Benchmark Results
 
-```
-                    READ THROUGHPUT COMPARISON
-     ┌────────────────────────────────────────────────────────┐
-     │                                                        │
-Casc-│████████████████████████████████████░░░░░░  7.16 GB/s  │ ⭐ BEST
-ade  │  GPU(30) + SHM(50) + Lustre(120) = 100% retention     │
-     │                                                        │
-LM-  │████████████████████░░░░░░░░░░░░░░░░░░░░░░  4.04 GB/s  │
-Cache│  Per-file Lustre I/O                                   │
-     │                                                        │
-HDF5 │██████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░  3.38 GB/s  │
-     │  Single file, no tiering                               │
-     │                                                        │
-Redis│██████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  1.22 GB/s  │
-     │  Network serialization bottleneck                      │
-     │                                                        │
-vLLM │░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  N/A        │ ❌ 85% LOST
-     │  170/200 blocks evicted!                               │
-     └────────────────────────────────────────────────────────┘
-       0    1    2    3    4    5    6    7    8  GB/s
-```
+> ✅ **REAL benchmarks completed** (Job 48412760)
+> 
+> 4 nodes × 4 GPUs = 16 ranks, 16GB total data, **NO simulation**
 
-### Key Metrics
+### Aggregated Results (16 ranks, 4 nodes)
 
-| System | Read (GB/s) | Write (GB/s) | Hit Rate | Data Loss |
-|--------|-------------|--------------|----------|-----------|
-| **Cascade** | **7.16** | 0.44 | **100%** | 0 blocks |
-| LMCache | 4.04 | 0.50 | 100% | 0 blocks |
-| HDF5 | 3.38 | 0.50 | 100% | 0 blocks |
-| Redis | 1.22 | 0.67 | 100% | 0 blocks |
-| vLLM | — | 0.99 | **15%** | **170 blocks (85%)** |
+| Storage System | Write Total (GB/s) | Read Total (GB/s) | Per-Rank Read | Real? |
+|----------------|-------------------|------------------|---------------|-------|
+| **Lustre Aggregated** | **13.94** | **129.66** | 8.10 GB/s | ✅ YES |
+| **Lustre Per-File** | 10.27 | 113.60 | 7.10 GB/s | ✅ YES |
+| **Shared Memory** | 41.15 | 111.43 | 6.96 GB/s | ✅ YES |
+| **GPU Memory** | 32.13 | 31.83 | 7.96 GB/s | ✅ YES |
+| **HDF5** | 0.83 | 22.68 | 1.42 GB/s | ✅ YES |
+| **Redis** | 2.08 | 3.05 | 0.19 GB/s | ✅ YES |
 
-### Why Cascade Wins
+### Key Observations
 
-1. **1.77× faster read** than LMCache: GPU+SHM tiers serve 40% of requests (80/200 blocks)
-2. **100% vs 15% hit rate** vs vLLM: Tiered overflow prevents eviction
-3. **Zero data loss**: All 200 blocks preserved across GPU(30) + SHM(50) + Lustre(120)
+1. **Lustre Aggregated** achieves **129.66 GB/s** combined read throughput (1.14× faster than per-file)
+2. **Shared Memory** delivers **111.43 GB/s** read across 16 ranks
+3. **Redis** is network-bound at only **3.05 GB/s** total read
+4. **HDF5** is compression-bound at **22.68 GB/s** read
+
+### Implementation Details
+
+All benchmarks use **real storage systems**:
+- ✅ **Lustre**: Actual file I/O to `$SCRATCH` with `lfs setstripe -c 16 -S 4m`
+- ✅ **HDF5**: Real `h5py` library with gzip compression
+- ✅ **Redis**: Real Redis server + `redis-py` client
+- ✅ **Shared Memory**: Real `/dev/shm` file operations
+- ✅ **GPU Memory**: Real CUDA memory via CuPy on A100 GPUs
+
+Raw data: [benchmark/results/real_4node_48412760_aggregated.json](benchmark/results/real_4node_48412760_aggregated.json)
 
 ---
 
@@ -177,8 +125,6 @@ vLLM │░░░░░░░░░░░░░░░░░░░░░░░░
 
 ### Prerequisites
 
-### Prerequisites
-
 ```bash
 # Login to Perlmutter
 ssh <username>@perlmutter.nersc.gov
@@ -211,11 +157,11 @@ cd cascade_Code/cpp
 ### Run Benchmark (Debug Queue - 4 nodes max)
 
 ```bash
-# Submit 4-node benchmark (max for debug queue)
-sbatch benchmark/scripts/max_debug_bench.sh
+# Submit REAL benchmark (no simulation)
+sbatch benchmark/scripts/real_benchmark.sh
 
 # Check results
-cat benchmark/logs/max_debug_<jobid>.out
+cat benchmark/logs/real_bench_<jobid>.out
 ```
 
 ---
@@ -225,27 +171,21 @@ cat benchmark/logs/max_debug_<jobid>.out
 ```
 Cascade/
 ├── cascade_Code/              # Core implementation
-│   └── cpp/                   # C++ with CUDA
-│       ├── src/cascade_core.cpp    # Tiered store logic
-│       └── src/gpu_backend.cu      # GPU memory management
+│   └── src/cascade/          # Python package
 │
 ├── benchmark/                 # Benchmark framework
 │   ├── adapters/             # Storage system adapters
-│   │   ├── cascade_adapter.py
-│   │   ├── lmcache_adapter.py
-│   │   └── ...
-│   └── scripts/              # SLURM scripts
-│       └── max_debug_bench.sh
+│   └── scripts/              
+│       └── real_benchmark.sh # ← REAL benchmarks (no simulation)
 │
 ├── paper/                    # SC'26 LaTeX paper
 │   ├── main.tex
-│   ├── 4. Evaluation.tex    # ← Results
-│   └── Figures/
+│   └── 4. Evaluation.tex    
 │
-├── third_party/              # Baseline implementations
-│   ├── LMCache/             # State-of-the-art KV cache
-│   ├── vllm/                # PagedAttention reference
-│   └── redis/               # In-memory store
+├── third_party/              # Dependencies
+│   ├── LMCache/             
+│   ├── redis/               
+│   └── mercury/             
 │
 └── docs/                     # Documentation
     ├── BENCHMARK.md

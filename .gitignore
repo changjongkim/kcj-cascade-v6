@@ -110,3 +110,7 @@ python_pkgs_py312/
 
 # HuggingFace cache
 hf_cache/
+*.tar.gz
+*.bin
+cascade_bench
+kv_aggregator*

@@ -1,0 +1,59 @@
+{
+  "metadata": {
+    "job_id": "48412760",
+    "num_ranks": 16,
+    "num_nodes": 4,
+    "total_data_gb": 16.0
+  },
+  "per_rank": {},
+  "aggregated": {
+    "Lustre-PerFile": {
+      "write_gbps_per_rank_mean": 0.642173365699301,
+      "write_gbps_total": 10.274773851188815,
+      "read_gbps_per_rank_mean": 7.099997711421855,
+      "read_gbps_total": 113.59996338274966,
+      "num_ranks": 16,
+      "is_real": true
+    },
+    "Lustre-Aggregated": {
+      "write_gbps_per_rank_mean": 0.871506067045133,
+      "write_gbps_total": 13.944097072722125,
+      "read_gbps_per_rank_mean": 8.103561609056051,
+      "read_gbps_total": 129.6569857448968,
+      "num_ranks": 16,
+      "is_real": true
+    },
+    "HDF5": {
+      "write_gbps_per_rank_mean": 0.051902644921891845,
+      "write_gbps_total": 0.8304423187502695,
+      "read_gbps_per_rank_mean": 1.4176014527245866,
+      "read_gbps_total": 22.681623243593386,
+      "num_ranks": 16,
+      "is_real": true
+    },
+    "Redis": {
+      "write_gbps_per_rank_mean": 0.1302102222805034,
+      "write_gbps_total": 2.0833635564880546,
+      "read_gbps_per_rank_mean": 0.19084027305767198,
+      "read_gbps_total": 3.0534443689227517,
+      "num_ranks": 16,
+      "is_real": true
+    },
+    "SharedMemory": {
+      "write_gbps_per_rank_mean": 2.5717876264991224,
+      "write_gbps_total": 41.14860202398596,
+      "read_gbps_per_rank_mean": 6.964610239180653,
+      "read_gbps_total": 111.43376382689046,
+      "num_ranks": 16,
+      "is_real": true
+    },
+    "GPU-Memory": {
+      "write_gbps_per_rank_mean": 8.032763549163263,
+      "write_gbps_total": 32.131054196653054,
+      "read_gbps_per_rank_mean": 7.957982930447962,
+      "read_gbps_total": 31.831931721791847,
+      "num_ranks": 4,
+      "is_real": true
+    }
+  }
+}
