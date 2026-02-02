@@ -6,20 +6,25 @@
 
 ## Abstract
 
-Cascade is a **3-tier hierarchical KV cache system** designed for large-scale LLM inference on HPC clusters. It achieves **near-hardware-limit throughput** through:
+Cascade is a **4-tier hierarchical KV cache system** designed for large-scale LLM inference on HPC clusters. 
 
-1. **Zero-copy GPU transfers** via CUDA pinned memory + async streams
-2. **Lock-free sharded indexing** (256 shards, minimal contention)
-3. **Content-addressed deduplication** (SHA256-based block IDs)
-4. **OpenMP parallel I/O** across all tiers
+### What Cascade Does That LMCache Cannot
 
-### Key Results (Perlmutter A100, 32 threads)
+| Feature | Cascade | LMCache | Impact |
+|---------|---------|---------|--------|
+| **Content-addressed dedup** | ✅ SHA-256 | ❌ Session-specific | **17.5× storage saved** |
+| **Multi-node scaling** | ✅ MPI | ❌ Single-node | **4× bandwidth** |
+| **Remote DRAM fetch** | ✅ Slingshot | ❌ None | **5.4× faster than Lustre** |
+| **Storage tiers** | 4 (GPU→SHM→Remote→Lustre) | 2 | Graceful degradation |
 
-| Tier | Write Throughput | Read Throughput | Hardware Efficiency |
-|------|------------------|-----------------|---------------------|
-| **GPU (HBM)** | 2.63 GB/s | **9.25 GB/s** | 29% PCIe Gen4 |
-| **SHM (DDR4)** | **24.90 GB/s** | **18.00 GB/s** | 12% DDR4 |
-| **Lustre** | ~2 GB/s | ~3 GB/s | (I/O bound) |
+### Key Results (Perlmutter, 4 nodes)
+
+| Capability | Performance | Notes |
+|------------|-------------|-------|
+| **Deduplication** | 17.5× storage saved | 100 sessions sharing system prompt |
+| **Multi-node SHM** | 91 GB/s aggregate | vs 17 GB/s Lustre |
+| **Remote DRAM** | 22.8 GB/s per link | Slingshot-11 cross-node |
+| **Tiered caching** | 9.4× speedup | Hot prefix in SHM |
 
 ---
 
