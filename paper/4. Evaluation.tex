@@ -188,55 +188,65 @@ The true differentiation appears when \textbf{data exceeds page cache capacity}:
 This is why larger-scale experiments (§\ref{sec:tiered-overflow}) are critical for comprehensive evaluation.
 
 %==============================================================================
-\subsection{Tiered Overflow: When Data Exceeds SHM Capacity}
+\subsection{Tiered Overflow: Cold Read vs Warm Read Analysis}
 \label{sec:tiered-overflow}
 %==============================================================================
 
 To evaluate \Cascade's tiered architecture comprehensively,
 we conduct experiments where data volume \emph{exceeds} the SHM tier capacity,
-forcing spillover to Lustre (Job 48414521).
+forcing spillover to Lustre.
+Critically, we distinguish between \textbf{cold reads} (after page cache invalidation)
+and \textbf{warm reads} (benefiting from OS page cache) to reflect real production scenarios (Job 48414598).
 
 \begin{table}[t]
 \centering
-\caption{Tiered overflow benchmark results (4 nodes, 16 ranks). 
-Cascade's advantage diminishes as overflow increases, converging with LMCache at 90\% overflow.}
+\caption{\textbf{Tiered overflow benchmark with cold/warm read distinction} (4 nodes, 16 ranks, mmap SHM).
+Cold read shows true Lustre performance; warm read benefits from OS page cache.}
 \label{tab:overflow-results}
-\begin{tabular}{l|r|r|rr|rr}
+\begin{tabular}{l|r|rr|rr|r}
 \toprule
-\textbf{Scenario} & \textbf{Data/Rank} & \textbf{Overflow} & \multicolumn{2}{c|}{\textbf{\Cascade (GB/s)}} & \multicolumn{2}{c}{\textbf{LMCache (GB/s)}} \\
- & & & Write & Read & Write & Read \\
+\textbf{Scenario} & \textbf{Overflow} & \multicolumn{2}{c|}{\textbf{\Cascade Read (GB/s)}} & \multicolumn{2}{c|}{\textbf{LMCache Read (GB/s)}} & \textbf{Cold Speedup} \\
+ & & Warm & Cold & Warm & Cold & \\
 \midrule
-All-fit (0\%) & 200MB & 0\% & \textbf{236} & \textbf{910*} & 14.8 & 111.2 \\
-50\% overflow & 400MB & 50\% & \textbf{28.3} & \textbf{247.5} & 14.1 & 137.8 \\
-90\% overflow & 1000MB & 90\% & 15.5 & 158.2 & 13.9 & 156.6 \\
+All SHM (0\%) & 0\% & 160.9 & \textbf{160.9} & 145.4 & 17.1 & \textbf{9.41$\times$} \\
+50\% overflow & 50\% & 142.8 & \textbf{29.9} & 171.8 & 17.2 & \textbf{1.74$\times$} \\
+75\% overflow & 75\% & 174.8 & \textbf{22.3} & 196.8 & 17.4 & \textbf{1.28$\times$} \\
+90\% overflow & 90\% & 195.3 & 19.0 & 200.9 & 17.4 & 1.09$\times$ \\
 \bottomrule
 \end{tabular}
-\begin{tablenotes}
-\small
-\item[*] Extreme throughput due to small data size and timing precision limits.
-\end{tablenotes}
 \end{table}
+
+\paragraph{Why Cold Read Matters.}
+In production LLM serving, KV cache reads often occur \emph{after} process restart,
+node failure recovery, or simply after sufficient time for page cache eviction.
+LMCache's ``warm read'' performance (145--200 GB/s) reflects OS page cache,
+not true Lustre storage performance.
+When measured with \texttt{posix\_fadvise(DONTNEED)} to invalidate cache,
+LMCache's cold read drops to \textbf{17.1--17.4 GB/s}---the true Lustre bandwidth.
 
 \paragraph{Key Observations.}
 \begin{enumerate}[leftmargin=*,nosep]
-    \item \textbf{0\% overflow}: \Cascade achieves extreme throughput when all data fits in SHM.
-    \item \textbf{50\% overflow}: \Cascade maintains 1.8$\times$ advantage (247.5 vs 137.8 GB/s read).
+    \item \textbf{0\% overflow}: \Cascade achieves \textbf{9.41$\times$ speedup on cold read}.
+          All data served from mmap SHM (160.9 GB/s) vs Lustre cold read (17.1 GB/s).
+    \item \textbf{50\% overflow}: \Cascade maintains \textbf{1.74$\times$ advantage} (29.9 vs 17.2 GB/s).
           Half the data is served from SHM at memory speed.
-    \item \textbf{90\% overflow}: \textbf{Cascade and LMCache converge} (158 vs 157 GB/s).
-          When 90\% of data goes to Lustre, the SHM tier's impact is minimal.
+    \item \textbf{75\% overflow}: Still \textbf{1.28$\times$ faster} despite 75\% data on Lustre.
+    \item \textbf{90\% overflow}: Systems converge (19.0 vs 17.4 GB/s) as Lustre dominates.
 \end{enumerate}
 
-This demonstrates that \Cascade's tiered architecture is most beneficial when:
+\paragraph{Per-Tier Bandwidth (Real mmap).}
+Our benchmark uses actual \texttt{mmap} on \texttt{/dev/shm}, not Python dictionaries:
 \begin{itemize}[leftmargin=*,nosep]
-    \item Working set fits in SHM (100\% benefit)
-    \item Hot/cold access pattern with hot data in SHM (partial benefit)
+    \item \textbf{SHM mmap read}: $\sim$10 GB/s per rank (160 GB/s aggregate)
+    \item \textbf{Lustre cold read}: $\sim$1.1 GB/s per rank (17 GB/s aggregate)
+    \item \textbf{Lustre warm read}: $\sim$12 GB/s per rank (OS page cache, not persistent)
 \end{itemize}
 
-\begin{tcolorbox}[colback=blue!5,colframe=blue!50!black,title=Insight: When Does Tiering Help?]
-\Cascade's tiered architecture provides significant speedup when $\geq$50\% of data fits in SHM.
-Beyond 90\% overflow, Lustre becomes the bottleneck and all systems converge.
-\textbf{For LLM serving with prefix caching, the hot prefix tokens (typically 10--30\% of KV cache)
-can remain in SHM, providing substantial acceleration.}
+\begin{tcolorbox}[colback=blue!5,colframe=blue!50!black,title=Key Insight: Cold Read is the True Test]
+LMCache warm read (145--200 GB/s) is misleading---it reflects OS page cache, not storage.
+\textbf{\Cascade's mmap SHM provides 9.41$\times$ speedup over true Lustre cold read.}
+For LLM serving with prefix caching, keeping hot prefix tokens ($\sim$10--30\% of data) in SHM
+provides substantial acceleration even with high overflow rates.
 \end{tcolorbox}
 
 %==============================================================================
@@ -415,15 +425,16 @@ Read Throughput (Total)* & 55.86 GB/s & 131.21 GB/s (PDC) & --- \\
 \end{table}
 
 *Note: Read throughput favors LMCache/PDC due to OS page cache effect (warm reads from buffer cache).
-In production cold-read scenarios, \Cascade's SHM tier would be 10--100$\times$ faster than Lustre.
+In production cold-read scenarios, \Cascade's SHM tier is \textbf{9.41$\times$ faster} than Lustre (see Table~\ref{tab:overflow-results}).
 
 \begin{tcolorbox}[colback=blue!5,colframe=blue!50!black,title=Evaluation Highlights]
 \begin{itemize}[leftmargin=*,nosep]
+    \item \textbf{9.41$\times$} cold read speedup when data fits in SHM (160.9 vs 17.1 GB/s)
     \item \textbf{$\sim$5$\times$} higher write throughput than LMCache/PDC (68.02 vs 13.79 GB/s)
     \item \textbf{SSE2 streaming stores} bypass CPU cache for write-dominated workloads
     \item \textbf{mmap + MADV\_HUGEPAGE} optimize memory access patterns
+    \item \textbf{Cold vs warm read} distinction reveals true storage performance
     \item All benchmarks verified with \textbf{real implementations} (no simulation)
-    \item \textbf{Linear scaling} across 4 nodes with 16 ranks
 \end{itemize}
 \end{tcolorbox}
 

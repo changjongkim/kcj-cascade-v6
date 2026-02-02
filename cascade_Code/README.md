@@ -239,15 +239,40 @@ found, size = store.get(block_id, out)
 
 ## Performance Summary
 
-### Throughput Comparison
+### Main Results (Perlmutter, 4 Nodes, 16 Ranks)
 
-| System | Read | Write | Multi-tier | Dedup |
-|--------|------|-------|------------|-------|
-| **Cascade** | **18 GB/s** | **25 GB/s** | ✅ | ✅ |
-| Redis Cluster | 0.8 GB/s | 0.5 GB/s | ❌ | ❌ |
-| Memcached | 1.2 GB/s | 0.8 GB/s | ❌ | ❌ |
-| vLLM PagedAttn | 5 GB/s | 3 GB/s | ❌ | ❌ |
-| LMCache | 8 GB/s | 6 GB/s | ❌ | ✅ |
+| System | Read (Total) | Write (Total) | Multi-tier | Dedup |
+|--------|--------------|---------------|------------|-------|
+| **Cascade** | **148.44 GB/s** | **56.58 GB/s** | ✅ | ✅ |
+| PDC | 135.57 GB/s | 13.59 GB/s | ❌ | ❌ |
+| LMCache | 122.72 GB/s | 13.87 GB/s | ❌ | ✅ |
+| HDF5 | 25.46 GB/s | 0.85 GB/s | ❌ | ❌ |
+| Redis | 2.63 GB/s | 1.63 GB/s | ❌ | ❌ |
+
+### Tiered Overflow: Cold Read Analysis (Job 48414598)
+
+When data exceeds SHM capacity, Cascade gracefully spills to Lustre.
+**Critical**: We measure cold reads (no page cache) to reflect real production scenarios.
+
+| Scenario | Overflow | Cascade Cold | LMCache Cold | **Speedup** |
+|----------|----------|--------------|--------------|-------------|
+| All SHM | 0% | 160.9 GB/s | 17.1 GB/s | **9.41×** |
+| 50% overflow | 50% | 29.9 GB/s | 17.2 GB/s | **1.74×** |
+| 75% overflow | 75% | 22.3 GB/s | 17.4 GB/s | **1.28×** |
+| 90% overflow | 90% | 19.0 GB/s | 17.4 GB/s | 1.09× |
+
+**Key Insight**: LMCache warm reads (145-200 GB/s) benefit from OS page cache.
+In production (after restart, cache eviction), cold reads show true storage performance.
+Cascade's mmap SHM provides **9.41× speedup** over Lustre cold read.
+
+### Per-Tier Bandwidth
+
+| Tier | Read | Write | Notes |
+|------|------|-------|-------|
+| GPU HBM | 9.28 GB/s | 3.54 GB/s | PCIe Gen4 limited |
+| SHM (mmap) | **10 GB/s/rank** | 2.8 GB/s/rank | Real /dev/shm |
+| Lustre (cold) | 1.1 GB/s/rank | 0.7 GB/s/rank | No page cache |
+| Lustre (warm) | 12 GB/s/rank | - | OS page cache |
 
 ### Scaling Efficiency
 
