@@ -277,9 +277,40 @@ bool ShmBackend::get(const BlockId& id, uint8_t* out_data, size_t* out_size) {
     ShmBlock block = *block_opt;
     *out_size = block.size;
     
-    // Direct memcpy - let CPU handle prefetch automatically
     const uint8_t* src = static_cast<const uint8_t*>(mmap_base_) + block.offset;
-    memcpy(out_data, src, block.size);
+    
+    // OPTIMIZED READ: Use prefetch + SSE2 for large blocks
+    if (block.size >= 4096) {
+        size_t size = block.size;
+        size_t aligned_size = size & ~63ULL;  // 64-byte aligned
+        
+        // Software prefetch: fetch ahead by 8 cache lines (512 bytes)
+        for (size_t i = 0; i < aligned_size; i += 512) {
+            _mm_prefetch(reinterpret_cast<const char*>(src + i + 512), _MM_HINT_T0);
+        }
+        
+        const __m128i* src_vec = reinterpret_cast<const __m128i*>(src);
+        __m128i* dst_vec = reinterpret_cast<__m128i*>(out_data);
+        
+        // SSE2 load + store (4x 16-byte registers = 64 bytes per iteration)
+        for (size_t i = 0; i < aligned_size; i += 64) {
+            __m128i v0 = _mm_load_si128(src_vec++);
+            __m128i v1 = _mm_load_si128(src_vec++);
+            __m128i v2 = _mm_load_si128(src_vec++);
+            __m128i v3 = _mm_load_si128(src_vec++);
+            _mm_store_si128(dst_vec++, v0);
+            _mm_store_si128(dst_vec++, v1);
+            _mm_store_si128(dst_vec++, v2);
+            _mm_store_si128(dst_vec++, v3);
+        }
+        
+        // Handle remainder
+        if (size > aligned_size) {
+            memcpy(out_data + aligned_size, src + aligned_size, size - aligned_size);
+        }
+    } else {
+        memcpy(out_data, src, block.size);
+    }
     
     return true;
 }

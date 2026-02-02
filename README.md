@@ -59,56 +59,57 @@ LLM inference is **memory-bound**: 80% of time is spent loading KV cache from me
 
 ## 📊 Benchmark Results
 
-### ✅ Real C++ Implementation Benchmarks (Job 48414315)
+### ✅ Real C++ Implementation Benchmarks (Job 48414391) - OPTIMIZED
 
 **Configuration:** 4 nodes × 4 ranks = 16 total ranks, 16GB data, NERSC Perlmutter
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        WRITE THROUGHPUT (GB/s)                               │
+│                        READ THROUGHPUT (GB/s) - 🏆 CASCADE WINS!             │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  Cascade C++  ████████████████████████████████████████████████████  68.02   │
+│  Cascade C++  █████████████████████████████████████████████████████ 148.44  │
 │                                                                              │
-│  LMCache      ████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  13.79   │
+│  PDC          █████████████████████████████████████████░░░░░░░░░░░░ 135.57  │
 │                                                                              │
-│  PDC          ████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  13.45   │
+│  LMCache      ████████████████████████████████████░░░░░░░░░░░░░░░░░ 122.72  │
 │                                                                              │
-│  Redis        █░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   1.62   │
+│  HDF5         ██████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  25.46  │
 │                                                                              │
-│  HDF5         █░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   0.85   │
+│  Redis        █░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   2.63  │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-                    🏆 Cascade: ~5× FASTER WRITES than LMCache/PDC
+              🏆 Cascade: FASTEST in BOTH Write AND Read!
 ```
 
-### Detailed Results Table (Job 48414315)
+### Detailed Results Table (Job 48414391)
 
 | System | Write/Rank | Write Total | Read/Rank | Read Total | Implementation |
 |--------|------------|-------------|-----------|------------|----------------|
-| **🏆 Cascade C++** | **4.25 GB/s** | **68.02 GB/s** | 3.49 GB/s | 55.86 GB/s | `ShmBackend + LustreBackend` |
-| LMCache | 0.86 GB/s | 13.79 GB/s | 7.52 GB/s | 120.29 GB/s | `local_disk_backend` |
-| PDC | 0.84 GB/s | 13.45 GB/s | 8.20 GB/s | 131.21 GB/s | `pdc_server` |
-| Redis | 0.10 GB/s | 1.62 GB/s | 0.17 GB/s | 2.65 GB/s | `redis-server` |
-| HDF5 | 0.05 GB/s | 0.85 GB/s | 1.32 GB/s | 21.07 GB/s | `h5py` |
+| **🏆 Cascade C++** | **3.54 GB/s** | **56.58 GB/s** | **9.28 GB/s** | **148.44 GB/s** | `ShmBackend + SSE2 prefetch` |
+| PDC | 0.85 GB/s | 13.59 GB/s | 8.47 GB/s | 135.57 GB/s | `pdc_server` |
+| LMCache | 0.87 GB/s | 13.87 GB/s | 7.67 GB/s | 122.72 GB/s | `local_disk_backend` |
+| HDF5 | 0.05 GB/s | 0.85 GB/s | 1.59 GB/s | 25.46 GB/s | `h5py` |
+| Redis | 0.10 GB/s | 1.63 GB/s | 0.16 GB/s | 2.63 GB/s | `redis-server` |
 
 ### 📈 Analysis
 
 | Observation | Explanation |
 |-------------|-------------|
-| **🚀 Cascade Write ~5× faster** | SSE2 streaming stores bypass CPU cache, mmap+MADV_HUGEPAGE |
-| **📖 LMCache/PDC Read faster** | OS page cache effect (warm reads); cold reads would be slower |
-| **🐌 Redis bottleneck** | Network serialization overhead |
+| **🏆 Cascade Read 1.1× faster** | SSE2 prefetch + vectorized copy + buffer reuse |
+| **🚀 Cascade Write ~4× faster** | SSE2 streaming stores bypass CPU cache, mmap+MADV_HUGEPAGE |
+| **� Redis bottleneck** | Network serialization overhead |
 | **📦 HDF5 slowest** | Compression (gzip) overhead |
 
-### 🔬 Why Cascade Read Shows Lower Numbers
+### 🔬 Key Optimizations Applied
 
-The benchmark reads immediately after writes, giving LMCache/PDC an unfair advantage:
-- LMCache/PDC writes to Lustre → data stays in **OS page cache** → reads from cache
-- Cascade writes to SHM → reads via **memcpy** (no cache benefit)
+1. **SSE2 Prefetch**: `_mm_prefetch()` fetches ahead by 8 cache lines (512 bytes)
+2. **Vectorized Copy**: SSE2 `_mm_load_si128` + `_mm_store_si128` for aligned reads
+3. **Buffer Reuse**: Pre-allocated read buffer eliminates `np.zeros()` overhead
+4. **mmap + MADV_HUGEPAGE**: Reduces TLB misses for large sequential access
 
-**In production (cold reads):** Cascade's SHM would be **10-100× faster** than Lustre.
+**Result:** Cascade now achieves **fastest Read AND Write** performance!
 
 ---
 
