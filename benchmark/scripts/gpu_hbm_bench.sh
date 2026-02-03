@@ -20,7 +20,7 @@ echo "Node: $(hostname)"
 echo "Time: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "=================================================================="
 
-module load cudatoolkit python
+module load cudatoolkit pytorch
 export CUDA_VISIBLE_DEVICES=0,1,2,3
 export JOB_ID=$SLURM_JOB_ID
 
