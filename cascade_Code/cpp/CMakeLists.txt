@@ -17,7 +17,12 @@ set(CMAKE_CUDA_FLAGS_RELEASE "-O3 -DNDEBUG -Xcompiler=${OpenMP_CXX_FLAGS}")
 # Find required packages
 find_package(CUDAToolkit REQUIRED)
 find_package(OpenSSL REQUIRED)
-find_package(pybind11 REQUIRED)
+
+# Optional: pybind11 for Python bindings
+option(BUILD_PYTHON "Build Python bindings" OFF)
+if(BUILD_PYTHON)
+    find_package(pybind11 REQUIRED)
+endif()
 
 # Include directories
 include_directories(${CMAKE_SOURCE_DIR}/include)
@@ -41,24 +46,26 @@ set_target_properties(cascade_static PROPERTIES
     POSITION_INDEPENDENT_CODE ON
 )
 
-# Python module - include CUDA source directly to avoid fatbin linking issues
-pybind11_add_module(cascade_cpp 
-    python/bindings.cpp
-    src/cascade_core.cpp
-    src/gpu_backend.cu
-)
-target_link_libraries(cascade_cpp PRIVATE 
-    CUDA::cudart
-    OpenSSL::Crypto
-    OpenMP::OpenMP_CXX
-)
-set_target_properties(cascade_cpp PROPERTIES
-    CUDA_SEPARABLE_COMPILATION OFF
-    CUDA_RESOLVE_DEVICE_SYMBOLS ON
-)
-
-# Installation
-install(TARGETS cascade_cpp LIBRARY DESTINATION .)
+# Python module (optional)
+if(BUILD_PYTHON)
+    pybind11_add_module(cascade_cpp 
+        python/bindings.cpp
+        src/cascade_core.cpp
+        src/gpu_backend.cu
+    )
+    target_link_libraries(cascade_cpp PRIVATE 
+        CUDA::cudart
+        OpenSSL::Crypto
+        OpenMP::OpenMP_CXX
+    )
+    set_target_properties(cascade_cpp PROPERTIES
+        CUDA_SEPARABLE_COMPILATION OFF
+        CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    )
+    
+    # Installation
+    install(TARGETS cascade_cpp LIBRARY DESTINATION .)
+endif()
 
 # ============================================================================
 # Benchmark executable
@@ -106,6 +113,50 @@ if(USE_IOURING)
         target_link_libraries(cascade_static ${URING_LIB})
         add_definitions(-DUSE_IOURING)
     endif()
+endif()
+
+# ============================================================================
+# MPI Distributed Backend
+# ============================================================================
+option(USE_MPI "Enable MPI for distributed multi-node" ON)
+
+if(USE_MPI)
+    find_package(MPI REQUIRED)
+    include_directories(${MPI_CXX_INCLUDE_DIRS})
+    
+    # Distributed library (MPI + CUDA)
+    add_library(cascade_distributed STATIC
+        src/cascade_core.cpp
+        src/gpu_backend.cu
+        src/distributed_backend.cpp
+    )
+    target_compile_definitions(cascade_distributed PUBLIC USE_MPI)
+    target_link_libraries(cascade_distributed 
+        CUDA::cudart
+        OpenSSL::Crypto
+        MPI::MPI_CXX
+        pthread
+        OpenMP::OpenMP_CXX
+    )
+    set_target_properties(cascade_distributed PROPERTIES
+        CUDA_SEPARABLE_COMPILATION ON
+        POSITION_INDEPENDENT_CODE ON
+    )
+    
+    # Distributed benchmark executable
+    add_executable(distributed_bench src/distributed_benchmark.cpp)
+    target_compile_definitions(distributed_bench PUBLIC USE_MPI)
+    target_link_libraries(distributed_bench 
+        cascade_distributed
+        CUDA::cudart
+        OpenSSL::Crypto
+        MPI::MPI_CXX
+        pthread
+        OpenMP::OpenMP_CXX
+    )
+    
+    message(STATUS "MPI enabled: ${MPI_CXX_COMPILER}")
+    message(STATUS "MPI include: ${MPI_CXX_INCLUDE_DIRS}")
 endif()
 
 message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")

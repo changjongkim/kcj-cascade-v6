@@ -1,0 +1,36 @@
+{
+  "job_id": "48438725",
+  "nodes": 4,
+  "ranks": 16,
+  "block_size_mb": 10,
+  "num_blocks": 100,
+  "total_data_gb": 15.625,
+  "results": {
+    "Cascade": {
+      "write_total_gbps": 44.99016493698682,
+      "hot_total_gbps": 363.52504706499036,
+      "cold_total_gbps": 363.52504706499036
+    },
+    "LMCache": {
+      "write_total_gbps": 10.785250785645704,
+      "hot_total_gbps": 137.1444960967648,
+      "cold_total_gbps": 19.7552738558469
+    },
+    "PDC": {
+      "write_total_gbps": 10.257426498024241,
+      "hot_total_gbps": 143.0521095133515,
+      "cold_total_gbps": 19.97684974809448
+    },
+    "Redis": {
+      "write_total_gbps": 10.217683653744158,
+      "hot_total_gbps": 141.53579974209902,
+      "cold_total_gbps": 20.0118783378712
+    },
+    "HDF5": {
+      "write_total_gbps": 0.8454240437360198,
+      "hot_total_gbps": 28.70670135062386,
+      "cold_total_gbps": 1.1006708331855046
+    }
+  },
+  "timestamp": "2026-02-02 16:51:33"
+}
