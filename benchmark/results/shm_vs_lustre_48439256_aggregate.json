@@ -1,0 +1,183 @@
+{
+  "job_id": "48439256",
+  "timestamp": "2026-02-02T17:15:56.549462",
+  "nodes": 4,
+  "ranks": 4,
+  "config": {
+    "num_blocks": 100,
+    "block_size_mb": 10.0,
+    "total_data_mb": 1000.0
+  },
+  "aggregate": {
+    "shm": {
+      "write_gbps_total": 12.43792407118893,
+      "hot_read_gbps_total": 30.136026278408437,
+      "mmap_read_gbps_total": 34.45999923616078
+    },
+    "lustre": {
+      "write_gbps_total": 2.548049883987743,
+      "hot_read_gbps_total": 33.34976071731616,
+      "cold_read_gbps_total": 4.349394920802644
+    },
+    "deduplication": {
+      "num_sessions": 100,
+      "prompt_size_mb": 1.25,
+      "lmcache_storage_mb": 125.0,
+      "cascade_storage_mb": 1.25,
+      "dedup_ratio": 100.0
+    }
+  },
+  "per_rank": [
+    {
+      "rank": 0,
+      "hostname": "nid002897",
+      "job_id": "48439256",
+      "config": {
+        "num_blocks": 100,
+        "block_size_mb": 10.0,
+        "total_data_mb": 1000.0
+      },
+      "tests": {
+        "shm": {
+          "path": "/dev/shm/cascade_bench_0",
+          "write_gbps": 3.077484079934058,
+          "hot_read_gbps": 7.347094466721952,
+          "mmap_read_gbps": 8.79166629802838
+        },
+        "lustre": {
+          "path": "/pscratch/sd/s/sgkim/Skim-cascade/benchmark/data/lustre_bench_48439256_0",
+          "write_gbps": 0.6466637339918023,
+          "hot_read_gbps": 7.70845987421223,
+          "cold_read_gbps": 1.0751296268007433
+        },
+        "deduplication": {
+          "num_sessions": 100,
+          "prompt_size_mb": 1.25,
+          "lmcache_storage_mb": 125.0,
+          "cascade_storage_mb": 1.25,
+          "dedup_ratio": 100.0
+        }
+      },
+      "speedups": {
+        "shm_vs_lustre_cold": 8.177308185794942,
+        "shm_vs_lustre_hot": 1.1405217697817813
+      }
+    },
+    {
+      "rank": 1,
+      "hostname": "nid002900",
+      "job_id": "48439256",
+      "config": {
+        "num_blocks": 100,
+        "block_size_mb": 10.0,
+        "total_data_mb": 1000.0
+      },
+      "tests": {
+        "shm": {
+          "path": "/dev/shm/cascade_bench_1",
+          "write_gbps": 3.0806949187572923,
+          "hot_read_gbps": 7.503478041500626,
+          "mmap_read_gbps": 8.595622218991105
+        },
+        "lustre": {
+          "path": "/pscratch/sd/s/sgkim/Skim-cascade/benchmark/data/lustre_bench_48439256_1",
+          "write_gbps": 0.6198207771023311,
+          "hot_read_gbps": 7.959684121246546,
+          "cold_read_gbps": 1.0805308555178363
+        },
+        "deduplication": {
+          "num_sessions": 100,
+          "prompt_size_mb": 1.25,
+          "lmcache_storage_mb": 125.0,
+          "cascade_storage_mb": 1.25,
+          "dedup_ratio": 100.0
+        }
+      },
+      "speedups": {
+        "shm_vs_lustre_cold": 7.9549993182487295,
+        "shm_vs_lustre_hot": 1.079894891311964
+      }
+    },
+    {
+      "rank": 2,
+      "hostname": "nid003644",
+      "job_id": "48439256",
+      "config": {
+        "num_blocks": 100,
+        "block_size_mb": 10.0,
+        "total_data_mb": 1000.0
+      },
+      "tests": {
+        "shm": {
+          "path": "/dev/shm/cascade_bench_2",
+          "write_gbps": 3.1494839616470642,
+          "hot_read_gbps": 7.79735062079743,
+          "mmap_read_gbps": 8.581723415030185
+        },
+        "lustre": {
+          "path": "/pscratch/sd/s/sgkim/Skim-cascade/benchmark/data/lustre_bench_48439256_2",
+          "write_gbps": 0.6307329420113186,
+          "hot_read_gbps": 8.654651572877928,
+          "cold_read_gbps": 1.0962202799119452
+        },
+        "deduplication": {
+          "num_sessions": 100,
+          "prompt_size_mb": 1.25,
+          "lmcache_storage_mb": 125.0,
+          "cascade_storage_mb": 1.25,
+          "dedup_ratio": 100.0
+        }
+      },
+      "speedups": {
+        "shm_vs_lustre_cold": 7.828466205459653,
+        "shm_vs_lustre_hot": 0.9915735304612047
+      }
+    },
+    {
+      "rank": 3,
+      "hostname": "nid003645",
+      "job_id": "48439256",
+      "config": {
+        "num_blocks": 100,
+        "block_size_mb": 10.0,
+        "total_data_mb": 1000.0
+      },
+      "tests": {
+        "shm": {
+          "path": "/dev/shm/cascade_bench_3",
+          "write_gbps": 3.1302611108505136,
+          "hot_read_gbps": 7.488103149388429,
+          "mmap_read_gbps": 8.490987304111112
+        },
+        "lustre": {
+          "path": "/pscratch/sd/s/sgkim/Skim-cascade/benchmark/data/lustre_bench_48439256_3",
+          "write_gbps": 0.6508324308822909,
+          "hot_read_gbps": 9.026965148979455,
+          "cold_read_gbps": 1.0975141585721195
+        },
+        "deduplication": {
+          "num_sessions": 100,
+          "prompt_size_mb": 1.25,
+          "lmcache_storage_mb": 125.0,
+          "cascade_storage_mb": 1.25,
+          "dedup_ratio": 100.0
+        }
+      },
+      "speedups": {
+        "shm_vs_lustre_cold": 7.736562884216454,
+        "shm_vs_lustre_hot": 0.940624801799646
+      }
+    }
+  ],
+  "average": {
+    "shm_write_gbps": 3.1094810177972323,
+    "shm_mmap_gbps": 8.614999809040196,
+    "lustre_write_gbps": 0.6370124709969357,
+    "lustre_cold_gbps": 1.087348730200661
+  },
+  "speedups": {
+    "shm_vs_lustre_cold": 7.922940975385487,
+    "aggregate_shm_read_gbps": 34.45999923616078,
+    "aggregate_lustre_cold_gbps": 4.349394920802644
+  }
+}
