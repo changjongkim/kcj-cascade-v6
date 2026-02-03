@@ -6,319 +6,188 @@
 
 ## 🎯 문제 정의
 
-LLM 추론은 **메모리 바운드**: 전체 시간의 80%가 KV 캐시 로딩에 소비됩니다.
+LLM 추론은 **메모리 바운드**: KV 캐시 로딩이 병목입니다.
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    LLM 추론 시간 분석 (LLaMA-70B)                        │
-├─────────────────────────────────────────────────────────────────────────┤
-│ ████████████████████████████████████████░░░░░░░░░░ KV 캐시 로딩 (80%)   │
-│ ░░░░░░░░░░ 연산 (20%)                                                   │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-### 기존 시스템들의 한계
-
-| 시스템 | 유형 | 한계점 | HPC 스케일 문제 |
-|--------|------|--------|----------------|
-| **vLLM** | GPU 메모리 | GPU당 40GB 제한 | ❌ 멀티노드 불가 |
-| **LMCache** | 파일 기반 | 세션별 중복 저장 | ❌ 싱글노드 전용 |
-| **PDC** | 객체 스토리지 | fsync 오버헤드 | ⚠️ 쓰기 느림 |
-| **Redis** | 인메모리 KV | 네트워크 직렬화 | ❌ 싱글노드 전용 |
-| **HDF5** | 과학 데이터 | 압축 CPU 병목 | ❌ 너무 느림 |
+| 시스템 | 유형 | 한계점 |
+|--------|------|--------|
+| **vLLM** | GPU 메모리 | GPU당 40GB 제한 |
+| **LMCache** | 파일 기반 | 싱글노드 전용 |
+| **PDC** | 객체 스토리지 | fsync 오버헤드 |
+| **Redis** | 인메모리 KV | 네트워크 직렬화 |
+| **HDF5** | 과학 데이터 | 압축 CPU 병목 |
 
 ---
 
-## 🚀 Cascade의 해결책
+## 🚀 Cascade 아키텍처
 
-### 4계층 계층적 스토리지
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         Cascade 아키텍처                                 │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│   Tier 1: GPU HBM ────────────────────────────────── 1555 GB/s         │
-│            │ 40GB × 4 = 160GB/노드                                      │
-│            ▼ evict (async)                                              │
-│   Tier 2: 로컬 SHM (mmap) ───────────────────────── 204 GB/s           │
-│            │ /dev/shm, 256GB/노드                                       │
-│            ▼ MPI 전송 (Slingshot-11)                                    │
-│   Tier 3: 원격 SHM ──────────────────────────────── 22.8 GB/s          │
-│            │ 다른 노드의 DRAM                                            │
-│            ▼ async prefetch                                             │
-│   Tier 4: Lustre PFS ────────────────────────────── 17 GB/s            │
-│            $SCRATCH, 44PB, stripe 최적화                                 │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+\`\`\`
+Tier 1: GPU HBM     ─── 1555 GB/s, 40GB × 4 = 160GB/노드
+   ↓ evict (async)
+Tier 2: 로컬 SHM    ─── 204 GB/s, /dev/shm 256GB/노드
+   ↓ MPI 전송
+Tier 3: 원격 SHM    ─── 22.8 GB/s, Slingshot-11
+   ↓ async prefetch
+Tier 4: Lustre PFS  ─── 7.8 TB/s aggregate, \$SCRATCH
+\`\`\`
 
 ---
 
-## 📊 5개 시스템 비교 (Perlmutter 4노드, 16GB 데이터)
+## 📦 디렉토리 구조
 
-> **Job 48438725** | 2026-02-02 | 4노드 × 4랭크 = 16 프로세스
-
-### 1. 🔥 Hot 데이터 시나리오 (SHM/Page Cache)
-
-> 자주 사용되는 prefix가 메모리에 캐시되어 있을 때
-
-| 시스템 | Write (GB/s) | Hot Read (GB/s) | 설명 |
-|--------|-------------|-----------------|------|
-| **Cascade** | **44.99** | **363.53** | mmap SHM 직접 접근 |
-| PDC | 10.26 | 143.05 | OS page cache |
-| Redis | 10.22 | 141.54 | page cache |
-| LMCache | 10.79 | 137.14 | OS page cache |
-| HDF5 | 0.85 | 28.71 | gzip 압축 해제 오버헤드 |
-
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│                    Hot Read 성능 비교 (GB/s)                          │
-├──────────────────────────────────────────────────────────────────────┤
-│ Cascade  ████████████████████████████████████████████████ 363.5     │
-│ PDC      ███████████████████ 143.1                                   │
-│ Redis    ██████████████████ 141.5                                    │
-│ LMCache  █████████████████ 137.1                                     │
-│ HDF5     ████ 28.7                                                   │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
-```
-📌 핵심 발견: Cascade mmap SHM이 다른 시스템 대비 2.5배 빠름!
-   → Cascade: 363 GB/s vs LMCache: 137 GB/s (2.65x speedup)
-```
+\`\`\`
+/pscratch/sd/s/sgkim/Skim-cascade/
+├── cascade_Code/           # Cascade 구현
+│   ├── cpp/               # C++ 코어 (mmap, MPI, 분산)
+│   └── src/cascade/       # Python 래퍼
+├── third_party/            # 비교 시스템들 (실제 설치)
+│   ├── LMCache/           # LMCache (torch 필요)
+│   ├── pdc/               # PDC (C, MPI)
+│   ├── redis/             # Redis (C)
+│   └── vllm/              # vLLM 참조용
+├── benchmark/              # 벤치마크
+└── paper/                  # SC'26 논문
+\`\`\`
 
 ---
 
-### 2. ❄️ Cold 데이터 시나리오 (Lustre 직접 읽기)
+# 🔧 설치 및 사용 가이드
 
-> `posix_fadvise(DONTNEED)`로 page cache를 비운 후 Lustre에서 직접 읽기
+## 1. Cascade (우리 시스템)
 
-| 시스템 | Cold Read (GB/s) | 설명 |
-|--------|-----------------|------|
-| Redis | **20.01** | Per-file batch |
-| **PDC** | 19.98 | Per-file + fsync |
-| LMCache | 19.76 | Per-file (기준선) |
-| HDF5 | 1.10 | 압축 해제 병목 |
+### 1.1 C++ MPI 분산 버전 빌드
 
-```
-📌 Lustre cold에서 모든 per-file 시스템이 ~20 GB/s로 수렴
-   → Cascade의 가치는 스토리지 포맷이 아닌 "계층적 캐싱"에 있음!
-   → Hot 데이터는 SHM에서 363 GB/s로 서빙 (18x faster than cold)
-```
+\`\`\`bash
+cd /pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/cpp
+mkdir build_mpi && cd build_mpi
 
----
+srun -A m1248_g -C gpu -q debug -n 1 -c 64 --gpus=4 -t 00:10:00 bash -c '
+cmake .. -DCMAKE_BUILD_TYPE=Release -DUSE_MPI=ON -DPERLMUTTER=ON
+make -j32 distributed_bench
+'
+\`\`\`
 
-## 🏆 Cascade만의 차별점 (LMCache가 못하는 것)
+### 1.2 실행 (멀티노드)
 
-### 1️⃣ Content-Addressed Deduplication (17.5배 스토리지 절약)
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                  100개 세션이 같은 System Prompt 공유                    │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  LMCache (세션별 ID):                                                    │
-│  ┌──────┐ ┌──────┐ ┌──────┐     ┌──────┐                               │
-│  │Prompt│ │Prompt│ │Prompt│ ... │Prompt│  = 100개 복사본 = 2100 MB     │
-│  │ #1   │ │ #2   │ │ #3   │     │ #100 │                               │
-│  └──────┘ └──────┘ └──────┘     └──────┘                               │
-│                                                                         │
-│  Cascade (SHA-256 해시):                                                 │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │              Prompt (SHA256: a1b2c3d4...)                         │  │
-│  │                       1개 저장 = 120 MB                           │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-│                                                                         │
-│  Session #1 ──┐                                                         │
-│  Session #2 ──┼──→ 모두 같은 블록 참조                                   │
-│  Session #100 ┘                                                         │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
-
-📊 결과: 2100 MB → 120 MB = 17.5배 절약!
-```
-
-| 시스템 | 저장 방식 | 100 세션 스토리지 | 절약률 |
-|--------|----------|------------------|--------|
-| LMCache | 세션별 ID | 2100 MB | 1.0× |
-| **Cascade** | SHA-256 해시 | **120 MB** | **17.5×** |
+\`\`\`bash
+srun -A m1248_g -C gpu -q debug -N 4 -n 4 --gpus-per-node=4 \\
+    --export=ALL,MPICH_GPU_SUPPORT_ENABLED=1 \\
+    ./distributed_bench --blocks 1000 --block-size 10
+\`\`\`
 
 ---
 
-### 2️⃣ 멀티노드 SHM 스케일링 (4배 대역폭)
+## 2. LMCache (Baseline)
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                       SHM 대역폭 스케일링                                │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  LMCache (싱글노드):                                                     │
-│  ┌─────────┐                                                            │
-│  │ Node 0  │──→ 13.6 GB/s (1노드 DDR4 한계)                             │
-│  └─────────┘                                                            │
-│                                                                         │
-│  Cascade (MPI 연결):                                                     │
-│  ┌─────────┐   ┌─────────┐   ┌─────────┐   ┌─────────┐                 │
-│  │ Node 0  │───│ Node 1  │───│ Node 2  │───│ Node 3  │                 │
-│  └─────────┘   └─────────┘   └─────────┘   └─────────┘                 │
-│       │             │             │             │                       │
-│       └─────────────┴─────────────┴─────────────┘                       │
-│                        │                                                │
-│                   54.3 GB/s (4노드 aggregate)                           │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+### 위치: third_party/LMCache/
 
-| 노드 수 | LMCache | Cascade | 스케일링 |
-|--------|---------|---------|----------|
-| 1 | 13.6 GB/s | 13.6 GB/s | 1× |
-| 4 | 13.6 GB/s ❌ | **54.3 GB/s** | **4×** |
-| 64 | 13.6 GB/s ❌ | ~800 GB/s (예상) | **~60×** |
+\`\`\`bash
+# GPU 노드에서 (torch 필요)
+srun -A m1248_g -C gpu -N 1 --gpus=4 -t 00:30:00 bash -c '
+module load python cudatoolkit
+python -c "
+import sys
+sys.path.insert(0, \"/pscratch/sd/s/sgkim/Skim-cascade/third_party/LMCache\")
+from lmcache.v1.storage_backend.local_disk_backend import LocalDiskBackend
+print(\"LMCache OK\")
+"
+'
+\`\`\`
 
 ---
 
-### 3️⃣ 원격 DRAM Fetch via Slingshot (Lustre 대비 5.4배)
+## 3. PDC (Proactive Data Containers)
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│              Node A에서 Node B의 캐시된 데이터 가져오기                   │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  LMCache (Lustre fallback):                                             │
-│  ┌─────────┐                    ┌─────────┐                            │
-│  │ Node A  │─────Lustre FS──────│ Node B  │                            │
-│  └─────────┘   17 GB/s 😢       └─────────┘                            │
-│                                                                         │
-│  Cascade (Slingshot-11 MPI):                                            │
-│  ┌─────────┐════════════════════┌─────────┐                            │
-│  │ Node A  │   22.8 GB/s 🚀     │ Node B  │                            │
-│  └─────────┘   (Slingshot-11)   └─────────┘                            │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+### 위치: third_party/pdc/install/
 
-| Message 크기 | Per-Link 대역폭 | 4노드 Aggregate |
-|-------------|----------------|-----------------|
-| 1 MB | 1.05 GB/s | 4.2 GB/s |
-| 64 MB | 20.82 GB/s | 83.3 GB/s |
-| 512 MB | **22.78 GB/s** | **91.1 GB/s** |
+\`\`\`bash
+export PDC_DIR=/pscratch/sd/s/sgkim/Skim-cascade/third_party/pdc/install
+export PATH=\$PDC_DIR/bin:\$PATH
+export LD_LIBRARY_PATH=\$PDC_DIR/lib:\$LD_LIBRARY_PATH
 
-**vs Lustre cold read (17 GB/s) = 5.4배 빠름!**
+# 서버 시작
+pdc_server &
+\`\`\`
 
 ---
 
-## 📈 시나리오별 성능 요약
+## 4. Redis
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      시나리오별 최적 시스템 선택                          │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  100% Hot (SHM):    Cascade >> LMCache > PDC >> HDF5 >> Redis          │
-│                     160 GB/s   145       136    25       3              │
-│                                                                         │
-│  100% Cold (Lustre): PDC ≈ LMCache ≈ Redis ≈ Cascade >> HDF5           │
-│                      17.7   17.5     17.3    16.9       14.4           │
-│                                                                         │
-│  중복 세션:          Cascade >>>>>>>>>>>>>>>>>>>>> 나머지 전부           │
-│                     17.5배 절약                    1배                  │
-│                                                                         │
-│  멀티노드:           Cascade >>>>>>>>>>>>>>>>>>>> 나머지 전부            │
-│                     4배 스케일                    싱글노드 한계          │
-│                                                                         │
-│  원격 데이터:        Cascade >>>>> LMCache/PDC (Lustre로 fallback)      │
-│                     22.8 GB/s     17 GB/s                              │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+### 위치: third_party/redis/src/
+
+\`\`\`bash
+# GPU 노드에서 (libcudart 필요)
+srun -A m1248_g -C gpu -N 1 --gpus=1 -t 00:30:00 bash -c '
+module load cudatoolkit
+/pscratch/sd/s/sgkim/Skim-cascade/third_party/redis/src/redis-server --daemonize yes
+'
+\`\`\`
 
 ---
 
-## 🔑 핵심 결론
+## 5. HDF5 (h5py)
 
-### Cascade vs 각 경쟁 시스템
-
-| vs | Cascade 장점 | 수치 |
-|----|-------------|------|
-| **vs LMCache** | 멀티노드, Dedup, 원격 DRAM | 17.5× 스토리지, 4× 대역폭 |
-| **vs PDC** | 더 빠른 Hot read, Dedup | 160 vs 136 GB/s (Hot) |
-| **vs Redis** | 네트워크 병목 없음 | 160 vs 2.6 GB/s (Hot) |
-| **vs HDF5** | CPU 압축 병목 없음 | 160 vs 25 GB/s (Hot) |
-| **vs vLLM** | 멀티노드, 영속 캐시 | GPU 40GB → 무제한 |
-
-### 언제 Cascade를 사용해야 하는가?
-
-| 시나리오 | 추천 시스템 | 이유 |
-|---------|------------|------|
-| 싱글노드, 작은 데이터 | LMCache 충분 | 단순함 |
-| **멀티노드 LLM 서빙** | **Cascade** | 유일한 선택 |
-| **세션 간 prefix 공유** | **Cascade** | 17.5배 절약 |
-| **HPC 클러스터** | **Cascade** | Slingshot 활용 |
-| 과학 데이터 분석 | HDF5 | 표준 포맷 |
+\`\`\`bash
+module load python
+pip install h5py --user
+python -c "import h5py; print(h5py.__version__)"
+\`\`\`
 
 ---
 
-## 📋 벤치마크 재현
+# 📊 벤치마크 실행
 
-### 빠른 테스트 (5분)
+## Hot vs Cold Read
 
-```bash
-# Cascade 고유 기능 벤치마크
-sbatch benchmark/scripts/cascade_unique_bench.sh
+- **Hot**: 데이터가 SHM 또는 page cache에 있을 때
+- **Cold**: posix_fadvise(DONTNEED)로 cache 비운 후 Lustre 직접 읽기
 
-# Slingshot 대역폭 테스트
-sbatch benchmark/scripts/slingshot_bench.sh
-```
+\`\`\`python
+import os, ctypes
 
-### 전체 5개 시스템 비교 (30분)
-
-```bash
-# 500GB 대규모 테스트
-sbatch benchmark/scripts/all5_large_bench.sh
-```
-
----
-
-## 📚 벤치마크 결과 (Job IDs)
-
-| Job | 설명 | 핵심 결과 |
-|-----|------|----------|
-| 48415672 | 500GB 5개 시스템 Cold read | Lustre: 모두 ~17 GB/s |
-| 48415750 | Dedup + 멀티노드 SHM | 17.5× 절약, 4× 스케일링 |
-| 48415769 | Slingshot-11 대역폭 | 22.8 GB/s (5.4× vs Lustre) |
-| 48414598 | Hot vs Cold tiered | Hot 160 GB/s, Cold 17 GB/s |
+def drop_page_cache(path):
+    fd = os.open(path, os.O_RDONLY)
+    size = os.fstat(fd).st_size
+    libc = ctypes.CDLL("libc.so.6")
+    libc.posix_fadvise(fd, 0, size, 4)  # POSIX_FADV_DONTNEED
+    os.close(fd)
+\`\`\`
 
 ---
 
-## 🏁 결론
+# 📋 실험 환경 (Perlmutter)
 
-> **"Cascade는 Lustre 스토리지 자체가 아닌, HPC-scale 계층적 캐싱에서 차별화된다."**
+| 구성요소 | 사양 |
+|---------|------|
+| **GPU** | NVIDIA A100-40GB × 4 = 160GB HBM/노드 |
+| **CPU** | AMD EPYC 7763 (64 cores) |
+| **DRAM** | 256GB DDR4/노드 |
+| **SHM** | /dev/shm: ~428GB |
+| **인터커넥트** | Slingshot-11 (200 Gb/s × 4 NIC) |
+| **스토리지** | Lustre \$SCRATCH (44PB, 7.8 TB/s) |
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    Cascade의 3가지 핵심 차별점                           │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  1. Content-Addressed Deduplication ──────────── 17.5× 스토리지 절약   │
-│     SHA-256 해시 기반, 세션 간 자동 공유                                 │
-│                                                                         │
-│  2. 멀티노드 SHM Aggregation ─────────────────── 4× 대역폭 (4노드)     │
-│     MPI 기반 글로벌 주소 공간                                            │
-│                                                                         │
-│  3. Slingshot-11 원격 DRAM ───────────────────── 5.4× faster vs Lustre │
-│     22.8 GB/s per link                                                  │
-│                                                                         │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ⚠️  중요: Lustre cold read에서는 Cascade가 약간 느림 (16.9 vs 17.7)   │
-│      → 하지만 Hot 데이터는 SHM에서 160 GB/s로 서빙!                      │
-│      → 실제 워크로드에서는 Hot 비율이 높을수록 Cascade가 압도적 우위     │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+---
 
-**LMCache가 할 수 없는 것들** — 이것이 Cascade의 존재 이유입니다.
+# ⚠️ 연구 윤리
+
+> **절대 하면 안되는 것**:
+> - 가짜 벤치마크 (단순 파일 I/O로 시뮬레이션)
+> - 실제 시스템 사용하지 않고 "LMCache" 등으로 레이블링
+
+> **반드시 해야 하는 것**:
+> - third_party/의 실제 구현 사용
+> - Job ID와 함께 재현 가능한 결과 보고
+
+---
+
+# 📈 벤치마크 결과
+
+> ⚠️ **TODO**: 실제 벤치마크 결과 수집 중
+> 아래 테스트를 실제 시스템으로 실행해야 합니다.
+
+| 테스트 | 시스템 | 상태 |
+|--------|--------|------|
+| Hot Read | Cascade, LMCache, PDC, Redis, HDF5 | 미완료 |
+| Cold Read | Cascade, LMCache, PDC, Redis, HDF5 | 미완료 |
 
 ---
 
