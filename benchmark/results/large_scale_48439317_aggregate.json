@@ -1,0 +1,47 @@
+{
+  "job_id": "48439317",
+  "nodes": 4,
+  "total_data_gb": 209.7152,
+  "aggregate_write_gbps": 12.46398312171705,
+  "aggregate_read_gbps": 17.05858798735024,
+  "avg_write_gbps": 3.1159957804292624,
+  "avg_read_gbps": 4.26464699683756,
+  "per_rank": [
+    {
+      "rank": 0,
+      "job_id": "48439317",
+      "total_data_gb": 52.4288,
+      "write_gbps": 3.116657701602627,
+      "read_gbps": 4.285336270500179,
+      "write_time_s": 16.822123254998587,
+      "read_time_s": 12.234465789981186
+    },
+    {
+      "rank": 1,
+      "job_id": "48439317",
+      "total_data_gb": 52.4288,
+      "write_gbps": 3.123782070245893,
+      "read_gbps": 4.263422200270898,
+      "write_time_s": 16.783757259952836,
+      "read_time_s": 12.29735117405653
+    },
+    {
+      "rank": 2,
+      "job_id": "48439317",
+      "total_data_gb": 52.4288,
+      "write_gbps": 3.1063618803695845,
+      "read_gbps": 4.250965359400819,
+      "write_time_s": 16.877879017032683,
+      "read_time_s": 12.333386788028292
+    },
+    {
+      "rank": 3,
+      "job_id": "48439317",
+      "total_data_gb": 52.4288,
+      "write_gbps": 3.117181469498944,
+      "read_gbps": 4.258864157178344,
+      "write_time_s": 16.81929669895908,
+      "read_time_s": 12.310512396041304
+    }
+  ]
+}
