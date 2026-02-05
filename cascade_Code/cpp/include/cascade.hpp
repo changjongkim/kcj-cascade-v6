@@ -60,6 +60,8 @@ BlockId compute_block_id(const uint8_t* data, size_t size);
 // Lock-Free Sharded Index (256 shards, minimal contention)
 // ============================================================================
 
+// CRITICAL ISSUE: [FALSE ADVERTISEMENT] Claims to be "Lock-Free" but uses std::shared_mutex (Lock-Based).
+// This introduces significant contention in high-throughput scenarios, contradicting the design goal.
 template<typename V>
 class ShardedIndex {
 public:
@@ -206,7 +208,8 @@ private:
     size_t stripe_size_;
     int stripe_count_;
     
-    // io_uring for async I/O
+    // CRITICAL ISSUE: [UNIMPLEMENTED FEATURES] io_uring is claimed in README but unused here.
+    // The ring_ pointer is initialized to nullptr and never used, forcing synchronous I/O.
     void* ring_ = nullptr;
     
     std::string block_path(const BlockId& id) const;
