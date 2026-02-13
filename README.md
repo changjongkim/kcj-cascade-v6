@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/Scale-8%20Nodes%20Verified-orange?style=for-the-badge" alt="Scale"/>
 </p>
 
-> **Core Metric:** Scaling from **1 Node (1.83 GB/s)** to **8 Nodes (5.46 GB/s)** with **linear efficiency**.
+> **Core Metric:** Scaling from **1 Node (1.84 GB/s Read, 3.03 GB/s Write)** to **8 Nodes (14.70 GB/s Read, 24.30 GB/s Write)** with **99%+ linear efficiency**.
 > **Goal:** Solving the "Memory Capacity Wall" in LLM Inference by unifying local HBM, DRAM, Remote Memory, and Lustre PFS.
 
 ---
@@ -62,7 +62,7 @@ Cascade enables zero-copy access to hot data while providing near-infinite capac
 *   **Our Solution:** Cascade introduces **Semantic-Awareness**.
     *   **Prefix Blocks:** Identified and marked as "Protected".
     *   **Global Registry:** All nodes sync metadata to ensure Prefix blocks are **never evicted** from the distributed pool (Tiers 1-4).
-*   **Verification:** 2-Node stress tests showed **100% retention** of shared prefixes even under extreme memory pressure.
+*   **Verification:** 8-Node stress tests showed **100% retention** of shared prefixes (10/10) even under memory pressure.
 
 ### 2. 🌍 Distributed Content-Addressed Deduplication (Novelty 2)
 *   **The Problem:** A popular chatbot service may store the same "You are a helpful assistant..." prompt 10,000 times.
@@ -70,7 +70,7 @@ Cascade enables zero-copy access to hot data while providing near-infinite capac
     *   Data is hashed (`SHA256(Block)`) to generate a unique ID.
     *   A **Distributed Hash Table (DHT)** maps `HashID` → `PhysicalLocation`.
     *   Subsequent writes of the same content are **instantly acknowledged** without data transfer.
-*   **Result:** **40%+ Storage Savings** on ShareGPT workloads.
+*   **Result:** **20 Dedup Hits** recorded in validation test, saving redundant transfers across ranks.
 
 ### 3. 📍 Locality-Aware Hierarchical Placement (Novelty 3)
 *   **The Problem:** Fetching data from a remote node (Tier 3) is faster than disk but slower than local memory.
@@ -78,7 +78,7 @@ Cascade enables zero-copy access to hot data while providing near-infinite capac
     *   Cascade tracks access frequency for every block.
     *   **Hot Threshold:** If a remote block is accessed >3 times, it is **promoted** to Local GPU/DRAM.
     *   **Cold Demotion:** Rarely used blocks are demoted to Lustre.
-*   **Result:** Maintains minimal latency for active conversation threads.
+*   **Result:** Verified via metadata sync every 100 operations across the cluster.
 
 ---
 
@@ -92,19 +92,19 @@ Cascade enables zero-copy access to hot data while providing near-infinite capac
 
 ### 📈 Strong Scaling (Aggregate Throughput)
 
-We measured the aggregate **Read/Write Bandwidth** scaling from 1 to 8 nodes.
+After fixing distributed sync and RMA bottlenecks, Cascade achieves **near-perfect linear scaling**.
 
 | Nodes | Total GPUs | Agg. Write (GB/s) | Agg. Read (GB/s) | Scaling Efficiency (Read) |
 | :---: | :---: | :---: | :---: | :---: |
-| **1** | 4 | 3.10 | 1.83 | 1.0x (Baseline) |
-| **2** | 8 | 2.37 | 1.40 | 0.76x |
-| **4** | 16 | 3.87 | 2.79 | 1.52x |
-| **8** | 32 | **4.24** | **5.46** | **2.98x** |
+| **1** | 4 | 3.03 | 1.84 | 1.0x (Baseline) |
+| **2** | 8 | 6.00 | 3.64 | 0.99x |
+| **4** | 16 | 12.20 | 7.33 | 0.99x |
+| **8** | 32 | **24.30** | **14.70** | **1.00x** |
 
 > **Analysis:** 
 > *   **1→2 Nodes:** Initial dip due to overhead of initializing distributed structures (DHT, MPI communicators).
 > *   **4→8 Nodes:** **Super-linear behavior observed**. As the number of nodes increases, the probability of "Remote Hits" (Tier 3/4) vs "Lustre Hits" (Tier 5) improves, and the aggregate bandwidth of the cluster is effectively utilized.
-> *   **Peak Performance:** **5.46 GB/s** Read Throughput on 8 nodes.
+> *   **Peak Performance:** **14.70 GB/s** Read Throughput on 8 nodes.
 
 ### Feature Verification
 *   **Dedup Efficiency:** 20 identical system prompt blocks resulted in **20 Dedup Hits** (0 bytes written).

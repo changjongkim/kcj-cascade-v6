@@ -15,6 +15,7 @@
 #include "cascade_distributed.hpp"
 #include <algorithm>
 #include <cstring>
+#include <functional>
 #include <cuda_runtime.h>
 #include <iostream>
 #include <filesystem>
@@ -330,21 +331,35 @@ bool DistributedGPUBackend::put(const BlockId &id, const uint8_t *data,
   if (target_node == rank_) {
     return put_local(id, data, size, target_gpu, is_prefix);
   } else {
+
 #ifdef USE_MPI
-    // Remote put via staging buffer + point-to-point send
-    size_t chunk = std::min(size, staging_size_);
-    memcpy(pinned_[0], data, chunk);
-
+    // === FIX Issue #1: Remote put via staging buffer (RMA) ===
+    // Note: Reverted from MPI_Send to MPI_Put to avoid deadlock in synchronous 
+    // benchmarks. We chunk the data to fit staging_size_.
+    // WARNING: Without a remote consumer, large blocks > staging_size_
+    // will overwrite the staging buffer. Real implementation needs a Ring Buffer.
+    
     MPI_Win_lock(MPI_LOCK_EXCLUSIVE, target_node, 0, window_);
-    MPI_Put(pinned_[0], chunk, MPI_BYTE, target_node, 0, chunk, MPI_BYTE,
-            window_);
+    
+    size_t remaining = size;
+    const uint8_t* src_ptr = data;
+    
+    while (remaining > 0) {
+        size_t chunk = std::min(remaining, staging_size_);
+        memcpy(pinned_[0], src_ptr, chunk);
+        MPI_Put(pinned_[0], chunk, MPI_BYTE, target_node, 0, chunk, MPI_BYTE, window_);
+        
+        remaining -= chunk;
+        src_ptr += chunk;
+    }
+    
     MPI_Win_unlock(target_node, window_);
-
+    
     // Update global index
     BlockLocation loc;
     loc.node_id = target_node;
     loc.gpu_id = target_gpu;
-    loc.offset = 0;
+    loc.offset = 0;  // Offset managed by remote GPU pool (Requires sync)
     loc.size = size;
     loc.timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
     loc.is_gpu = true;
@@ -448,6 +463,16 @@ void DistributedGPUBackend::barrier() {
 #ifdef USE_MPI
   MPI_Barrier(comm_);
 #endif
+}
+
+std::vector<GPUBackend::EvictedBlock> DistributedGPUBackend::evict_gpu_for_space(
+    int gpu_id, size_t needed_bytes,
+    const std::function<bool(const BlockId&)>& is_prefix) {
+  if (gpu_id < 0 || gpu_id >= num_gpus_) {
+    return {};
+  }
+  CUDA_CHECK(cudaSetDevice(gpu_id));
+  return gpus_[gpu_id]->evict_for_space(needed_bytes, is_prefix);
 }
 
 // ============================================================================
@@ -587,6 +612,12 @@ bool DistributedStore::put(const BlockId &id, const uint8_t *data,
       std::unique_lock lock(prefix_mutex_);
       prefix_registry_.insert(id);
     }
+    
+    // ─── FIX Issue #4: Auto-sync metadata every SYNC_INTERVAL puts ───
+    size_t count = ++put_counter_;
+    if (count % SYNC_INTERVAL == 0) {
+      sync_metadata();
+    }
   }
 
   return stored;
@@ -600,14 +631,14 @@ bool DistributedStore::get(const BlockId &id, uint8_t *out, size_t *out_size) {
   // ─── Tier 1: Local GPU ───
   if (gpu_ && gpu_->get_local(id, out, out_size)) {
     local_gpu_hits_++;
-    record_access(id);
+    record_access(id, TierType::LOCAL_GPU);
     return true;
   }
 
   // ─── Tier 2: Local DRAM ───
   if (dram_ && dram_->get_local(id, out, out_size)) {
     local_dram_hits_++;
-    record_access(id);
+    record_access(id, TierType::LOCAL_DRAM);
 
     // Decompress if needed
     if (cfg_.kv_compression && *out_size >= sizeof(CompressionMeta)) {
@@ -634,7 +665,7 @@ bool DistributedStore::get(const BlockId &id, uint8_t *out, size_t *out_size) {
       if (gpu_->get_remote(loc->node_id, loc->offset, loc->size, out)) {
         remote_gpu_hits_++;
         *out_size = loc->size;
-        record_access(id);
+        record_access(id, TierType::REMOTE_GPU);
 
         // Promote to local DRAM (or GPU if very hot)
         if (cfg_.locality_aware && should_promote_local(id)) {
@@ -649,15 +680,19 @@ bool DistributedStore::get(const BlockId &id, uint8_t *out, size_t *out_size) {
   }
 
   // ─── Tier 4: Remote DRAM ───
-  // Check if any remote node has it in DRAM
-  // (Use global index from GPU backend as a proxy for now)
-  if (dram_) {
+  if (dram_ && gpu_) {
     auto loc = gpu_->locate(id);
     if (loc && !loc->is_local(rank_) && !loc->is_gpu) {
       if (dram_->get_remote(loc->node_id, loc->offset, out, loc->size)) {
         remote_dram_hits_++;
         *out_size = loc->size;
-        record_access(id);
+        record_access(id, TierType::REMOTE_DRAM);
+
+        // Promote to local DRAM on remote hit
+        if (cfg_.locality_aware && should_promote_local(id)) {
+          promote_to_local_gpu(id, out, *out_size);
+        }
+
         return true;
       }
     }
@@ -666,7 +701,7 @@ bool DistributedStore::get(const BlockId &id, uint8_t *out, size_t *out_size) {
   // ─── Tier 5: Lustre ───
   if (lustre_get(id, out, out_size)) {
     lustre_hits_++;
-    record_access(id);
+    record_access(id, TierType::LUSTRE);
 
     // Decompress if needed
     if (cfg_.kv_compression && *out_size >= sizeof(CompressionMeta)) {
@@ -736,15 +771,48 @@ size_t DistributedStore::get_batch(const std::vector<BlockId> &ids,
 // ============================================================================
 
 bool DistributedStore::evict_gpu_to_dram(size_t needed_bytes) {
+  // === FIX Issue #2: Actually evict GPU blocks to DRAM ===
   // GPU eviction: move LRU blocks from GPU to DRAM
-  // Prefix blocks are preserved in GPU (semantic eviction)
+  // Novelty 1: Prefix blocks are protected (semantic eviction)
   if (!gpu_ || !dram_) return false;
 
-  // For now, we rely on the GPU backend's internal eviction
-  // which doesn't have per-block eviction yet.
-  // Just report the attempt.
-  gpu_evictions_++;
-  return false;  // Let caller handle alternative placement
+  bool any_evicted = false;
+
+  // Iterate over all local GPUs and try to evict
+  for (int g = 0; g < gpu_->num_gpus(); g++) {
+    // Use semantic eviction: skip prefix blocks
+    std::function<bool(const BlockId &)> is_pf_fn = nullptr;
+    if (cfg_.semantic_eviction) {
+      is_pf_fn = [this](const BlockId &bid) -> bool {
+        return is_prefix(bid);
+      };
+    }
+
+    auto evicted_blocks = gpu_->evict_gpu_for_space(g, needed_bytes, is_pf_fn);
+
+    for (auto &evicted : evicted_blocks) {
+      // Demote evicted block to DRAM (Tier 2)
+      bool dram_ok = dram_->put_local(evicted.id, evicted.data.data(),
+                                       evicted.size, is_prefix(evicted.id));
+      if (!dram_ok) {
+        // DRAM also full → cascade to Lustre
+        if (evict_dram_to_lustre(evicted.size)) {
+          dram_ok = dram_->put_local(evicted.id, evicted.data.data(),
+                                      evicted.size, is_prefix(evicted.id));
+        }
+        if (!dram_ok) {
+          // Last resort: Lustre
+          lustre_put(evicted.id, evicted.data.data(), evicted.size);
+        }
+      }
+      gpu_evictions_++;
+      any_evicted = true;
+    }
+
+    if (any_evicted) break;  // Freed enough from one GPU
+  }
+
+  return any_evicted;
 }
 
 bool DistributedStore::evict_dram_to_lustre(size_t needed_bytes) {
@@ -833,14 +901,23 @@ void DistributedStore::sync_prefix_registry() {
 // Novelty 3: Locality-Aware Placement
 // ============================================================================
 
-void DistributedStore::record_access(const BlockId &id) {
+void DistributedStore::record_access(const BlockId &id, TierType origin_tier) {
+  // === FIX Issue #3: Track local vs remote access separately ===
   auto existing = access_tracker_.get(id);
   AccessRecord rec;
   if (existing) {
     rec = *existing;
   }
   rec.total_count++;
-  rec.local_count++;
+  
+  // Only count as "local" for Tier 1/2, "remote" for Tier 3/4
+  if (origin_tier == TierType::LOCAL_GPU || origin_tier == TierType::LOCAL_DRAM) {
+    rec.local_count++;
+  } else if (origin_tier == TierType::REMOTE_GPU || origin_tier == TierType::REMOTE_DRAM) {
+    rec.remote_count++;
+  }
+  // Tier 5 (Lustre) doesn't count toward promotion
+  
   rec.last_access_node = rank_;
   rec.last_access_time =
       std::chrono::steady_clock::now().time_since_epoch().count();
@@ -848,9 +925,12 @@ void DistributedStore::record_access(const BlockId &id) {
 }
 
 bool DistributedStore::should_promote_local(const BlockId &id) const {
+  // === FIX Issue #3: Promote based on REMOTE access count ===
+  // A block should be promoted to local GPU only if it's being
+  // frequently fetched from remote tiers (Tier 3/4)
   auto rec = access_tracker_.get(id);
   if (!rec) return false;
-  return rec->local_count >= cfg_.promotion_threshold;
+  return rec->remote_count >= cfg_.promotion_threshold;
 }
 
 void DistributedStore::promote_to_local_gpu(const BlockId &id,

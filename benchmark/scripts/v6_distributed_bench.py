@@ -17,7 +17,11 @@ import hashlib
 import numpy as np
 
 # Add MPI build directory first (must load before non-MPI build)
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../cascade_Code/cpp/build_mpi'))
+default_build = '../../cascade_Code/cpp/build_mpi'
+build_dir = os.environ.get('CASCADE_BUILD_DIR', default_build)
+if not os.path.isabs(build_dir):
+    build_dir = os.path.join(os.path.dirname(__file__), build_dir)
+sys.path.insert(0, build_dir)
 
 try:
     import cascade_cpp

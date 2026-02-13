@@ -7,7 +7,7 @@ module load gcc/11.2.0 2>/dev/null
 
 # 2. Load MPI and CUDA (order matters for detecting correct MPICH version)
 module load cray-mpich 2>/dev/null
-module load cudatoolkit/12.2 2>/dev/null
+module load cudatoolkit/12.4 2>/dev/null
 module load craype-accel-nvidia80 2>/dev/null
 module load nccl/2.21.5 2>/dev/null
 module load python/3.9 2>/dev/null

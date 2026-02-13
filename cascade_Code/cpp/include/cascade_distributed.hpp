@@ -36,6 +36,7 @@
 #include <array>
 #include <queue>
 #include <condition_variable>
+#include <functional>
 
 #ifdef USE_MPI
 #include <mpi.h>
@@ -157,10 +158,10 @@ private:
 
 struct AccessRecord {
     uint32_t total_count = 0;
-    uint32_t local_count = 0;   // Times accessed from this node
+    uint32_t local_count = 0;     // Times accessed from LOCAL tiers (1,2)
+    uint32_t remote_count = 0;    // Times accessed from REMOTE tiers (3,4)
     int last_access_node = -1;
     uint64_t last_access_time = 0;
-    
     float locality_score(int my_rank) const {
         if (total_count == 0) return 0.0f;
         return static_cast<float>(local_count) / total_count;
@@ -279,6 +280,13 @@ public:
     void sync_all();
     void barrier();
     
+    // Eviction: evict LRU blocks from a specific GPU, returning evicted data
+    std::vector<GPUBackend::EvictedBlock> evict_gpu_for_space(
+        int gpu_id, size_t needed_bytes,
+        const std::function<bool(const BlockId&)>& is_prefix = nullptr);
+    
+    int num_gpus() const { return num_gpus_; }
+    
     // Global index
     DistributedIndex<BlockLocation> global_index_;
     
@@ -339,7 +347,7 @@ public:
     size_t dedup_bytes_saved() const { return dedup_bytes_saved_.load(); }
     
     // Novelty 3: Locality-aware placement
-    void record_access(const BlockId& id);
+    void record_access(const BlockId& id, TierType origin_tier);
     bool should_promote_local(const BlockId& id) const;
     void promote_to_local_gpu(const BlockId& id, const uint8_t* data, size_t size);
     
@@ -407,6 +415,10 @@ private:
     std::atomic<size_t> prefix_blocks_protected_{0};
     std::atomic<size_t> promotions_to_local_{0};
     std::atomic<size_t> compression_savings_{0};
+    
+    // Auto-sync metadata every N puts
+    std::atomic<size_t> put_counter_{0};
+    static constexpr size_t SYNC_INTERVAL = 100;
     
     // Helpers
     bool lustre_put(const BlockId& id, const uint8_t* data, size_t size);
