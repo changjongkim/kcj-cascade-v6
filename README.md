@@ -172,13 +172,3 @@ kcj-cascade-v6/
 ```
 
 ---
-
-## 📜 Citation & Contact
-
-**Target Publication:** SC'26 (Supercomputing 2026)
-
-**Contributors:**
-*   **Changjong Kim** (Principal Investigator) - `changjongkim at korea.ac.kr`
-*   Sunggon Kim (Implementation Lead) - `sgkim at lbl.gov`
-
-**License:** MIT License
