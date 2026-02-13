@@ -5,8 +5,8 @@
 #SBATCH -N 1
 #SBATCH -t 00:15:00
 #SBATCH -J buildpy
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/buildpy_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/buildpy_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/buildpy_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/buildpy_%j.err
 #SBATCH --gpus-per-node=4
 
 set -e
@@ -26,7 +26,7 @@ echo "Python:"
 which python3
 python3 --version
 
-cd /pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/cpp
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/cpp
 rm -rf build_final
 mkdir -p build_final
 cd build_final

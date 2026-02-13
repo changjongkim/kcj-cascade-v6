@@ -6,8 +6,8 @@
 #SBATCH -N 4
 #SBATCH --ntasks-per-node=4
 #SBATCH --gpus-per-node=4
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/all5_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/all5_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/all5_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/all5_%j.err
 #SBATCH -J all5_bench
 
 set -e

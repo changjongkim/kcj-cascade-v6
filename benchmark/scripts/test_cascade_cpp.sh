@@ -5,8 +5,8 @@
 #SBATCH -N 1
 #SBATCH -t 00:10:00
 #SBATCH -J test_cpp
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/test_cpp_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/test_cpp_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/test_cpp_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/test_cpp_%j.err
 #SBATCH --gpus-per-node=4
 
 set -e
@@ -20,7 +20,7 @@ echo "Python version:"
 which python3
 python3 --version
 
-cd /pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/cpp/build_py2
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/cpp/build_py2
 
 # Python 3.9로 빌드됐으므로 pytorch 환경의 python 사용
 PYTHON_BIN=$(which python3)

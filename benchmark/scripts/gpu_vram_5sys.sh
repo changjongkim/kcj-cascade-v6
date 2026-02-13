@@ -8,8 +8,8 @@
 #SBATCH --gpus-per-node=4
 #SBATCH -t 00:30:00
 #SBATCH -J gpu_vram_5sys
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/gpu_vram_5sys_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/gpu_vram_5sys_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/gpu_vram_5sys_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/gpu_vram_5sys_%j.err
 
 ###############################################################################
 # GPU VRAM 기반 5-System Benchmark
@@ -38,7 +38,7 @@ echo "=================================================================="
 module load pytorch cudatoolkit
 export CUDA_VISIBLE_DEVICES=0,1,2,3
 
-cd /pscratch/sd/s/sgkim/Skim-cascade
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 
 python3 << 'PYTHON_END'
 import torch
@@ -395,7 +395,7 @@ output = {
     "results": results
 }
 
-output_path = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/gpu_vram_5sys_{job_id}.json"
+output_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/gpu_vram_5sys_{job_id}.json"
 with open(output_path, "w") as f:
     json.dump(output, f, indent=2, default=str)
 

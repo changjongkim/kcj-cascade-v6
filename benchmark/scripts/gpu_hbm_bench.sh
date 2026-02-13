@@ -8,8 +8,8 @@
 #SBATCH --gpus-per-node=4
 #SBATCH -t 00:10:00
 #SBATCH -J gpu_hbm
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/gpu_hbm_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/gpu_hbm_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/gpu_hbm_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/gpu_hbm_%j.err
 
 set -e
 
@@ -24,7 +24,7 @@ module load cudatoolkit pytorch
 export CUDA_VISIBLE_DEVICES=0,1,2,3
 export JOB_ID=$SLURM_JOB_ID
 
-cd /pscratch/sd/s/sgkim/Skim-cascade
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 
 python3 << 'PYTHON_END'
 import torch
@@ -164,7 +164,7 @@ if num_gpus >= 2:
                 print(f"  GPU {i} -> GPU {j}: {gbps:>8.1f} GB/s ({link})")
                 del src, dst
 
-output_path = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/gpu_hbm_{job_id}.json"
+output_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/gpu_hbm_{job_id}.json"
 with open(output_path, "w") as f:
     json.dump({
         "job_id": job_id,

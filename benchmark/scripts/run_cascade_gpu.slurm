@@ -5,12 +5,12 @@
 #SBATCH -N 1
 #SBATCH -t 00:10:00
 #SBATCH -J cascade_gpu
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/gpu_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/gpu_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/gpu_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/gpu_%j.err
 
 module load python cudatoolkit
 
-export PYTHONPATH=/pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/src:$PYTHONPATH
+export PYTHONPATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/src:$PYTHONPATH
 
 echo "🚀 Cascade GPU Benchmark"
 echo "Node: $(hostname)"
@@ -20,7 +20,7 @@ python3 << 'PYTHON_EOF'
 import sys
 import time
 import numpy as np
-sys.path.insert(0, "/pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/src")
+sys.path.insert(0, "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/src")
 
 print("\n📊 GPU Backend Direct Test")
 

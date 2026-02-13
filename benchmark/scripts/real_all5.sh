@@ -5,8 +5,8 @@
 #SBATCH -N 1
 #SBATCH -t 00:30:00
 #SBATCH -J real_all5
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/real_all5_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/real_all5_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/real_all5_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/real_all5_%j.err
 #SBATCH --gpus-per-node=4
 
 module load cudatoolkit
@@ -15,7 +15,7 @@ module load pytorch/2.6.0
 # LMCache 의존성 설치
 pip install --quiet --user prometheus_client
 
-export PYTHONPATH=/pscratch/sd/s/sgkim/Skim-cascade/third_party/LMCache:/pscratch/sd/s/sgkim/Skim-cascade/python_pkgs_py312:$PYTHONPATH
+export PYTHONPATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/LMCache:/pscratch/sd/s/sgkim/kcj/Cascade-kcj/python_pkgs_py312:$PYTHONPATH
 
 echo "================================================"
 echo "REAL 5 SYSTEMS: Hot/Warm/Cold Benchmark"
@@ -127,7 +127,7 @@ print("2. LMCache - REAL third_party code")
 print("="*60)
 
 try:
-    sys.path.insert(0, '/pscratch/sd/s/sgkim/Skim-cascade/third_party/LMCache')
+    sys.path.insert(0, '/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/LMCache')
     # LMCache 실제 storage backend
     from lmcache.v1.storage_backend.local_cpu_backend import LocalCPUBackend
     print("LMCache module loaded successfully!")
@@ -392,7 +392,7 @@ for sys_name in ["vLLM", "LMCache", "Cascade", "PDC", "HDF5"]:
     print(f"{sys_name:<12} {str(hot):>12} {str(warm):>12} {str(cold):>12}")
 
 # Save
-results_file = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/real_all5_{JOB_ID}.json"
+results_file = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/real_all5_{JOB_ID}.json"
 os.makedirs(os.path.dirname(results_file), exist_ok=True)
 with open(results_file, 'w') as f:
     json.dump(results, f, indent=2)

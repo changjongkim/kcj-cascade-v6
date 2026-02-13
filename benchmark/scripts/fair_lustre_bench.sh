@@ -6,8 +6,8 @@
 #SBATCH -N 4
 #SBATCH --ntasks-per-node=4
 #SBATCH --gpus-per-node=4
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/fair_bench_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/fair_bench_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/fair_bench_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/fair_bench_%j.err
 #SBATCH -J fair_bench
 
 ###############################################################################
@@ -53,7 +53,7 @@ RANK = int(os.environ.get('SLURM_PROCID', 0))
 NPROCS = int(os.environ.get('SLURM_NTASKS', 1))
 JOB_ID = os.environ.get('SLURM_JOB_ID', 'local')
 SCRATCH = os.environ.get('SCRATCH', '/tmp')
-PROJECT_DIR = os.environ.get('PROJECT_DIR', '/pscratch/sd/s/sgkim/Skim-cascade')
+PROJECT_DIR = os.environ.get('PROJECT_DIR', '/pscratch/sd/s/sgkim/kcj/Cascade-kcj')
 
 # Large data sizes: 2GB, 5GB per rank
 # 4 nodes × 4 ranks = 16 ranks → 32GB, 80GB total

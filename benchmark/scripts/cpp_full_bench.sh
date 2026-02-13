@@ -5,8 +5,8 @@
 #SBATCH -N 1
 #SBATCH -t 00:30:00
 #SBATCH -J cpp_full
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/cpp_full_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/cpp_full_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/cpp_full_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/cpp_full_%j.err
 #SBATCH --gpus-per-node=4
 
 set -e
@@ -19,7 +19,7 @@ echo "Job ID: $SLURM_JOB_ID"
 echo "Node: $(hostname)"
 echo "Start: $(date)"
 
-cd /pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/cpp
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/cpp
 
 # Clean and rebuild
 rm -rf build_full

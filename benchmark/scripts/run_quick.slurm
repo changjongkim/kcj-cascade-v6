@@ -5,16 +5,16 @@
 #SBATCH -N 1
 #SBATCH -t 00:01:00
 #SBATCH -J quick_test
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/quick_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/quick_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/quick_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/quick_%j.err
 
 module load python cudatoolkit
-export PYTHONPATH=/pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/src:$PYTHONPATH
+export PYTHONPATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/src:$PYTHONPATH
 
 python3 << 'PYEOF'
 import sys, time
 import numpy as np
-sys.path.insert(0, "/pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/src")
+sys.path.insert(0, "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/src")
 
 print("🚀 Quick GPU Optimization Test (1 min)")
 

@@ -8,8 +8,8 @@
 #SBATCH --gpus-per-node=4
 #SBATCH -t 00:30:00
 #SBATCH -J fair_tier
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/fair_tier_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/fair_tier_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/fair_tier_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/fair_tier_%j.err
 
 ###############################################################################
 # Fair Storage Tier Benchmark
@@ -34,7 +34,7 @@ module load cudatoolkit
 module load pytorch/2.6.0  # torch + GCC 13.2
 
 # Cascade C++ 모듈 경로
-export PYTHONPATH="/pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/cpp/build_cascade_cpp:$PYTHONPATH"
+export PYTHONPATH="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/cpp/build_cascade_cpp:$PYTHONPATH"
 
 # CUDA 확인
 nvidia-smi --query-gpu=name,memory.total,memory.free --format=csv
@@ -67,7 +67,7 @@ RESULTS = {}
 SHM_PATH = "/dev/shm/fair_bench"
 NVME_PATH = "/tmp/fair_bench"
 LUSTRE_PATH = os.environ.get("SCRATCH", "/pscratch/sd/s/sgkim") + "/fair_bench"
-CASCADE_MODULE = "/pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/cpp/build_cascade_cpp"
+CASCADE_MODULE = "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/cpp/build_cascade_cpp"
 
 # 디렉토리 생성
 for p in [SHM_PATH, NVME_PATH, LUSTRE_PATH]:
@@ -348,7 +348,7 @@ output = {
     "hardware_reference": HW_BANDWIDTH
 }
 
-results_path = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/fair_tier_{os.environ.get('SLURM_JOB_ID', 'local')}.json"
+results_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/fair_tier_{os.environ.get('SLURM_JOB_ID', 'local')}.json"
 with open(results_path, 'w') as f:
     json.dump(output, f, indent=2)
 print(f"\nResults saved to: {results_path}")

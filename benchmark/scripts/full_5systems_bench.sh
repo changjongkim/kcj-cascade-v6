@@ -5,8 +5,8 @@
 #SBATCH -N 4
 #SBATCH -t 00:30:00
 #SBATCH -J 5sys_bench
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/5sys_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/5sys_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/5sys_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/5sys_%j.err
 #SBATCH --ntasks-per-node=4
 #SBATCH --gpus-per-node=4
 
@@ -20,12 +20,12 @@ export PATH=/global/common/software/nersc9/pytorch/2.6.0/bin:$PATH
 module load cudatoolkit gcc/11.2.0 cray-mpich
 
 # Cascade C++ 모듈 경로
-export PYTHONPATH=/pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/cpp/build_cascade_cpp:$PYTHONPATH
+export PYTHONPATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/cpp/build_cascade_cpp:$PYTHONPATH
 
 # LMCache 경로
-export PYTHONPATH=/pscratch/sd/s/sgkim/Skim-cascade/third_party/LMCache:$PYTHONPATH
+export PYTHONPATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/LMCache:$PYTHONPATH
 
-cd /pscratch/sd/s/sgkim/Skim-cascade
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 
 /global/common/software/nersc9/pytorch/2.6.0/bin/python3 << 'PYEOF'
 #!/usr/bin/env python3
@@ -150,7 +150,7 @@ class LMCacheAdapter(BaseAdapter):
     
     def initialize(self):
         try:
-            sys.path.insert(0, '/pscratch/sd/s/sgkim/Skim-cascade/third_party/LMCache')
+            sys.path.insert(0, '/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/LMCache')
             from lmcache.storage_backend.local_backend import LMCLocalBackend
             
             self.path = "/tmp/lmcache_5sys"
@@ -212,7 +212,7 @@ class PDCAdapter(BaseAdapter):
     def initialize(self):
         try:
             # PDC uses MPI and requires server - use file-based simulation
-            self.path = "/pscratch/sd/s/sgkim/Skim-cascade/benchmark/tmp_pdc"
+            self.path = "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp_pdc"
             os.makedirs(self.path, exist_ok=True)
             self.available = True
             print(f"  [OK] {self.name}: Using Lustre-based backend at {self.path}")
@@ -435,8 +435,8 @@ output = {
     'results': all_results
 }
 
-os.makedirs('/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results', exist_ok=True)
-out_path = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/5systems_{SLURM_JOB_ID}.json"
+os.makedirs('/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results', exist_ok=True)
+out_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/5systems_{SLURM_JOB_ID}.json"
 with open(out_path, 'w') as f:
     json.dump(output, f, indent=2)
 

@@ -5,13 +5,13 @@
 #SBATCH -N 4
 #SBATCH -t 00:20:00
 #SBATCH -J full_6sys
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/full_6sys_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/full_6sys_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/full_6sys_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/full_6sys_%j.err
 
 module load cudatoolkit
 module load pytorch/2.6.0
 
-export PYTHONPATH=/pscratch/sd/s/sgkim/Skim-cascade/python_pkgs_py312:$PYTHONPATH
+export PYTHONPATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/python_pkgs_py312:$PYTHONPATH
 
 echo "================================================"
 echo "Job ID: $SLURM_JOB_ID"
@@ -22,7 +22,7 @@ echo "================================================"
 # 확인
 python -c "import redis; import torch; import h5py; print('All imports OK:', redis.__version__, torch.__version__, h5py.__version__, 'cuda:', torch.cuda.is_available())"
 
-RESULTS_DIR=/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results
+RESULTS_DIR=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results
 RESULTS_FILE=$RESULTS_DIR/full_6sys_$SLURM_JOB_ID.json
 
 # 벤치마크 스크립트

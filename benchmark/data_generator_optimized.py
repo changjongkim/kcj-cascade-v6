@@ -61,7 +61,7 @@ except ImportError:
 class DataGenConfig:
     """Data generation configuration"""
     # Output
-    output_dir: Path = Path("/pscratch/sd/s/sgkim/Skim-cascade/benchmark/data")
+    output_dir: Path = Path("/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/data")
     
     # KV Block dimensions (LLaMA-70B GQA)
     num_layers: int = 80
@@ -519,7 +519,7 @@ def main():
     parser.add_argument("--size_gb", type=float, default=100.0, 
                         help="Total data size in GB (default: 100)")
     parser.add_argument("--output", type=str, 
-                        default="/pscratch/sd/s/sgkim/Skim-cascade/benchmark/data",
+                        default="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/data",
                         help="Output directory")
     parser.add_argument("--block_tokens", type=int, default=256,
                         help="Tokens per block (default: 256)")

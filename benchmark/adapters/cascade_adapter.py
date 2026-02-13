@@ -7,7 +7,9 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 
 # Add cascade to path
-sys.path.insert(0, str(Path("/pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/src")))
+# Add repo root to path
+REPO_ROOT = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(REPO_ROOT))
 
 try:
     from .base import StorageAdapter
@@ -35,7 +37,7 @@ class CascadeAdapter(StorageAdapter):
         # Default config
         self.gpu_capacity_gb = config.get("gpu_capacity_gb", 32.0)
         self.shm_capacity_gb = config.get("shm_capacity_gb", 64.0)
-        self.lustre_path = config.get("lustre_path", "/pscratch/sd/s/sgkim/Skim-cascade/benchmark/cascade_store")
+        self.lustre_path = config.get("lustre_path", "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/cascade_store")
         self.use_gpu = config.get("use_gpu", False)
         self.use_compression = config.get("use_compression", True)
         self.use_sharding = config.get("use_sharding", True)
@@ -112,7 +114,7 @@ class CascadeAdapter(StorageAdapter):
     
     def clear(self) -> None:
         if self._initialized and self.store:
-            self.store.clear_cache()
+            self.store.clear()
     
     def flush(self) -> None:
         if self._initialized and self.store:
@@ -121,12 +123,18 @@ class CascadeAdapter(StorageAdapter):
     def get_stats(self) -> Dict[str, Any]:
         if not self._initialized:
             return {}
-        return self.store.get_stats()
+        stats = self.store.get_stats()
+        return {
+            "gpu_used": stats.gpu_used,
+            "shm_used": stats.shm_used,
+            "gpu_hits": stats.gpu_hits,
+            "shm_hits": stats.shm_hits,
+            "lustre_hits": stats.lustre_hits,
+            "misses": stats.misses,
+            "dedup_hits": stats.dedup_hits
+        }
     
     def close(self) -> None:
         if self.store:
-            try:
-                self.store.cleanup()
-            except:
-                self.store.flush()
+            self.store.flush()
         self._initialized = False

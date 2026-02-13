@@ -130,3 +130,9 @@ dump.rdb
 *.cubin
 *.fatbin
 *.ptx
+
+# Local benchmark logs & build artifacts
+benchmark/logs/
+benchmark/data/
+cascade_Code/cpp/build_mpi/
+*.log

@@ -1,11 +1,21 @@
 /**
- * Cascade Distributed Backend - Multi-Node Multi-GPU KV Cache
- * 
- * GPU-aware MPI on HPE Slingshot (Perlmutter)
- * - MPICH_GPU_SUPPORT_ENABLED=1
- * - NCCL_NET_GDR_LEVEL=PHB
- * - GDRCopy v2.4
- * - 4x Slingshot NICs (cxi0-cxi3)
+ * Cascade Distributed Backend V6 - Multi-Node Multi-GPU KV Cache
+ *
+ * 3 Core Novelties:
+ *   1. Cross-node semantic-aware eviction (prefix block protection)
+ *   2. Distributed content-addressed deduplication (SHA256 global index)
+ *   3. Locality-aware hierarchical placement (access frequency tracking)
+ *
+ * 5-Tier Hierarchy:
+ *   Tier 1: Local GPU  (NVLink P2P within node)
+ *   Tier 2: Local DRAM (pinned, MPI RMA window)
+ *   Tier 3: Remote GPU (GPU-aware MPI over Slingshot)
+ *   Tier 4: Remote DRAM (MPI RMA one-sided)
+ *   Tier 5: Lustre PFS (aggregated I/O, O_DIRECT)
+ *
+ * GPU-aware MPI on HPE Slingshot (Perlmutter):
+ *   MPICH_GPU_SUPPORT_ENABLED=1, NCCL_NET_GDR_LEVEL=PHB,
+ *   GDRCopy v2.4, 4x Slingshot NICs
  */
 
 #pragma once
@@ -17,12 +27,15 @@
 #include <mutex>
 #include <shared_mutex>
 #include <unordered_map>
+#include <unordered_set>
 #include <optional>
 #include <thread>
 #include <cstring>
 #include <cstdint>
 #include <chrono>
 #include <array>
+#include <queue>
+#include <condition_variable>
 
 #ifdef USE_MPI
 #include <mpi.h>
@@ -34,8 +47,16 @@ namespace cascade {
 namespace distributed {
 
 // ============================================================================
-// Block Location in Cluster
+// Block Location in Cluster (5-tier)
 // ============================================================================
+
+enum class TierType : uint8_t {
+    LOCAL_GPU  = 0,   // Tier 1
+    LOCAL_DRAM = 1,   // Tier 2
+    REMOTE_GPU = 2,   // Tier 3
+    REMOTE_DRAM = 3,  // Tier 4
+    LUSTRE     = 4,   // Tier 5
+};
 
 struct BlockLocation {
     int node_id;           // MPI rank
@@ -44,6 +65,12 @@ struct BlockLocation {
     size_t size;           // Block size
     uint64_t timestamp;    // Creation time
     bool is_gpu;           // true=GPU, false=DRAM
+    bool is_prefix;        // Novelty 1: semantic eviction flag
+    
+    TierType tier() const {
+        if (is_gpu) return TierType::LOCAL_GPU;  // caller adjusts for remote
+        return TierType::LOCAL_DRAM;
+    }
     
     bool is_local(int my_rank) const { return node_id == my_rank; }
 };
@@ -81,6 +108,41 @@ public:
         return get(key).has_value();
     }
     
+    bool remove(const BlockId& key) {
+        size_t shard_id = std::hash<BlockId>{}(key) % NUM_SHARDS;
+        auto& shard = shards_[shard_id];
+        std::unique_lock lock(shard.mutex);
+        return shard.data.erase(key) > 0;
+    }
+    
+    void clear() {
+        for (auto& shard : shards_) {
+            std::unique_lock lock(shard.mutex);
+            shard.data.clear();
+        }
+    }
+    
+    // Collect all keys (for metadata sync)
+    std::vector<BlockId> keys() const {
+        std::vector<BlockId> result;
+        for (const auto& shard : shards_) {
+            std::shared_lock lock(shard.mutex);
+            for (const auto& [k, v] : shard.data) {
+                result.push_back(k);
+            }
+        }
+        return result;
+    }
+    
+    size_t size() const {
+        size_t total = 0;
+        for (const auto& shard : shards_) {
+            std::shared_lock lock(shard.mutex);
+            total += shard.data.size();
+        }
+        return total;
+    }
+    
 private:
     struct Shard {
         mutable std::shared_mutex mutex;
@@ -90,16 +152,51 @@ private:
 };
 
 // ============================================================================
-// Distributed Config
+// Access Frequency Tracker (Novelty 3: Locality-aware placement)
+// ============================================================================
+
+struct AccessRecord {
+    uint32_t total_count = 0;
+    uint32_t local_count = 0;   // Times accessed from this node
+    int last_access_node = -1;
+    uint64_t last_access_time = 0;
+    
+    float locality_score(int my_rank) const {
+        if (total_count == 0) return 0.0f;
+        return static_cast<float>(local_count) / total_count;
+    }
+};
+
+// ============================================================================
+// Distributed Config (V6)
 // ============================================================================
 
 struct DistributedConfig {
+    // Per-node resources
     size_t gpu_capacity_per_device = 32ULL * 1024 * 1024 * 1024;
     size_t dram_capacity = 64ULL * 1024 * 1024 * 1024;
     int num_gpus_per_node = 4;
     size_t staging_buffer_size = 16 * 1024 * 1024;
     int num_staging_buffers = 32;
-    bool sync_metadata = false;
+    
+    // Novelty 1: Cross-node semantic eviction
+    bool semantic_eviction = true;
+    
+    // Novelty 2: Distributed deduplication
+    bool dedup_enabled = true;
+    
+    // Novelty 3: Locality-aware placement
+    bool locality_aware = true;
+    uint32_t promotion_threshold = 3;  // Accesses before promoting to local GPU
+    
+    // V6 features
+    bool kv_compression = false;     // INT8 quantization
+    bool sync_metadata = false;      // Periodic metadata sync
+    
+    // Lustre (Tier 5)
+    std::string lustre_path = "";
+    bool aggregated_lustre = true;
+    size_t agg_file_size = 256ULL * 1024 * 1024;
 };
 
 // ============================================================================
@@ -109,6 +206,7 @@ struct DistributedConfig {
 struct DRAMBlock {
     size_t offset;
     size_t size;
+    bool is_prefix = false;
 };
 
 class DistributedDRAMBackend {
@@ -120,12 +218,19 @@ public:
 #endif
     ~DistributedDRAMBackend();
     
-    bool put_local(const BlockId& id, const uint8_t* data, size_t size);
+    bool put_local(const BlockId& id, const uint8_t* data, size_t size, bool is_prefix = false);
     bool get_local(const BlockId& id, uint8_t* out, size_t* out_size);
     bool get_remote(int target_rank, size_t offset, uint8_t* out, size_t size);
+    bool remove_local(const BlockId& id);
     
+    // Novelty 1: Semantic eviction — returns IDs of evicted blocks
+    std::vector<std::pair<BlockId, std::vector<uint8_t>>>
+        evict_for_space(size_t needed, bool protect_prefix = true);
+    
+    bool contains(const BlockId& id) const { return index_.contains(id); }
     size_t used_bytes() const { return used_.load(); }
     size_t capacity() const { return capacity_; }
+    size_t count() const { return index_.size(); }
     void barrier();
     
     DistributedIndex<DRAMBlock> index_;
@@ -135,6 +240,11 @@ private:
     void* dram_base_ = nullptr;
     std::atomic<size_t> write_offset_{0};
     std::atomic<size_t> used_{0};
+    
+    // LRU tracking for eviction
+    mutable std::mutex lru_mutex_;
+    std::list<BlockId> lru_list_;
+    std::unordered_map<BlockId, std::list<BlockId>::iterator> lru_map_;
     
 #ifdef USE_MPI
     MPI_Comm comm_;
@@ -156,9 +266,9 @@ public:
 #endif
     ~DistributedGPUBackend();
     
-    bool put(const BlockId& id, const uint8_t* data, size_t size);
+    bool put(const BlockId& id, const uint8_t* data, size_t size, bool is_prefix = false);
     bool get(const BlockId& id, uint8_t* out, size_t* out_size);
-    bool put_local(const BlockId& id, const uint8_t* data, size_t size, int gpu);
+    bool put_local(const BlockId& id, const uint8_t* data, size_t size, int gpu, bool is_prefix = false);
     bool get_local(const BlockId& id, uint8_t* out, size_t* out_size);
     bool get_remote(int rank, size_t offset, size_t size, uint8_t* out);
     
@@ -192,7 +302,7 @@ private:
 };
 
 // ============================================================================
-// Main Distributed Store
+// Main Distributed Store (V6 — with 3 Novelties)
 // ============================================================================
 
 class DistributedStore {
@@ -204,27 +314,60 @@ public:
 #endif
     ~DistributedStore();
     
-    bool put(const BlockId& id, const uint8_t* data, size_t size);
+    // Core API
+    bool put(const BlockId& id, const uint8_t* data, size_t size, bool is_prefix = false);
     bool get(const BlockId& id, uint8_t* out, size_t* out_size);
     bool contains(const BlockId& id) const;
     std::optional<BlockLocation> locate(const BlockId& id) const;
     
+    // Batch API
     size_t put_batch(const std::vector<BlockId>& ids,
                      const std::vector<const uint8_t*>& data,
-                     const std::vector<size_t>& sizes);
+                     const std::vector<size_t>& sizes,
+                     const std::vector<bool>& is_prefix);
     size_t get_batch(const std::vector<BlockId>& ids,
                      std::vector<uint8_t*>& out,
                      std::vector<size_t>& sizes);
+    
+    // Novelty 1: Cross-node semantic eviction
+    bool evict_gpu_to_dram(size_t needed_bytes);
+    bool evict_dram_to_lustre(size_t needed_bytes);
+    void sync_prefix_registry();
+    
+    // Novelty 2: Distributed deduplication
+    size_t dedup_hits() const { return dedup_hits_.load(); }
+    size_t dedup_bytes_saved() const { return dedup_bytes_saved_.load(); }
+    
+    // Novelty 3: Locality-aware placement
+    void record_access(const BlockId& id);
+    bool should_promote_local(const BlockId& id) const;
+    void promote_to_local_gpu(const BlockId& id, const uint8_t* data, size_t size);
     
     void barrier();
     void sync_metadata();
     
     struct Stats {
+        // Usage
         size_t local_gpu_used, local_dram_used;
         size_t cluster_gpu_used, cluster_dram_used;
+        // Hits per tier
         size_t local_gpu_hits, local_dram_hits;
         size_t remote_gpu_hits, remote_dram_hits;
+        size_t lustre_hits;
         size_t misses;
+        // Novelty 2: Dedup
+        size_t dedup_hits;
+        size_t dedup_bytes_saved;
+        // Novelty 1: Semantic eviction
+        size_t gpu_evictions, dram_evictions;
+        size_t prefix_blocks_protected;
+        // Novelty 3: Locality
+        size_t promotions_to_local;
+        // V6: Compression
+        size_t compression_savings;
+        // Counts
+        size_t total_blocks;
+        size_t prefix_blocks;
     };
     Stats get_stats();
     
@@ -238,12 +381,38 @@ private:
     MPI_Comm comm_;
 #endif
     
-    std::unique_ptr<DistributedGPUBackend> gpu_;
-    std::unique_ptr<DistributedDRAMBackend> dram_;
+    // Backends (5 tiers)
+    std::unique_ptr<DistributedGPUBackend> gpu_;     // Tier 1 & 3
+    std::unique_ptr<DistributedDRAMBackend> dram_;    // Tier 2 & 4
+    std::unique_ptr<LustreBackend> lustre_;           // Tier 5 (per-file)
+    std::unique_ptr<AggregatedLustreBackend> agg_lustre_;  // Tier 5 (aggregated)
     
+    // Novelty 2: Global dedup index
+    DistributedIndex<bool> global_dedup_;
+    
+    // Novelty 1: Prefix block registry (cross-node)
+    mutable std::shared_mutex prefix_mutex_;
+    std::unordered_set<BlockId> prefix_registry_;
+    
+    // Novelty 3: Access frequency tracker
+    DistributedIndex<AccessRecord> access_tracker_;
+    
+    // Stats
     std::atomic<size_t> local_gpu_hits_{0}, local_dram_hits_{0};
     std::atomic<size_t> remote_gpu_hits_{0}, remote_dram_hits_{0};
+    std::atomic<size_t> lustre_hits_{0};
     std::atomic<size_t> misses_{0};
+    std::atomic<size_t> dedup_hits_{0}, dedup_bytes_saved_{0};
+    std::atomic<size_t> gpu_evictions_{0}, dram_evictions_{0};
+    std::atomic<size_t> prefix_blocks_protected_{0};
+    std::atomic<size_t> promotions_to_local_{0};
+    std::atomic<size_t> compression_savings_{0};
+    
+    // Helpers
+    bool lustre_put(const BlockId& id, const uint8_t* data, size_t size);
+    bool lustre_get(const BlockId& id, uint8_t* out, size_t* out_size);
+    bool lustre_contains(const BlockId& id) const;
+    bool is_prefix(const BlockId& id) const;
 };
 
 }  // namespace distributed

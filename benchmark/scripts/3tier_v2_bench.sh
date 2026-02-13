@@ -8,8 +8,8 @@
 #SBATCH --gpus-per-node=4
 #SBATCH -t 00:30:00
 #SBATCH -J 3tier_v2
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/3tier_v2_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/3tier_v2_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/3tier_v2_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/3tier_v2_%j.err
 
 ###############################################################################
 # 3-Tier Benchmark V2 - 실제 구현 방식 비교
@@ -31,7 +31,7 @@ echo "=================================================================="
 module load pytorch cudatoolkit
 export CUDA_VISIBLE_DEVICES=0,1,2,3
 
-cd /pscratch/sd/s/sgkim/Skim-cascade
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 
 python3 << 'PYTHON_END'
 import torch
@@ -257,7 +257,7 @@ print("\n" + "="*80)
 print("TIER 3: Lustre - Implementation Methods")
 print("="*80)
 
-LUSTRE_PATH = "/pscratch/sd/s/sgkim/Skim-cascade/benchmark/tmp_lustre"
+LUSTRE_PATH = "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp_lustre"
 os.makedirs(LUSTRE_PATH, exist_ok=True)
 
 # --- mmap Lustre ---
@@ -462,7 +462,7 @@ output = {
     "results": results
 }
 
-output_path = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/3tier_v2_{job_id}.json"
+output_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/3tier_v2_{job_id}.json"
 with open(output_path, "w") as f:
     json.dump(output, f, indent=2, default=str)
 

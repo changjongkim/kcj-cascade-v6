@@ -1,0 +1,61 @@
+/**
+ * Cascade Distributed Backend Implementation
+ *
+ * Multi-Node Multi-GPU KV Cache with GPU-aware MPI
+ * Optimized for HPE Slingshot on Perlmutter
+ */
+
+#include "cascade_distributed.hpp"
+#include <algorithm>
+#include <cstring>
+#include <cuda_runtime.h>
+#include <iostream>
+
+#define CUDA_CHECK(call)                                                       \
+  do {                                                                         \
+    cudaError_t err = call;                                                    \
+    if (err != cudaSuccess) {                                                  \
+      fprintf(stderr, "CUDA error at %s:%d: %s\n", __FILE__, __LINE__,         \
+              cudaGetErrorString(err));                                        \
+    }                                                                          \
+  } while (0)
+
+namespace cascade {
+namespace distributed {
+
+// ============================================================================
+// DistributedDRAMBackend Implementation
+// ============================================================================
+
+#ifdef USE_MPI
+DistributedDRAMBackend::DistributedDRAMBackend(size_t capacity, MPI_Comm comm)
+    : capacity_(capacity), comm_(comm) {
+  int initialized;
+  MPI_Initialized(&initialized);
+  if (!initialized) {
+    int provided;
+    MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided);
+  }
+
+  MPI_Comm_rank(comm_, &rank_);
+  MPI_Comm_size(comm_, &world_size_);
+
+  // Allocate pinned memory for RMA window (GPU-aware MPI requires pinned)
+  CUDA_CHECK(cudaHostAlloc(&dram_base_, capacity_, cudaHostAllocDefault));
+  memset(dram_base_, 0, capacity_);
+
+  // Create MPI window for one-sided communication
+  MPI_Win_create(dram_base_, capacity_, 1, MPI_INFO_NULL, comm_, &window_);
+
+  if (rank_ == 0) {
+    printf("[DRAM Backend] Initialized %.2f GB per node, %d nodes total\n",
+           capacity_ / (1024.0 * 1024.0 * 1024.0), world_size_);
+  }
+}
+#else
+DistributedDRAMBackend::DistributedDRAMBackend(size_t capacity)
+    : capacity_(capacity) {
+  CUDA_CHECK(cudaHostAlloc(&dram_base_, capacity_, cudaHostAllocDefault));
+  memset(dram_base_, 0, capacity_);
+}
+#endif

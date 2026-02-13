@@ -28,7 +28,7 @@ echo "=========================================="
 
 # Environment
 module load python
-cd /pscratch/sd/s/sgkim/Skim-cascade
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 
 # Create log directory
 mkdir -p benchmark/logs
@@ -37,7 +37,7 @@ mkdir -p benchmark/logs
 SIZE_GB=${SIZE_GB:-500}          # Total data size in GB
 NUM_PREFIXES=${NUM_PREFIXES:-100}  # Number of unique system prompts
 SESSIONS_PER_PREFIX=${SESSIONS_PER_PREFIX:-50}  # Sessions sharing each prefix
-OUTPUT_DIR="/pscratch/sd/s/sgkim/Skim-cascade/benchmark/data"
+OUTPUT_DIR="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/data"
 
 echo ""
 echo "Configuration:"

@@ -40,6 +40,7 @@ target_link_libraries(cascade_static
     CUDA::cudart
     OpenSSL::Crypto
     pthread
+    stdc++fs
 )
 set_target_properties(cascade_static PROPERTIES
     CUDA_SEPARABLE_COMPILATION ON
@@ -48,16 +49,27 @@ set_target_properties(cascade_static PROPERTIES
 
 # Python module (optional)
 if(BUILD_PYTHON)
-    pybind11_add_module(cascade_cpp 
+    set(CASCADE_CPP_SOURCES
         python/bindings.cpp
         src/cascade_core.cpp
         src/gpu_backend.cu
     )
+    if(USE_MPI)
+        list(APPEND CASCADE_CPP_SOURCES src/distributed_backend.cpp)
+    endif()
+
+    pybind11_add_module(cascade_cpp ${CASCADE_CPP_SOURCES})
     target_link_libraries(cascade_cpp PRIVATE 
         CUDA::cudart
         OpenSSL::Crypto
         OpenMP::OpenMP_CXX
+        stdc++fs
     )
+    if(USE_MPI)
+        target_link_libraries(cascade_cpp PRIVATE MPI::MPI_CXX)
+        target_compile_definitions(cascade_cpp PRIVATE USE_MPI)
+    endif()
+
     set_target_properties(cascade_cpp PROPERTIES
         CUDA_SEPARABLE_COMPILATION OFF
         CUDA_RESOLVE_DEVICE_SYMBOLS ON
@@ -131,12 +143,15 @@ if(USE_MPI)
         src/distributed_backend.cpp
     )
     target_compile_definitions(cascade_distributed PUBLIC USE_MPI)
+    # Link GTL for GPU-aware MPI on Perlmutter
     target_link_libraries(cascade_distributed 
         CUDA::cudart
         OpenSSL::Crypto
         MPI::MPI_CXX
+        -lmpi_gtl_cuda
         pthread
         OpenMP::OpenMP_CXX
+        stdc++fs
     )
     set_target_properties(cascade_distributed PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON
@@ -151,6 +166,7 @@ if(USE_MPI)
         CUDA::cudart
         OpenSSL::Crypto
         MPI::MPI_CXX
+        -lmpi_gtl_cuda
         pthread
         OpenMP::OpenMP_CXX
     )

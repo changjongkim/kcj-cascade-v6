@@ -5,8 +5,8 @@
 #SBATCH -N 4
 #SBATCH -t 00:30:00
 #SBATCH -J 5sys_v2
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/5sys_v2_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/5sys_v2_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/5sys_v2_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/5sys_v2_%j.err
 #SBATCH --ntasks-per-node=4
 #SBATCH --gpus-per-node=4
 
@@ -20,9 +20,9 @@ module load cudatoolkit
 module load pytorch/2.6.0
 
 export PATH=/global/common/software/nersc9/pytorch/2.6.0/bin:$PATH
-export PYTHONPATH=/pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/cpp/build_cascade_cpp:$PYTHONPATH
+export PYTHONPATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/cpp/build_cascade_cpp:$PYTHONPATH
 
-cd /pscratch/sd/s/sgkim/Skim-cascade
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 
 python3 << 'PYEOF'
 #!/usr/bin/env python3
@@ -159,7 +159,7 @@ class PDCAdapter(BaseAdapter):
     name = "PDC"
     
     def initialize(self):
-        self.path = "/pscratch/sd/s/sgkim/Skim-cascade/benchmark/tmp_pdc_v2"
+        self.path = "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp_pdc_v2"
         os.makedirs(self.path, exist_ok=True)
         self.available = True
         print(f"  [OK] {self.name}: {self.path}")
@@ -307,7 +307,7 @@ for n, r in all_results.items():
         v = r[512]
         print(f"{n:<15} {v['write']:>8.2f} {v['hot']:>8.2f} {v['warm']:>8.2f} {v['cold']:>8.2f}")
 
-out_path = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/5sys_v2_{SLURM_JOB_ID}.json"
+out_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/5sys_v2_{SLURM_JOB_ID}.json"
 with open(out_path, 'w') as f:
     json.dump({
         'job_id': SLURM_JOB_ID,

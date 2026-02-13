@@ -6,8 +6,8 @@
 #SBATCH -t 00:30:00
 #SBATCH -J real_6sys_v2
 #SBATCH --gpus-per-node=4
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/real_6sys_v2_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/real_6sys_v2_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/real_6sys_v2_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/real_6sys_v2_%j.err
 
 # ============================================================
 # 실제 6개 시스템 비교 벤치마크 (v2 - /tmp 문제 수정)
@@ -17,7 +17,7 @@
 set -e
 export MPICH_GPU_SUPPORT_ENABLED=1
 
-cd /pscratch/sd/s/sgkim/Skim-cascade
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 
 echo "================================================"
 echo "Job ID: $SLURM_JOB_ID"
@@ -28,13 +28,13 @@ echo "================================================"
 module load python cudatoolkit
 pip install h5py --user --quiet 2>/dev/null || true
 
-export PYTHONPATH=/pscratch/sd/s/sgkim/Skim-cascade/python_pkgs_py312/lib:$PYTHONPATH
+export PYTHONPATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/python_pkgs_py312/lib:$PYTHONPATH
 
-RESULTS_DIR=/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results
+RESULTS_DIR=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results
 mkdir -p $RESULTS_DIR
 
 # Python 스크립트를 공유 스토리지에 저장
-BENCH_SCRIPT=/pscratch/sd/s/sgkim/Skim-cascade/benchmark/scripts/real_6sys_bench_$SLURM_JOB_ID.py
+BENCH_SCRIPT=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/scripts/real_6sys_bench_$SLURM_JOB_ID.py
 
 cat > $BENCH_SCRIPT << 'PYTHON_EOF'
 #!/usr/bin/env python3
@@ -242,7 +242,7 @@ def main():
     
     # Redis 서버 시작 (rank 0에서만)
     if rank == 0:
-        redis_server = "/pscratch/sd/s/sgkim/Skim-cascade/third_party/redis/src/redis-server"
+        redis_server = "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/redis/src/redis-server"
         if os.path.exists(redis_server):
             os.system(f"{redis_server} --port 16379 --daemonize yes 2>/dev/null || true")
             time.sleep(2)

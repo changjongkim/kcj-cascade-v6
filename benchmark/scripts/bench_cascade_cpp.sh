@@ -5,14 +5,14 @@
 #SBATCH -N 1
 #SBATCH -t 00:15:00
 #SBATCH -J bench_cpp
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/bench_cpp_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/bench_cpp_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/bench_cpp_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/bench_cpp_%j.err
 #SBATCH --gpus-per-node=4
 
 export PATH=/global/common/software/nersc9/pytorch/2.6.0/bin:$PATH
 module load cudatoolkit gcc/11.2.0
 
-cd /pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/cpp/build_cascade_cpp
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/cpp/build_cascade_cpp
 export PYTHONPATH=$(pwd):$PYTHONPATH
 
 echo "===== Cascade C++ Backend Benchmark ====="
@@ -90,7 +90,7 @@ print("\nStats:", store.get_stats())
 
 # Save results
 import os
-out_path = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/cpp_bench_{os.environ.get('SLURM_JOB_ID', 'local')}.json"
+out_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/cpp_bench_{os.environ.get('SLURM_JOB_ID', 'local')}.json"
 with open(out_path, 'w') as f:
     json.dump({
         'job_id': os.environ.get('SLURM_JOB_ID', 'local'),

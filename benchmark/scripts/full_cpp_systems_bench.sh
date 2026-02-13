@@ -5,8 +5,8 @@
 #SBATCH -N 1
 #SBATCH -t 00:25:00
 #SBATCH -J full_bench
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/full_bench_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/full_bench_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/full_bench_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/full_bench_%j.err
 #SBATCH --gpus-per-node=4
 
 export PATH=/global/common/software/nersc9/pytorch/2.6.0/bin:$PATH
@@ -18,7 +18,7 @@ echo "Node: $SLURMD_NODENAME"
 date
 
 # Setup PYTHONPATH for cascade_cpp
-export PYTHONPATH=/pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/cpp/build_cascade_cpp:$PYTHONPATH
+export PYTHONPATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/cpp/build_cascade_cpp:$PYTHONPATH
 
 /global/common/software/nersc9/pytorch/2.6.0/bin/python3 << 'PYEOF'
 #!/usr/bin/env python3
@@ -219,7 +219,7 @@ except Exception as e:
 # 4. Lustre
 print("\n[4/4] Testing Lustre Backend...")
 try:
-    lustre = LustreBackend("/pscratch/sd/s/sgkim/Skim-cascade/benchmark/tmp_lustre")
+    lustre = LustreBackend("/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp_lustre")
     all_results["Lustre"] = benchmark_system(lustre, BLOCK_SIZES, ITERATIONS)
     print(f"  Done: {all_results['Lustre']}")
 except Exception as e:
@@ -249,7 +249,7 @@ output = {
     'results': all_results
 }
 
-out_path = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/full_systems_{SLURM_JOB_ID}.json"
+out_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/full_systems_{SLURM_JOB_ID}.json"
 with open(out_path, 'w') as f:
     json.dump(output, f, indent=2)
 print(f"\nResults saved: {out_path}")

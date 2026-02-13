@@ -208,7 +208,7 @@ def main():
     
     # Redis 서버 시작
     if rank == 0:
-        redis_server = "/pscratch/sd/s/sgkim/Skim-cascade/third_party/redis/src/redis-server"
+        redis_server = "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/redis/src/redis-server"
         if os.path.exists(redis_server):
             import subprocess
             subprocess.run(f"{redis_server} --port 16379 --daemonize yes", shell=True, stderr=subprocess.DEVNULL)

@@ -6,12 +6,12 @@
 #SBATCH -t 00:30:00
 #SBATCH -J real_6sys_v3
 #SBATCH --gpus-per-node=4
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/real_6sys_v3_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/real_6sys_v3_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/real_6sys_v3_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/real_6sys_v3_%j.err
 
 set -e
 export MPICH_GPU_SUPPORT_ENABLED=1
-cd /pscratch/sd/s/sgkim/Skim-cascade
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 
 echo "================================================"
 echo "Job ID: $SLURM_JOB_ID"
@@ -26,10 +26,10 @@ module load python cudatoolkit pytorch
 pip install redis h5py --user --quiet 2>/dev/null || true
 export PYTHONPATH=$HOME/.local/lib/python3.11/site-packages:$PYTHONPATH
 
-RESULTS_DIR=/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results
+RESULTS_DIR=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results
 mkdir -p $RESULTS_DIR
 
-BENCH_SCRIPT=/pscratch/sd/s/sgkim/Skim-cascade/benchmark/scripts/real_6sys_bench_$SLURM_JOB_ID.py
+BENCH_SCRIPT=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/scripts/real_6sys_bench_$SLURM_JOB_ID.py
 
 cat > $BENCH_SCRIPT << 'PYTHON_EOF'
 #!/usr/bin/env python3
@@ -242,7 +242,7 @@ def main():
     
     # Redis 서버 시작
     if rank == 0:
-        redis_server = "/pscratch/sd/s/sgkim/Skim-cascade/third_party/redis/src/redis-server"
+        redis_server = "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/redis/src/redis-server"
         if os.path.exists(redis_server):
             import subprocess
             subprocess.run(f"{redis_server} --port 16379 --daemonize yes", shell=True, stderr=subprocess.DEVNULL)

@@ -24,7 +24,7 @@ class HDF5Adapter(StorageAdapter):
     def __init__(self, config: Dict[str, Any] = None):
         super().__init__("HDF5", config)
         self.h5file = None
-        self.file_path = config.get("file_path", "/pscratch/sd/s/sgkim/Skim-cascade/benchmark/hdf5_store/kv_cache.h5")
+        self.file_path = config.get("file_path", "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/hdf5_store/kv_cache.h5")
         self.compression = config.get("compression", "gzip")
         self.compression_level = config.get("compression_level", 1)  # Fast compression
         

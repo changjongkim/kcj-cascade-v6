@@ -11,7 +11,7 @@
 
 module load python cudatoolkit
 
-cd /pscratch/sd/s/sgkim/Skim-cascade
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 
 # Ensure log directory exists
 mkdir -p benchmark/logs
@@ -22,7 +22,7 @@ python -m benchmark.run_benchmark \
     --systems all \
     --workload all \
     --num_blocks 1000 \
-    --data_path /pscratch/sd/s/sgkim/Skim-cascade/benchmark/data \
-    --output /pscratch/sd/s/sgkim/Skim-cascade/benchmark/results
+    --data_path /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/data \
+    --output /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results
 
 echo "Debug benchmark complete"

@@ -11,12 +11,12 @@
 
 module load python cudatoolkit
 
-cd /pscratch/sd/s/sgkim/Skim-cascade
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 
 # Generate 500GB of benchmark data
 python -m benchmark.data_generator \
     --size_gb 500 \
-    --output /pscratch/sd/s/sgkim/Skim-cascade/benchmark/data \
+    --output /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/data \
     --block_tokens 256
 
 echo "Data generation complete"

@@ -13,18 +13,18 @@
 module load python cudatoolkit
 module load pytorch/2.1.0
 
-cd /pscratch/sd/s/sgkim/Skim-cascade
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 
 # Hugging Face token (if needed)
 # export HF_TOKEN="your_token_here"
-export HF_HOME=/pscratch/sd/s/sgkim/Skim-cascade/benchmark/hf_cache
+export HF_HOME=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/hf_cache
 
 # Generate real KV cache data from LLaMA-2-70B
 python -m benchmark.data_generator_real \
     --model meta-llama/Llama-2-70b-hf \
     --datasets openorca,cnn_dailymail,sharegpt \
     --num_samples 10000 \
-    --output /pscratch/sd/s/sgkim/Skim-cascade/benchmark/data_real \
+    --output /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/data_real \
     --tp 4 \
     --block_size 256 \
     --shared_prefix

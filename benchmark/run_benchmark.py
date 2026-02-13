@@ -274,10 +274,10 @@ def main():
     parser.add_argument("--num_blocks", type=int, default=1000,
                         help="Number of blocks to test")
     parser.add_argument("--data_path", type=str, 
-                        default="/pscratch/sd/s/sgkim/Skim-cascade/benchmark/data",
+                        default="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/data",
                         help="Path to benchmark data")
     parser.add_argument("--output", type=str,
-                        default="/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results",
+                        default="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results",
                         help="Output directory for results")
     args = parser.parse_args()
     
@@ -347,7 +347,7 @@ def main():
     print("-" * 64)
     
     for key, stats in all_results.items():
-        print(f"{stats['system']:12,.0f} {stats['throughput_gbps']:>10.2f} "
+        print(f"{stats['system']:12s} {stats['throughput_gbps']:>10.2f} "
               f"{stats['avg_latency_ms']:>12.2f}")
     
     print(f"\\nResults saved to: {results_file}")

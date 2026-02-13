@@ -57,8 +57,8 @@ from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor
 
 # Add third_party paths
-sys.path.insert(0, '/pscratch/sd/s/sgkim/Skim-cascade/third_party/LMCache')
-sys.path.insert(0, '/pscratch/sd/s/sgkim/Skim-cascade/third_party/vllm')
+sys.path.insert(0, '/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/LMCache')
+sys.path.insert(0, '/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/vllm')
 
 DATA_DIR = Path(os.environ['DATA_DIR'])
 RESULTS_DIR = Path(os.environ['RESULTS_DIR'])

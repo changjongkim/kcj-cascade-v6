@@ -6,8 +6,8 @@
 #SBATCH -t 00:30:00
 #SBATCH --gpus-per-node=4
 #SBATCH -J cascade_features
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/cascade_features_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/cascade_features_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/cascade_features_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/cascade_features_%j.err
 
 ###############################################################################
 # CASCADE UNIQUE FEATURES BENCHMARK
@@ -24,7 +24,7 @@ echo "Nodes: $SLURM_NNODES"
 echo "Date: $(date -Iseconds)"
 echo "=========================================="
 
-cd /pscratch/sd/s/sgkim/Skim-cascade
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 
 CASCADE_BIN="cascade_Code/cpp/build_mpi/distributed_bench"
 RESULT_DIR="benchmark/results"
@@ -197,7 +197,7 @@ if os.path.exists('/tmp/dedup_result.json'):
         results['tests']['deduplication'] = json.load(f)
 
 # Save
-result_path = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/cascade_features_{job_id}.json"
+result_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/cascade_features_{job_id}.json"
 with open(result_path, 'w') as f:
     json.dump(results, f, indent=2)
 

@@ -6,8 +6,8 @@
 #SBATCH -t 00:30:00
 #SBATCH --gpus-per-node=4
 #SBATCH -J shm_vs_lustre
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/shm_vs_lustre_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/shm_vs_lustre_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/shm_vs_lustre_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/shm_vs_lustre_%j.err
 
 ###############################################################################
 # SHM vs Lustre Core Benchmark
@@ -28,7 +28,7 @@ echo "Date: $(date -Iseconds)"
 echo "Hostname: $(hostname)"
 echo "=========================================="
 
-cd /pscratch/sd/s/sgkim/Skim-cascade
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 
 # Run on each node
 srun -N $SLURM_NNODES -n $SLURM_NNODES --ntasks-per-node=1 \
@@ -134,7 +134,7 @@ shutil.rmtree(SHM_DIR, ignore_errors=True)
 
 print(f"[Rank {rank}] === Lustre Benchmark ===")
 
-LUSTRE_DIR = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/data/lustre_bench_{job_id}_{rank}"
+LUSTRE_DIR = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/data/lustre_bench_{job_id}_{rank}"
 os.makedirs(LUSTRE_DIR, exist_ok=True)
 
 # Lustre Write
@@ -248,7 +248,7 @@ print(f"SHM vs Lustre Cold: {shm_vs_lustre_cold:.1f}x faster")
 # Save results
 ###############################################################################
 
-result_path = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/shm_vs_lustre_{job_id}_rank{rank}.json"
+result_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/shm_vs_lustre_{job_id}_rank{rank}.json"
 with open(result_path, 'w') as f:
     json.dump(results, f, indent=2)
 
@@ -271,7 +271,7 @@ job_id = os.environ.get('SLURM_JOB_ID', 'unknown')
 nodes = int(os.environ.get('SLURM_NNODES', 1))
 
 # Collect all rank results
-results_pattern = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/shm_vs_lustre_{job_id}_rank*.json"
+results_pattern = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/shm_vs_lustre_{job_id}_rank*.json"
 rank_files = sorted(glob.glob(results_pattern))
 
 all_results = []
@@ -323,7 +323,7 @@ aggregate['speedups'] = {
     'aggregate_lustre_cold_gbps': aggregate['aggregate']['lustre']['cold_read_gbps_total'],
 }
 
-result_path = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/shm_vs_lustre_{job_id}_aggregate.json"
+result_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/shm_vs_lustre_{job_id}_aggregate.json"
 with open(result_path, 'w') as f:
     json.dump(aggregate, f, indent=2)
 

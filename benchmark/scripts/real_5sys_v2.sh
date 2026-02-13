@@ -5,8 +5,8 @@
 #SBATCH -N 1
 #SBATCH -t 00:30:00
 #SBATCH -J real_5sys_v2
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/real_5sys_v2_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/real_5sys_v2_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/real_5sys_v2_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/real_5sys_v2_%j.err
 #SBATCH --gpus-per-node=4
 
 module load cudatoolkit
@@ -15,7 +15,7 @@ module load pytorch/2.6.0
 # LMCache 의존성 모두 설치
 pip install --quiet --user prometheus_client aiofile msgspec
 
-export PYTHONPATH=/pscratch/sd/s/sgkim/Skim-cascade/third_party/LMCache:/pscratch/sd/s/sgkim/Skim-cascade/python_pkgs_py312:$PYTHONPATH
+export PYTHONPATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/LMCache:/pscratch/sd/s/sgkim/kcj/Cascade-kcj/python_pkgs_py312:$PYTHONPATH
 
 python3 << 'PYTHON_EOF'
 import os, sys, time, json, mmap, ctypes
@@ -68,7 +68,7 @@ print(f"COLD: {results['cold']['vLLM']:.2f} GB/s")
 # === 2. LMCache (NVMe file pattern) ===
 print("\n=== 2. LMCache (NVMe pattern) ===")
 try:
-    sys.path.insert(0, '/pscratch/sd/s/sgkim/Skim-cascade/third_party/LMCache')
+    sys.path.insert(0, '/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/LMCache')
     from lmcache.v1.storage_backend.local_cpu_backend import LocalCPUBackend
     print("LMCache import OK")
 except Exception as e:
@@ -183,7 +183,7 @@ print("-"*44)
 for s in ["vLLM", "LMCache", "Cascade", "PDC", "HDF5"]:
     print(f"{s:<12} {results['hot'].get(s,'-'):>10} {results['warm'].get(s,'-'):>10} {results['cold'].get(s,'-'):>10}")
 
-rf = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/real_5sys_v2_{JOB_ID}.json"
+rf = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/real_5sys_v2_{JOB_ID}.json"
 os.makedirs(os.path.dirname(rf), exist_ok=True)
 with open(rf, 'w') as fp: json.dump(results, fp, indent=2)
 print(f"\nSaved: {rf}")

@@ -5,15 +5,15 @@
 #SBATCH -N 4
 #SBATCH -t 00:20:00
 #SBATCH -J proper_bench
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/proper_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/proper_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/proper_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/proper_%j.err
 #SBATCH --gpus-per-node=4
 
 module load cudatoolkit
 module load cray-mpich
 module load pytorch/2.6.0
 
-export PYTHONPATH=/pscratch/sd/s/sgkim/Skim-cascade/python_pkgs_py312:$PYTHONPATH
+export PYTHONPATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/python_pkgs_py312:$PYTHONPATH
 export MPICH_GPU_SUPPORT_ENABLED=1
 
 echo "================================================"
@@ -27,7 +27,7 @@ echo "================================================"
 # ============ 1. Cascade C++ (실제 구현) ============
 echo ""
 echo "=== 1. Cascade C++ Distributed Benchmark ==="
-cd /pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/cpp/build_mpi
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/cpp/build_mpi
 
 # 4 nodes, 4 GPUs per node = 16 total
 srun --export=ALL,MPICH_GPU_SUPPORT_ENABLED=1 -n 16 -c 8 --gpus-per-node=4 \
@@ -224,7 +224,7 @@ print("-"*60)
 for test, vals in results["tests"].items():
     print(f"{test:<20} {vals['write_gbps']:>12.2f} {vals['read_gbps']:>12.2f}")
 
-results_file = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/proper_{JOB_ID}.json"
+results_file = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/proper_{JOB_ID}.json"
 os.makedirs(os.path.dirname(results_file), exist_ok=True)
 with open(results_file, 'w') as f:
     json.dump(results, f, indent=2)

@@ -8,7 +8,7 @@ to read the same aggregated KV cache data.
 Usage:
     from benchmark.shared_data import SharedDataReader
     
-    reader = SharedDataReader("/pscratch/sd/s/sgkim/Skim-cascade/benchmark/data")
+    reader = SharedDataReader("/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/data")
     
     # Get a specific block
     block_id, key_data, value_data = reader.get_block_by_id("abc123...")
@@ -267,7 +267,7 @@ class SharedDataReader:
 def load_shared_data(data_dir: str = None) -> SharedDataReader:
     """Convenience function to load shared data"""
     if data_dir is None:
-        data_dir = "/pscratch/sd/s/sgkim/Skim-cascade/benchmark/data"
+        data_dir = "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/data"
     return SharedDataReader(data_dir)
 
 

@@ -96,7 +96,7 @@ class MLPerfDatasetLoader:
         "You are analyzing the following document. Answer questions based solely on the information provided in the document. Be precise and cite relevant sections when possible.\\n\\nDocument:\\n{document}",
     ]
     
-    def __init__(self, cache_dir: str = "/pscratch/sd/s/sgkim/Skim-cascade/benchmark/datasets"):
+    def __init__(self, cache_dir: str = "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/datasets"):
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
     
@@ -531,7 +531,7 @@ class RealDataGenerator:
     def generate(
         self,
         datasets: List[str] = ["openorca"],
-        output_dir: str = "/pscratch/sd/s/sgkim/Skim-cascade/benchmark/data_real",
+        output_dir: str = "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/data_real",
         total_samples: int = 5000,
         include_shared_prefix: bool = True,
         shared_prefix_ratio: float = 0.3,  # 30% shared prefix workload
@@ -601,7 +601,7 @@ def main():
     parser.add_argument("--datasets", type=str, default="openorca,sharegpt")
     parser.add_argument("--num_samples", type=int, default=5000)
     parser.add_argument("--output", type=str, 
-                        default="/pscratch/sd/s/sgkim/Skim-cascade/benchmark/data_real")
+                        default="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/data_real")
     parser.add_argument("--tp", type=int, default=4, help="Tensor parallel size")
     parser.add_argument("--block_size", type=int, default=256)
     parser.add_argument("--shared_prefix", action="store_true", default=True)

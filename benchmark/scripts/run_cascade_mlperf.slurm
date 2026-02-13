@@ -5,8 +5,8 @@
 #SBATCH -N 1
 #SBATCH -t 00:30:00
 #SBATCH -J cascade_mlperf
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/mlperf_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/mlperf_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/mlperf_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/mlperf_%j.err
 
 echo "============================================================"
 echo "🚀 Cascade MLPerf Benchmark on GPU Node"
@@ -22,13 +22,13 @@ module load python
 module load cudatoolkit
 
 # Set paths
-export PYTHONPATH=/pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/src:/pscratch/sd/s/sgkim/Skim-cascade/benchmark:$PYTHONPATH
-export CASCADE_LUSTRE_PATH=/pscratch/sd/s/sgkim/Skim-cascade/benchmark/cascade_store
+export PYTHONPATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/src:/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark:$PYTHONPATH
+export CASCADE_LUSTRE_PATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/cascade_store
 
 # Create directories
 mkdir -p $CASCADE_LUSTRE_PATH
-mkdir -p /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs
-mkdir -p /pscratch/sd/s/sgkim/Skim-cascade/benchmark/results
+mkdir -p /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs
+mkdir -p /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results
 
 # Check GPU
 nvidia-smi --query-gpu=name,memory.total --format=csv
@@ -49,8 +49,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-sys.path.insert(0, "/pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/src")
-sys.path.insert(0, "/pscratch/sd/s/sgkim/Skim-cascade/benchmark")
+sys.path.insert(0, "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/src")
+sys.path.insert(0, "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark")
 
 print("=" * 70)
 print("🚀 Cascade MLPerf Benchmark - GPU Node Full Test")
@@ -110,7 +110,7 @@ config = {
     "use_gpu": GPU_AVAILABLE,
     "gpu_capacity_gb": 32.0,
     "shm_capacity_gb": 64.0,
-    "lustre_path": "/pscratch/sd/s/sgkim/Skim-cascade/benchmark/cascade_store"
+    "lustre_path": "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/cascade_store"
 }
 
 print(f"\n📦 Initializing Cascade adapter (GPU={GPU_AVAILABLE})...")
@@ -285,7 +285,7 @@ print("=" * 70)
 
 # Save results
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-results_path = Path("/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results")
+results_path = Path("/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results")
 results_file = results_path / f"mlperf_cascade_{timestamp}.json"
 
 with open(results_file, 'w') as f:

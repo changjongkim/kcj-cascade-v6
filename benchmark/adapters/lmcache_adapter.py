@@ -22,7 +22,7 @@ class LMCacheAdapter(StorageAdapter):
     def __init__(self, config: Dict[str, Any] = None):
         super().__init__("LMCache", config)
         self.cache = None
-        self.storage_path = config.get("storage_path", "/pscratch/sd/s/sgkim/Skim-cascade/benchmark/lmcache_store")
+        self.storage_path = config.get("storage_path", "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/lmcache_store")
         self.max_size_gb = config.get("max_size_gb", 100.0)
         
         self._fallback_mode = False
@@ -31,7 +31,7 @@ class LMCacheAdapter(StorageAdapter):
     def initialize(self) -> bool:
         try:
             # Try to import LMCache
-            lmcache_path = Path("/pscratch/sd/s/sgkim/Skim-cascade/third_party/LMCache")
+            lmcache_path = Path("/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/LMCache")
             if lmcache_path.exists():
                 sys.path.insert(0, str(lmcache_path))
             

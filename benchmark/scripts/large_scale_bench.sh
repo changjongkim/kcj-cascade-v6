@@ -6,8 +6,8 @@
 #SBATCH -t 00:30:00
 #SBATCH --gpus-per-node=4
 #SBATCH -J large_scale
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/large_scale_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/large_scale_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/large_scale_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/large_scale_%j.err
 
 ###############################################################################
 # LARGE SCALE BENCHMARK
@@ -25,7 +25,7 @@ echo "Nodes: $SLURM_NNODES"
 echo "Date: $(date -Iseconds)"
 echo "=========================================="
 
-cd /pscratch/sd/s/sgkim/Skim-cascade
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 
 ###############################################################################
 # Test 1: Large Data Volume (50GB per node)
@@ -101,7 +101,7 @@ results = {
     'read_time_s': read_time
 }
 
-result_path = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/large_scale_{job_id}_rank{rank}.json"
+result_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/large_scale_{job_id}_rank{rank}.json"
 with open(result_path, 'w') as f:
     json.dump(results, f, indent=2)
 
@@ -124,7 +124,7 @@ import glob
 job_id = os.environ.get('SLURM_JOB_ID', 'unknown')
 nodes = int(os.environ.get('SLURM_NNODES', 1))
 
-pattern = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/large_scale_{job_id}_rank*.json"
+pattern = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/large_scale_{job_id}_rank*.json"
 files = sorted(glob.glob(pattern))
 
 all_results = []
@@ -151,7 +151,7 @@ aggregate = {
     'per_rank': all_results
 }
 
-result_path = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/large_scale_{job_id}_aggregate.json"
+result_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/large_scale_{job_id}_aggregate.json"
 with open(result_path, 'w') as f:
     json.dump(aggregate, f, indent=2)
 

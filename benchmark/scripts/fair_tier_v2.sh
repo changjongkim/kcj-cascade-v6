@@ -5,8 +5,8 @@
 #SBATCH -N 1
 #SBATCH -t 00:30:00
 #SBATCH -J fair_tier
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/fair_tier_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/fair_tier_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/fair_tier_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/fair_tier_%j.err
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
 #SBATCH -c 64
@@ -19,11 +19,11 @@ date
 module load cudatoolkit
 module load pytorch/2.6.0
 
-export PYTHONPATH=/pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/cpp/build_cascade_cpp:$PYTHONPATH
+export PYTHONPATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/cpp/build_cascade_cpp:$PYTHONPATH
 
 nvidia-smi --query-gpu=name,memory.total --format=csv
 
-cd /pscratch/sd/s/sgkim/Skim-cascade
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 
 python3 << 'PYEOF'
 import numpy as np
@@ -280,7 +280,7 @@ output = {
     "hw_reference": HW
 }
 
-path = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/fair_tier_{SLURM_JOB_ID}.json"
+path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/fair_tier_{SLURM_JOB_ID}.json"
 with open(path, 'w') as f:
     json.dump(output, f, indent=2)
 print(f"\nSaved: {path}")

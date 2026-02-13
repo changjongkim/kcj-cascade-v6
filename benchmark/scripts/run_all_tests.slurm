@@ -5,11 +5,11 @@
 #SBATCH -N 2
 #SBATCH -t 00:05:00
 #SBATCH -J cascade_all
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/all_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/all_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/all_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/all_%j.err
 
 module load python cudatoolkit
-export PYTHONPATH=/pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/src:$PYTHONPATH
+export PYTHONPATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/src:$PYTHONPATH
 
 echo "🚀 Cascade All-in-One Test (5min, 2 nodes)"
 echo "Nodes: $SLURM_NODELIST"
@@ -21,7 +21,7 @@ import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
-sys.path.insert(0, "/pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/src")
+sys.path.insert(0, "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/src")
 
 print("=" * 60)
 print("🚀 Cascade Full Benchmark Suite")
@@ -89,7 +89,7 @@ print("=" * 60)
 config = CascadeConfig(
     gpu_capacity_gb=4.0 if HAS_GPU else 0,
     shm_capacity_gb=8.0,
-    lustre_path="/pscratch/sd/s/sgkim/Skim-cascade/benchmark/cascade_store",
+    lustre_path="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/cascade_store",
     dedup_enabled=True,
     prefix_aware=True,
 )
@@ -172,7 +172,7 @@ print(f"   Nodes: {nnodes}, This rank: {rank}")
 node_store = CascadeStore(CascadeConfig(
     gpu_capacity_gb=0,
     shm_capacity_gb=2.0,
-    lustre_path=f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/cascade_store/node_{rank}",
+    lustre_path=f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/cascade_store/node_{rank}",
     dedup_enabled=True,
 ))
 
@@ -216,7 +216,7 @@ print(f"  Multi-node:      {results['multinode_read_gbps']:.2f} GB/s (per node)"
 print("=" * 60)
 
 # Save
-with open(f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/all_tests_{datetime.now():%Y%m%d_%H%M%S}.json", 'w') as f:
+with open(f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/all_tests_{datetime.now():%Y%m%d_%H%M%S}.json", 'w') as f:
     json.dump(results, f, indent=2)
 
 print("✅ All tests complete!")

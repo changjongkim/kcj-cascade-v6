@@ -8,8 +8,8 @@
 #SBATCH --gpus-per-node=4
 #SBATCH -t 00:30:00
 #SBATCH -J 3tier_5sys
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/3tier_5sys_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/3tier_5sys_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/3tier_5sys_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/3tier_5sys_%j.err
 
 ###############################################################################
 # 3-Tier × 5-System Comprehensive Benchmark
@@ -52,10 +52,10 @@ export CUDA_VISIBLE_DEVICES=0,1,2,3
 export JOB_ID=$SLURM_JOB_ID
 
 # Add paths
-export PYTHONPATH=/pscratch/sd/s/sgkim/Skim-cascade/third_party/LMCache:$PYTHONPATH
-export PYTHONPATH=/pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/cpp/build_cascade_cpp:$PYTHONPATH
+export PYTHONPATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/LMCache:$PYTHONPATH
+export PYTHONPATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/cpp/build_cascade_cpp:$PYTHONPATH
 
-cd /pscratch/sd/s/sgkim/Skim-cascade
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 
 python3 << 'PYTHON_END'
 import torch
@@ -128,7 +128,7 @@ print("="*80)
 # --- Cascade GPU ---
 print("\n[1/5] Cascade GPU Backend...")
 try:
-    sys.path.insert(0, "/pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/cpp/build_cascade_cpp")
+    sys.path.insert(0, "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/cpp/build_cascade_cpp")
     import cascade_cpp
     
     # Create GPU data
@@ -172,7 +172,7 @@ print("\n[2/5] LMCache GPU Backend...")
 try:
     # LMCache uses GDS or CPU+GPU transfer
     # For fair comparison, we use local_cpu_backend + GPU transfer
-    sys.path.insert(0, "/pscratch/sd/s/sgkim/Skim-cascade/third_party/LMCache")
+    sys.path.insert(0, "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/LMCache")
     from lmcache.v1.storage_backend.local_cpu_backend import LocalCPUBackend
     
     # Create backend
@@ -408,7 +408,7 @@ print("\n" + "="*80)
 print("TIER 3: Lustre/Disk ($SCRATCH)")
 print("="*80)
 
-LUSTRE_PATH = "/pscratch/sd/s/sgkim/Skim-cascade/benchmark/tmp_lustre"
+LUSTRE_PATH = "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp_lustre"
 os.makedirs(LUSTRE_PATH, exist_ok=True)
 
 # --- Cascade Lustre ---
@@ -634,7 +634,7 @@ output = {
     "results": results
 }
 
-output_path = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/3tier_5sys_{job_id}.json"
+output_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/3tier_5sys_{job_id}.json"
 with open(output_path, "w") as f:
     json.dump(output, f, indent=2, default=str)
 

@@ -6,8 +6,8 @@
 #SBATCH -t 00:30:00
 #SBATCH --gpus-per-node=4
 #SBATCH -J real_5sys
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/real_5sys_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/real_5sys_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/real_5sys_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/real_5sys_%j.err
 
 ###############################################################################
 # REAL 5-SYSTEM BENCHMARK - SC'26
@@ -24,10 +24,10 @@ echo "=========================================="
 
 # Environment setup
 module load python cudatoolkit
-export PYTHONPATH="/pscratch/sd/s/sgkim/Skim-cascade/third_party/LMCache:$PYTHONPATH"
-export LD_LIBRARY_PATH="/pscratch/sd/s/sgkim/Skim-cascade/third_party/pdc/install/lib:$LD_LIBRARY_PATH"
+export PYTHONPATH="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/LMCache:$PYTHONPATH"
+export LD_LIBRARY_PATH="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/pdc/install/lib:$LD_LIBRARY_PATH"
 
-cd /pscratch/sd/s/sgkim/Skim-cascade
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 
 # Test parameters
 NUM_BLOCKS=100
@@ -80,7 +80,7 @@ import numpy as np
 import json
 
 # Add LMCache to path
-sys.path.insert(0, '/pscratch/sd/s/sgkim/Skim-cascade/third_party/LMCache')
+sys.path.insert(0, '/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/LMCache')
 
 try:
     # Try to import real LMCache
@@ -219,8 +219,8 @@ HDF5_BENCH
 echo ""
 echo "=== [4/5] Redis (Real third_party) ==="
 
-REDIS_SERVER="/pscratch/sd/s/sgkim/Skim-cascade/third_party/redis/src/redis-server"
-REDIS_CLI="/pscratch/sd/s/sgkim/Skim-cascade/third_party/redis/src/redis-cli"
+REDIS_SERVER="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/redis/src/redis-server"
+REDIS_CLI="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/redis/src/redis-cli"
 
 if [ -f "$REDIS_SERVER" ]; then
     echo "Starting Redis server..."
@@ -236,7 +236,7 @@ import json
 
 try:
     # Try to import redis-py
-    sys.path.insert(0, '/pscratch/sd/s/sgkim/Skim-cascade/python_pkgs_py312/lib')
+    sys.path.insert(0, '/pscratch/sd/s/sgkim/kcj/Cascade-kcj/python_pkgs_py312/lib')
     import redis
     print("✅ redis-py imported successfully")
     
@@ -306,7 +306,7 @@ fi
 echo ""
 echo "=== [5/5] PDC (Proactive Data Containers) ==="
 
-PDC_SERVER="/pscratch/sd/s/sgkim/Skim-cascade/third_party/pdc/install/bin/pdc_server"
+PDC_SERVER="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/pdc/install/bin/pdc_server"
 if [ -f "$PDC_SERVER" ]; then
     echo "PDC server binary exists"
     echo "Note: PDC requires C API integration for proper benchmarking"
@@ -360,7 +360,7 @@ if os.path.exists(cascade_file):
     }
 
 # Save aggregated results
-result_path = f"/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results/real_5sys_{os.environ.get('SLURM_JOB_ID', 'unknown')}.json"
+result_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/real_5sys_{os.environ.get('SLURM_JOB_ID', 'unknown')}.json"
 with open(result_path, 'w') as f:
     json.dump(results, f, indent=2)
 

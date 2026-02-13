@@ -6,8 +6,8 @@
 #SBATCH -t 00:30:00
 #SBATCH --gpus-per-node=4
 #SBATCH -J scaling_bench
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/scaling_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/scaling_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/scaling_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/scaling_%j.err
 
 ###############################################################################
 # SCALING BENCHMARK
@@ -26,7 +26,7 @@ echo "Nodes: $SLURM_NNODES"
 echo "Date: $(date -Iseconds)"
 echo "=========================================="
 
-cd /pscratch/sd/s/sgkim/Skim-cascade
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 
 ###############################################################################
 # Test 1: Block Size Scaling

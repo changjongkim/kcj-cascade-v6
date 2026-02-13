@@ -5,8 +5,8 @@
 #SBATCH -N 4
 #SBATCH -t 00:30:00
 #SBATCH -J real_5systems
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/real_5sys_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/real_5sys_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/real_5sys_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/real_5sys_%j.err
 
 # ============================================================
 # 실제 5개 시스템 비교 벤치마크
@@ -16,7 +16,7 @@
 set -e
 export MPICH_GPU_SUPPORT_ENABLED=1
 
-cd /pscratch/sd/s/sgkim/Skim-cascade
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 
 echo "================================================"
 echo "Job ID: $SLURM_JOB_ID"
@@ -29,17 +29,17 @@ module load python cudatoolkit
 pip install h5py --user --quiet 2>/dev/null || true
 
 # Redis Python client
-export PYTHONPATH=/pscratch/sd/s/sgkim/Skim-cascade/python_pkgs_py312/lib:$PYTHONPATH
+export PYTHONPATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/python_pkgs_py312/lib:$PYTHONPATH
 
 # PDC 환경
-export PDC_DIR=/pscratch/sd/s/sgkim/Skim-cascade/third_party/pdc/install
+export PDC_DIR=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/pdc/install
 export PATH=$PDC_DIR/bin:$PATH
 export LD_LIBRARY_PATH=$PDC_DIR/lib:$LD_LIBRARY_PATH
 
 # LMCache 환경
-export LMCACHE_PATH=/pscratch/sd/s/sgkim/Skim-cascade/third_party/LMCache
+export LMCACHE_PATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/LMCache
 
-RESULTS_DIR=/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results
+RESULTS_DIR=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results
 mkdir -p $RESULTS_DIR
 
 # 테스트 설정
@@ -150,7 +150,7 @@ class LMCacheStore:
         self.disk_dir.mkdir(exist_ok=True)
         
         try:
-            sys.path.insert(0, os.environ.get('LMCACHE_PATH', '/pscratch/sd/s/sgkim/Skim-cascade/third_party/LMCache'))
+            sys.path.insert(0, os.environ.get('LMCACHE_PATH', '/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/LMCache'))
             # LMCache는 torch 필요하므로 GPU 노드에서만 작동
             from lmcache.v1.storage_backend.local_disk_backend import LocalDiskBackend
             self.backend = LocalDiskBackend(
@@ -366,7 +366,7 @@ def main():
     if rank == 0:
         print("\n[3/5] Redis (third_party)...")
         # Redis 서버 시작 시도
-        redis_server = "/pscratch/sd/s/sgkim/Skim-cascade/third_party/redis/src/redis-server"
+        redis_server = "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/third_party/redis/src/redis-server"
         if os.path.exists(redis_server):
             os.system(f"{redis_server} --port 16379 --daemonize yes 2>/dev/null || true")
             time.sleep(2)

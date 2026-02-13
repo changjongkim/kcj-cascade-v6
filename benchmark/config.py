@@ -29,9 +29,9 @@ class LLaMAConfig:
 class BenchmarkConfig:
     """Benchmark settings"""
     # Paths
-    base_path: Path = Path("/pscratch/sd/s/sgkim/Skim-cascade")
-    data_path: Path = Path("/pscratch/sd/s/sgkim/Skim-cascade/benchmark/data")
-    results_path: Path = Path("/pscratch/sd/s/sgkim/Skim-cascade/benchmark/results")
+    base_path: Path = Path("/pscratch/sd/s/sgkim/kcj/Cascade-kcj")
+    data_path: Path = Path("/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/data")
+    results_path: Path = Path("/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results")
     
     # Data generation
     total_data_size_gb: float = 500.0

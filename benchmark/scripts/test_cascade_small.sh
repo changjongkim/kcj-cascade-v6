@@ -5,14 +5,14 @@
 #SBATCH -N 1
 #SBATCH -t 00:10:00
 #SBATCH -J test_small
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/test_small_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/test_small_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/test_small_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/test_small_%j.err
 #SBATCH --gpus-per-node=4
 
 export PATH=/global/common/software/nersc9/pytorch/2.6.0/bin:$PATH
 module load cudatoolkit gcc/11.2.0
 
-cd /pscratch/sd/s/sgkim/Skim-cascade/cascade_Code/cpp/build_cascade_cpp
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/cpp/build_cascade_cpp
 export PYTHONPATH=$(pwd):$PYTHONPATH
 
 echo "Testing with small SHM size..."

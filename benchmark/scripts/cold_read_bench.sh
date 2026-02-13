@@ -6,8 +6,8 @@
 #SBATCH -N 4
 #SBATCH --ntasks-per-node=4
 #SBATCH --gpus-per-node=4
-#SBATCH -o /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/cold_read_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/Skim-cascade/benchmark/logs/cold_read_%j.err
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/cold_read_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/cold_read_%j.err
 #SBATCH -J cold_read_bench
 
 ###############################################################################
@@ -61,7 +61,7 @@ RANK = int(os.environ.get('SLURM_PROCID', 0))
 NPROCS = int(os.environ.get('SLURM_NTASKS', 1))
 JOB_ID = os.environ.get('SLURM_JOB_ID', 'local')
 SCRATCH = os.environ.get('SCRATCH', '/tmp')
-PROJECT_DIR = os.environ.get('PROJECT_DIR', '/pscratch/sd/s/sgkim/Skim-cascade')
+PROJECT_DIR = os.environ.get('PROJECT_DIR', '/pscratch/sd/s/sgkim/kcj/Cascade-kcj')
 
 BLOCK_SIZE = 10 * 1024 * 1024  # 10MB
 NUM_BLOCKS = 50  # 500MB per rank
