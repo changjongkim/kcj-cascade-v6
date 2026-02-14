@@ -137,3 +137,5 @@ benchmark/data/
 cascade_Code/cpp/build_mpi/
 *.log
 benchmark/data_external/
+mpi_test_bin
+

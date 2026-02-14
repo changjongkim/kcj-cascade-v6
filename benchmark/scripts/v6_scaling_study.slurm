@@ -2,7 +2,7 @@
 #SBATCH --job-name=v6_scaling_study
 #SBATCH --account=m1248_g
 #SBATCH --constraint=gpu
-#SBATCH --qos=regular
+#SBATCH --qos=debug
 #SBATCH --nodes=8
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
@@ -11,37 +11,36 @@
 #SBATCH --output=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/v6_scaling_%j.out
 #SBATCH --error=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/v6_scaling_%j.err
 
-# ============================================================================
-#  Cascade V6 Scaling Study: 1, 2, 4, 8 Nodes
-# ============================================================================
-
-module load PrgEnv-gnu 2>/dev/null
-module load gcc-native/13.2 2>/dev/null
-module load cudatoolkit/12.4 2>/dev/null
-module load cray-python 2>/dev/null
-module load cray-mpich 2>/dev/null
-
-export MPICH_GPU_SUPPORT_ENABLED=1
+# Set Project Directory
 export PROJECT_DIR="/pscratch/sd/s/sgkim/kcj/Cascade-kcj"
-export PYTHONPATH="${PROJECT_DIR}/cascade_Code/cpp/build_mpi:${PYTHONPATH}"
+
+# Source environment (handles modules, compiler wrappers, and LD_PRELOAD)
+source ${PROJECT_DIR}/setup_env.sh
+
+# Ensure PYTHONPATH includes the build directory where cascade_cpp.so resides
+export PYTHONPATH="${PROJECT_DIR}/cascade_Code/cpp/build_cascade_cpp:${PYTHONPATH}"
 
 BENCH_SCRIPT="${PROJECT_DIR}/benchmark/scripts/v6_distributed_bench.py"
 
-echo "Nodes | Agg Write (GB/s) | Agg Read (GB/s)"
-echo "------------------------------------------"
+printf "| Nodes | Agg Write (GB/s) | Agg Read (GB/s) |\n"
+printf "|-------|-----------------|-----------------|\n"
 
 for N in 1 2 4 8
 do
-    echo "Running benchmark on $N nodes..."
-    # We use -n $N to have 1 task per node, each task managing its local GPUs
-    srun -N $N -n $N --gpus-per-node=4 python $BENCH_SCRIPT > ${PROJECT_DIR}/benchmark/logs/v6_scale_N${N}_${SLURM_JOB_ID}.log 2>&1
+    # Run benchmark with environment sourced on each node
+    srun -N $N -n $N --gpus-per-node=4 \
+        bash -c "source ${PROJECT_DIR}/setup_env.sh && python $BENCH_SCRIPT" > ${PROJECT_DIR}/benchmark/logs/v6_scale_N${N}_${SLURM_JOB_ID}.log 2>&1
     
-    # Extract aggregate throughput from Test 4
+    # Extract results
     W=$(grep "Write:" ${PROJECT_DIR}/benchmark/logs/v6_scale_N${N}_${SLURM_JOB_ID}.log | tail -1 | awk '{print $2}')
     R=$(grep "Read:" ${PROJECT_DIR}/benchmark/logs/v6_scale_N${N}_${SLURM_JOB_ID}.log | tail -1 | awk '{print $2}')
     
-    echo "  $N   |     $W         |      $R"
+    # Handle empty results (if grep fails)
+    W=${W:-0.00}
+    R=${R:-0.00}
+    
+    printf "|  %d    |      %.2f       |      %.2f       |\n" "$N" "$W" "$R"
 done
 
-echo "------------------------------------------"
+printf "|-------|-----------------|-----------------|\n"
 echo "Scaling study complete."

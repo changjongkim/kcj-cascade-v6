@@ -23,11 +23,16 @@ echo "[DEBUG] Environment Loaded."
 
 export MPICH_GPU_SUPPORT_ENABLED=1
 export PROJECT_DIR="/pscratch/sd/s/sgkim/kcj/Cascade-kcj"
-export CASCADE_BUILD_DIR="${PROJECT_DIR}/cascade_Code/cpp/build_clean"
+export CASCADE_BUILD_DIR="${PROJECT_DIR}/cascade_Code/cpp/build_clean_fix"
 # Point to the clean build directory
-export PYTHONPATH="${PROJECT_DIR}/cascade_Code/cpp/build_clean:${PYTHONPATH}"
+export PYTHONPATH="${CASCADE_BUILD_DIR}:${PYTHONPATH}"
 
 BENCH_SCRIPT="${PROJECT_DIR}/benchmark/scripts/v6_distributed_bench.py"
+
+export FI_PROVIDER=cxi
+export FI_LOG_LEVEL=info
+# Preload system libfabric to ensure Slingshot compatibility
+export LD_PRELOAD=/opt/cray/libfabric/1.22.0/lib64/libfabric.so.1
 
 echo "Nodes | Agg Write (GB/s) | Agg Read (GB/s)"
 echo "------------------------------------------"

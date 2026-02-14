@@ -7,12 +7,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
+# Set RPATH to prioritize Cray system libraries over Conda/others
+set(CMAKE_INSTALL_RPATH "/opt/cray/pe/lib64:/opt/cray/libfabric/1.22.0/lib64:/opt/cray/pe/gcc/12.2.0/snos/lib64")
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
 # Find OpenMP
 find_package(OpenMP REQUIRED)
 
 # Optimization flags with OpenMP
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG ${OpenMP_CXX_FLAGS}")
-set(CMAKE_CUDA_FLAGS_RELEASE "-O3 -DNDEBUG -Xcompiler=${OpenMP_CXX_FLAGS}")
+set(CMAKE_CUDA_FLAGS_RELEASE "-O3 -DNDEBUG -Xcompiler=${OpenMP_CXX_FLAGS} -allow-unsupported-compiler")
 
 # Find required packages
 find_package(CUDAToolkit REQUIRED)

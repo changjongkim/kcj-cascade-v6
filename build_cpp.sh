@@ -11,14 +11,15 @@ mkdir -p $BUILD_DIR
 cd $BUILD_DIR
 
 echo "Configuring with CMake..."
-# Explicitly use the GCC 11.2 compilers and fix LD_LIBRARY_PATH for cmake
-LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH cmake .. \
+# Use Cray compiler wrappers (cc, CC) which handle MPI and Cray libraries automatically
+cmake .. \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_PYTHON=ON \
     -DUSE_MPI=ON \
-    -DCMAKE_C_COMPILER=$(which gcc) \
-    -DCMAKE_CXX_COMPILER=$(which g++) \
+    -DCMAKE_C_COMPILER=cc \
+    -DCMAKE_CXX_COMPILER=CC \
     -DCMAKE_CUDA_ARCHITECTURES=80 \
+    -DCMAKE_CUDA_FLAGS="-allow-unsupported-compiler" \
     -DPERLMUTTER=ON
 
 echo "Building..."
