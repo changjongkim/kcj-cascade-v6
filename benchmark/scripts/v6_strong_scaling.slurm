@@ -4,29 +4,22 @@
 #SBATCH -q debug
 #SBATCH -t 00:30:00
 #SBATCH -J v6_strong
-#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/v6_strong_scaling_%j.out
-#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/v6_strong_scaling_%j.out
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/strong_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/strong_%j.err
 #SBATCH --nodes=8
 #SBATCH --ntasks-per-node=4
 #SBATCH --gpus-per-node=4
 
 set -e
-export MPICH_GPU_SUPPORT_ENABLED=1
 
 cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 mkdir -p benchmark/logs benchmark/tmp
 
-# Load env
-source cascade_Code/cpp/build_mpi/load_env.sh 2>/dev/null || {
-    module reset 2>/dev/null || true
-    module load gcc-native/12.3
-    module load cudatoolkit/12.4
-    module load cray-mpich/8.1.30
-    export CRAY_ACCEL_TARGET=nvidia80
-    export MPICH_GPU_SUPPORT_ENABLED=1
-}
+# Load environment using the robust script
+source setup_env.sh
 
-export CASCADE_BUILD_DIR=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/cpp/build_mpi
+# Explicitly set build dir to ensure python script picks up the right path
+export CASCADE_BUILD_DIR=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/cpp/build_cascade_cpp
 BENCH_SCRIPT=benchmark/scripts/v6_strong_scaling_bench.py
 LOG_DIR=benchmark/logs
 

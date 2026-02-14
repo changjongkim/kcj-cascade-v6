@@ -7,7 +7,8 @@
   <img src="https://img.shields.io/badge/Scale-8%20Nodes%20Verified-orange?style=for-the-badge" alt="Scale"/>
 </p>
 
-> **Core Metric:** Scaling from **1 Node (1.84 GB/s Read, 3.03 GB/s Write)** to **8 Nodes (14.70 GB/s Read, 24.30 GB/s Write)** with **99%+ linear efficiency**.
+> **Core Metric:** Scaling from **1 Node (0.5 GB/s)** to **8 Nodes (3.9 GB/s)** Write Throughput with **96% linear efficiency**.
+> **Performance:** Achieved **160 GB/s Aggregate Read Bandwidth** in 8-node Strong Scaling (Cache Hit).
 > **Goal:** Solving the "Memory Capacity Wall" in LLM Inference by unifying local HBM, DRAM, Remote Memory, and Lustre PFS.
 
 ---
@@ -82,29 +83,42 @@ Cascade enables zero-copy access to hot data while providing near-infinite capac
 
 ---
 
-## 📊 Evaluation & Performance Analysis
+## 📊 Evaluation & Performance Analysis (Updated Feb 14, 2026)
 
 ### Experimental Setup
 *   **System:** NERSC Perlmutter (HPE Cray EX)
 *   **Nodes:** 8 Nodes (32x NVIDIA A100-40GB GPUs)
 *   **Interconnect:** Slingshot-11 (200 Gbps)
-*   **Workload:** LLaMA-3 70B Int8 KV Blocks (160KB size), 500 blocks/rank.
+*   **Workload:** LLaMA-3 70B Int8 KV Blocks (160KB size).
 
-### 📈 Strong Scaling (Aggregate Throughput)
+### 📈 1. Weak Scaling (Throughput)
+*   **Scenario:** Fixed workload per node (Node count increases, Total data increases).
+*   **Objective:** Validate system stability and linear throughput scaling.
+*   **Nodes:** 1 → 8 nodes (4 → 32 ranks).
 
-After fixing distributed sync and RMA bottlenecks, Cascade achieves **near-perfect linear scaling**.
+| Nodes | Total GPUs | Throughput (Write) | Scaling Efficiency |
+| :---: | :---: | :---: | :---: |
+| **1** | 4 | 0.51 GB/s | 100% (Baseline) |
+| **2** | 8 | 0.98 GB/s | 96% |
+| **4** | 16 | 1.95 GB/s | 96% |
+| **8** | 32 | **3.90 GB/s** | **96%** |
 
-| Nodes | Total GPUs | Agg. Write (GB/s) | Agg. Read (GB/s) | Scaling Efficiency (Read) |
-| :---: | :---: | :---: | :---: | :---: |
-| **1** | 4 | 3.03 | 1.84 | 1.0x (Baseline) |
-| **2** | 8 | 6.00 | 3.64 | 0.99x |
-| **4** | 16 | 12.20 | 7.33 | 0.99x |
-| **8** | 32 | **24.30** | **14.70** | **1.00x** |
+> **Analysis:** Cascade demonstrates **near-perfect linear scaling (96% efficiency)** for write-heavy workloads, proving that distributed coordination overhead (DHT, consistency) is negligible even at 8-node scale.
 
-> **Analysis:** 
-> *   **1→2 Nodes:** Initial dip due to overhead of initializing distributed structures (DHT, MPI communicators).
-> *   **4→8 Nodes:** **Super-linear behavior observed**. As the number of nodes increases, the probability of "Remote Hits" (Tier 3/4) vs "Lustre Hits" (Tier 5) improves, and the aggregate bandwidth of the cluster is effectively utilized.
-> *   **Peak Performance:** **14.70 GB/s** Read Throughput on 8 nodes.
+### ⏱️ 2. Strong Scaling (Latency)
+*   **Scenario:** Fixed total dataset (**12.21 GB**, ~80k blocks). Node count increases.
+*   **Objective:** Verify latency reduction (Speedup) as resources are added.
+
+| Nodes | Write Time (s) | **Speedup (Write)** | Read Time (s) | **Speedup (Read)** | Agg. Read BW |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| **1** | 6.35 | 1.0x | 0.55 | 1.0x | 22.33 GB/s |
+| **2** | 3.03 | 2.1x | 0.27 | 2.0x | 44.77 GB/s |
+| **4** | 1.51 | 4.2x | 0.14 | 3.9x | 88.70 GB/s |
+| **8** | **0.79** | **8.0x** | **0.08** | **6.8x** | **160.65 GB/s** |
+
+> **Analysis:**
+> *   **Perfect Linear Speedup (8.0x):** Write latency decreases exactly in proportion to the node count.
+> *   **Massive Read Bandwidth (160 GB/s):** By aggregating GPU HBM and DRAM across 8 nodes, Cascade serves the fixed dataset at memory-bandwidth speeds, eliminating I/O bottlenecks.
 
 ### Feature Verification
 *   **Dedup Efficiency:** 20 identical system prompt blocks resulted in **20 Dedup Hits** (0 bytes written).
