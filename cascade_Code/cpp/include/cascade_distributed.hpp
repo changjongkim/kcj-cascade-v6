@@ -233,6 +233,7 @@ public:
     size_t capacity() const { return capacity_; }
     size_t count() const { return index_.size(); }
     void barrier();
+    size_t get_offset(const BlockId& id) const;
     
     DistributedIndex<DRAMBlock> index_;
     
@@ -241,6 +242,17 @@ private:
     void* dram_base_ = nullptr;
     std::atomic<size_t> write_offset_{0};
     std::atomic<size_t> used_{0};
+    
+    // Free-list for memory reuse (same pattern as GPUMemoryPool & ShmBackend)
+    struct FreeBlock {
+        size_t offset;
+        size_t size;
+    };
+    std::list<FreeBlock> free_list_;
+    mutable std::mutex free_list_mutex_;
+    
+    size_t allocate(size_t size);
+    void deallocate(size_t offset, size_t size);
     
     // LRU tracking for eviction
     mutable std::mutex lru_mutex_;

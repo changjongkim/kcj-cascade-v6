@@ -80,13 +80,86 @@ DistributedDRAMBackend::~DistributedDRAMBackend() {
   }
 }
 
+// ============================================================================
+// Free-list allocator (best-fit + coalescing) — same pattern as GPUMemoryPool
+// ============================================================================
+
+size_t DistributedDRAMBackend::allocate(size_t size) {
+  size_t aligned = (size + 63) & ~63ULL;  // 64-byte alignment
+
+  // 1. Try free-list (best-fit)
+  {
+    std::lock_guard<std::mutex> lock(free_list_mutex_);
+    auto best = free_list_.end();
+    size_t best_waste = SIZE_MAX;
+
+    for (auto it = free_list_.begin(); it != free_list_.end(); ++it) {
+      if (it->size >= aligned) {
+        size_t waste = it->size - aligned;
+        if (waste < best_waste) {
+          best = it;
+          best_waste = waste;
+          if (waste == 0) break;  // Perfect fit
+        }
+      }
+    }
+
+    if (best != free_list_.end()) {
+      size_t offset = best->offset;
+      if (best->size == aligned) {
+        free_list_.erase(best);
+      } else {
+        best->offset += aligned;
+        best->size -= aligned;
+      }
+      return offset;
+    }
+  }
+
+  // 2. Bump allocator fallback
+  size_t offset = write_offset_.fetch_add(aligned);
+  if (offset + aligned > capacity_) {
+    write_offset_.fetch_sub(aligned);
+    return SIZE_MAX;  // Allocation failed
+  }
+  return offset;
+}
+
+void DistributedDRAMBackend::deallocate(size_t offset, size_t size) {
+  size_t aligned = (size + 63) & ~63ULL;
+
+  std::lock_guard<std::mutex> lock(free_list_mutex_);
+
+  // Insert in sorted order by offset
+  auto it = free_list_.begin();
+  while (it != free_list_.end() && it->offset < offset) {
+    ++it;
+  }
+  auto inserted = free_list_.insert(it, {offset, aligned});
+
+  // Coalesce with next block
+  auto next = std::next(inserted);
+  if (next != free_list_.end() &&
+      inserted->offset + inserted->size == next->offset) {
+    inserted->size += next->size;
+    free_list_.erase(next);
+  }
+
+  // Coalesce with previous block
+  if (inserted != free_list_.begin()) {
+    auto prev = std::prev(inserted);
+    if (prev->offset + prev->size == inserted->offset) {
+      prev->size += inserted->size;
+      free_list_.erase(inserted);
+    }
+  }
+}
+
 bool DistributedDRAMBackend::put_local(const BlockId &id, const uint8_t *data,
                                        size_t size, bool is_prefix) {
-  size_t offset = write_offset_.fetch_add(size);
-  if (offset + size > capacity_) {
-    // Out of space; caller should evict first
-    write_offset_.fetch_sub(size);
-    return false;
+  size_t offset = allocate(size);
+  if (offset == SIZE_MAX) {
+    return false;  // Out of space; caller should evict first
   }
 
   memcpy(static_cast<uint8_t *>(dram_base_) + offset, data, size);
@@ -148,6 +221,7 @@ bool DistributedDRAMBackend::remove_local(const BlockId &id) {
   auto block = index_.get(id);
   if (!block) return false;
   
+  deallocate(block->offset, block->size);
   used_.fetch_sub(block->size);
   index_.remove(id);
   
@@ -172,7 +246,7 @@ DistributedDRAMBackend::evict_for_space(size_t needed, bool protect_prefix) {
   // Iterate from LRU tail (least recently used)
   auto it = lru_list_.rbegin();
   while (it != lru_list_.rend() && freed < needed) {
-    const BlockId &id = *it;
+    BlockId id = *it; // Copy to avoid dangling reference after erase
     auto block = index_.get(id);
     if (!block) {
       ++it;
@@ -193,7 +267,8 @@ DistributedDRAMBackend::evict_for_space(size_t needed, bool protect_prefix) {
     evicted.push_back({id, std::move(data)});
     freed += block->size;
 
-    // Clean up
+    // Clean up: return memory to free-list, then remove from index
+    deallocate(block->offset, block->size);
     used_.fetch_sub(block->size);
     index_.remove(id);
     
@@ -211,6 +286,13 @@ void DistributedDRAMBackend::barrier() {
 #ifdef USE_MPI
   MPI_Barrier(comm_);
 #endif
+}
+
+size_t DistributedDRAMBackend::get_offset(const BlockId &id) const {
+  auto block = index_.get(id);
+  if (!block)
+    return 0;
+  return block->offset;
 }
 
 // ============================================================================
@@ -269,8 +351,9 @@ DistributedGPUBackend::~DistributedGPUBackend() {
   }
 #endif
   for (int i = 0; i < 32; i++) {
-    if (pinned_[i])
+    if (pinned_[i]) {
       cudaFreeHost(pinned_[i]);
+    }
   }
 }
 
@@ -308,69 +391,19 @@ void DistributedGPUBackend::init_window() {
 }
 
 int DistributedGPUBackend::get_target_node(const BlockId &id) const {
-  if (id.size() < 2)
-    return 0;
-  uint16_t h = (static_cast<uint16_t>(static_cast<uint8_t>(id[0])) << 8) |
-               static_cast<uint8_t>(id[1]);
-  return h % world_size_;
+  return std::hash<std::string>{}(id) % world_size_;
 }
 
 int DistributedGPUBackend::get_target_gpu(const BlockId &id) const {
-  if (id.size() < 4)
-    return 0;
-  uint16_t h = (static_cast<uint16_t>(static_cast<uint8_t>(id[2])) << 8) |
-               static_cast<uint8_t>(id[3]);
-  return h % num_gpus_;
+  return (std::hash<std::string>{}(id) / world_size_) % num_gpus_;
 }
 
 bool DistributedGPUBackend::put(const BlockId &id, const uint8_t *data,
                                 size_t size, bool is_prefix) {
-  int target_node = get_target_node(id);
+  // Novelty 3: Prioritize locality. Always store on the rank that produces the data.
+  // We use the hashing only to pick the GPU within the node.
   int target_gpu = get_target_gpu(id);
-
-  if (target_node == rank_) {
-    return put_local(id, data, size, target_gpu, is_prefix);
-  } else {
-
-#ifdef USE_MPI
-    // === FIX Issue #1: Remote put via staging buffer (RMA) ===
-    // Note: Reverted from MPI_Send to MPI_Put to avoid deadlock in synchronous 
-    // benchmarks. We chunk the data to fit staging_size_.
-    // WARNING: Without a remote consumer, large blocks > staging_size_
-    // will overwrite the staging buffer. Real implementation needs a Ring Buffer.
-    
-    MPI_Win_lock(MPI_LOCK_EXCLUSIVE, target_node, 0, window_);
-    
-    size_t remaining = size;
-    const uint8_t* src_ptr = data;
-    
-    while (remaining > 0) {
-        size_t chunk = std::min(remaining, staging_size_);
-        memcpy(pinned_[0], src_ptr, chunk);
-        MPI_Put(pinned_[0], chunk, MPI_BYTE, target_node, 0, chunk, MPI_BYTE, window_);
-        
-        remaining -= chunk;
-        src_ptr += chunk;
-    }
-    
-    MPI_Win_unlock(target_node, window_);
-    
-    // Update global index
-    BlockLocation loc;
-    loc.node_id = target_node;
-    loc.gpu_id = target_gpu;
-    loc.offset = 0;  // Offset managed by remote GPU pool (Requires sync)
-    loc.size = size;
-    loc.timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
-    loc.is_gpu = true;
-    loc.is_prefix = is_prefix;
-    global_index_.put(id, loc, size);
-
-    return true;
-#else
-    return false;
-#endif
-  }
+  return put_local(id, data, size, target_gpu, is_prefix);
 }
 
 bool DistributedGPUBackend::put_local(const BlockId &id, const uint8_t *data,
@@ -385,7 +418,7 @@ bool DistributedGPUBackend::put_local(const BlockId &id, const uint8_t *data,
     BlockLocation loc;
     loc.node_id = rank_;
     loc.gpu_id = gpu;
-    loc.offset = 0;
+    loc.offset = gpus_[gpu]->get_offset(id); // Use real offset for remote access
     loc.size = size;
     loc.timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
     loc.is_gpu = true;
@@ -612,12 +645,6 @@ bool DistributedStore::put(const BlockId &id, const uint8_t *data,
       std::unique_lock lock(prefix_mutex_);
       prefix_registry_.insert(id);
     }
-    
-    // ─── FIX Issue #4: Auto-sync metadata every SYNC_INTERVAL puts ───
-    size_t count = ++put_counter_;
-    if (count % SYNC_INTERVAL == 0) {
-      sync_metadata();
-    }
   }
 
   return stored;
@@ -640,7 +667,7 @@ bool DistributedStore::get(const BlockId &id, uint8_t *out, size_t *out_size) {
     local_dram_hits_++;
     record_access(id, TierType::LOCAL_DRAM);
 
-    // Decompress if needed
+    // Decompress if needed for user
     if (cfg_.kv_compression && *out_size >= sizeof(CompressionMeta)) {
       CompressionMeta meta;
       memcpy(&meta, out, sizeof(CompressionMeta));
@@ -650,34 +677,19 @@ bool DistributedStore::get(const BlockId &id, uint8_t *out, size_t *out_size) {
       *out_size = orig_size;
     }
 
-    // Novelty 3: Promote to local GPU if hot
+    // Promotion
     if (cfg_.locality_aware && should_promote_local(id)) {
       promote_to_local_gpu(id, out, *out_size);
     }
-
     return true;
   }
 
-  // ─── Tier 3: Remote GPU ───
+  // Tier 3: Remote GPU — Temporarily disabled for window stability
+  /*
   if (gpu_) {
-    auto loc = gpu_->locate(id);
-    if (loc && !loc->is_local(rank_) && loc->is_gpu) {
-      if (gpu_->get_remote(loc->node_id, loc->offset, loc->size, out)) {
-        remote_gpu_hits_++;
-        *out_size = loc->size;
-        record_access(id, TierType::REMOTE_GPU);
-
-        // Promote to local DRAM (or GPU if very hot)
-        if (cfg_.locality_aware && should_promote_local(id)) {
-          promote_to_local_gpu(id, out, *out_size);
-        } else if (dram_) {
-          dram_->put_local(id, out, *out_size, is_prefix(id));
-        }
-
-        return true;
-      }
-    }
+     ...
   }
+  */
 
   // ─── Tier 4: Remote DRAM ───
   if (dram_ && gpu_) {
@@ -688,11 +700,25 @@ bool DistributedStore::get(const BlockId &id, uint8_t *out, size_t *out_size) {
         *out_size = loc->size;
         record_access(id, TierType::REMOTE_DRAM);
 
-        // Promote to local DRAM on remote hit
+        // 1. Promote to local DRAM (Still COMPRESSED)
+        if (dram_) {
+          dram_->put_local(id, out, *out_size, is_prefix(id));
+        }
+
+        // 2. Decompress for user
+        if (cfg_.kv_compression && *out_size >= sizeof(CompressionMeta)) {
+          CompressionMeta meta;
+          memcpy(&meta, out, sizeof(CompressionMeta));
+          size_t orig_size = KVCompressor::original_size(*out_size);
+          std::vector<uint8_t> tmp(out, out + *out_size);
+          KVCompressor::decompress(tmp.data(), *out_size, meta, out, orig_size);
+          *out_size = orig_size;
+        }
+
+        // 3. Promote to local GPU (Hot data, uncompressed)
         if (cfg_.locality_aware && should_promote_local(id)) {
           promote_to_local_gpu(id, out, *out_size);
         }
-
         return true;
       }
     }
@@ -703,7 +729,12 @@ bool DistributedStore::get(const BlockId &id, uint8_t *out, size_t *out_size) {
     lustre_hits_++;
     record_access(id, TierType::LUSTRE);
 
-    // Decompress if needed
+    // 1. Promote to DRAM (Still COMPRESSED)
+    if (dram_) {
+      dram_->put_local(id, out, *out_size, is_prefix(id));
+    }
+
+    // 2. Decompress for user
     if (cfg_.kv_compression && *out_size >= sizeof(CompressionMeta)) {
       CompressionMeta meta;
       memcpy(&meta, out, sizeof(CompressionMeta));
@@ -712,12 +743,6 @@ bool DistributedStore::get(const BlockId &id, uint8_t *out, size_t *out_size) {
       KVCompressor::decompress(tmp.data(), *out_size, meta, out, orig_size);
       *out_size = orig_size;
     }
-
-    // Promote to DRAM
-    if (dram_) {
-      dram_->put_local(id, out, *out_size, is_prefix(id));
-    }
-
     return true;
   }
 
@@ -771,16 +796,11 @@ size_t DistributedStore::get_batch(const std::vector<BlockId> &ids,
 // ============================================================================
 
 bool DistributedStore::evict_gpu_to_dram(size_t needed_bytes) {
-  // === FIX Issue #2: Actually evict GPU blocks to DRAM ===
-  // GPU eviction: move LRU blocks from GPU to DRAM
-  // Novelty 1: Prefix blocks are protected (semantic eviction)
   if (!gpu_ || !dram_) return false;
 
   bool any_evicted = false;
 
-  // Iterate over all local GPUs and try to evict
   for (int g = 0; g < gpu_->num_gpus(); g++) {
-    // Use semantic eviction: skip prefix blocks
     std::function<bool(const BlockId &)> is_pf_fn = nullptr;
     if (cfg_.semantic_eviction) {
       is_pf_fn = [this](const BlockId &bid) -> bool {
@@ -791,25 +811,49 @@ bool DistributedStore::evict_gpu_to_dram(size_t needed_bytes) {
     auto evicted_blocks = gpu_->evict_gpu_for_space(g, needed_bytes, is_pf_fn);
 
     for (auto &evicted : evicted_blocks) {
-      // Demote evicted block to DRAM (Tier 2)
-      bool dram_ok = dram_->put_local(evicted.id, evicted.data.data(),
-                                       evicted.size, is_prefix(evicted.id));
+      // GPU stores uncompressed data. DRAM stores compressed data.
+      // We MUST compress before demoting to DRAM to maintain the invariant.
+      const uint8_t *dram_data = evicted.data.data();
+      size_t dram_size = evicted.size;
+      std::vector<uint8_t> compressed_buf;
+
+      if (cfg_.kv_compression && evicted.size >= 64) {
+        CompressionMeta meta;
+        compressed_buf = KVCompressor::compress(evicted.data.data(), evicted.size, meta);
+        dram_data = compressed_buf.data();
+        dram_size = compressed_buf.size();
+      }
+
+      // Try to demote to DRAM
+      bool dram_ok = dram_->put_local(evicted.id, dram_data,
+                                       dram_size, is_prefix(evicted.id));
       if (!dram_ok) {
-        // DRAM also full → cascade to Lustre
-        if (evict_dram_to_lustre(evicted.size)) {
-          dram_ok = dram_->put_local(evicted.id, evicted.data.data(),
-                                      evicted.size, is_prefix(evicted.id));
-        }
-        if (!dram_ok) {
-          // Last resort: Lustre
-          lustre_put(evicted.id, evicted.data.data(), evicted.size);
-        }
+        // DRAM full → cascade: evict DRAM to Lustre first, then retry
+        evict_dram_to_lustre(dram_size);
+        dram_ok = dram_->put_local(evicted.id, dram_data,
+                                    dram_size, is_prefix(evicted.id));
+      }
+      if (!dram_ok) {
+        // Still can't fit in DRAM — send directly to Lustre
+        lustre_put(evicted.id, dram_data, dram_size);
+      }
+
+      if (dram_ok) {
+        BlockLocation loc;
+        loc.node_id = rank_;
+        loc.gpu_id = -1;  // DRAM
+        loc.offset = dram_->get_offset(evicted.id);
+        loc.size = dram_size;  // Store COMPRESSED size in index
+        loc.timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
+        loc.is_gpu = false;
+        loc.is_prefix = is_prefix(evicted.id);
+        gpu_->global_index_.put(evicted.id, loc);
       }
       gpu_evictions_++;
       any_evicted = true;
     }
 
-    if (any_evicted) break;  // Freed enough from one GPU
+    if (any_evicted) break;
   }
 
   return any_evicted;
@@ -819,6 +863,7 @@ bool DistributedStore::evict_dram_to_lustre(size_t needed_bytes) {
   if (!dram_) return false;
 
   auto evicted = dram_->evict_for_space(needed_bytes, cfg_.semantic_eviction);
+  // DRAM→Lustre eviction logging (only on rank 0, throttled)
 
   for (auto &[id, data] : evicted) {
     // Demote to Lustre (Tier 5)
@@ -1013,11 +1058,15 @@ void DistributedStore::sync_metadata() {
   MPI_Allgatherv(send_buf.data(), send_size, MPI_CHAR, recv_buf.data(), recv_sizes.data(), displs.data(), MPI_CHAR, comm_);
 
   const char* ptr = recv_buf.data();
+  const char* buf_end = recv_buf.data() + total;
   for(int r=0; r<world_size_; r++) {
     if(r==rank_) { ptr += recv_sizes[r]; continue; }
+    if(ptr + sizeof(uint32_t) > buf_end) break;
     uint32_t cnt; memcpy(&cnt, ptr, sizeof(cnt)); ptr+=sizeof(cnt);
     for(uint32_t i=0; i<cnt; i++) {
+      if(ptr + sizeof(uint32_t) > buf_end) break;
       uint32_t klen; memcpy(&klen, ptr, sizeof(klen)); ptr+=sizeof(klen);
+      if(ptr + klen + sizeof(BlockLocation) > buf_end) break;
       BlockId id(ptr, ptr+klen); ptr+=klen;
       BlockLocation loc; memcpy(&loc, ptr, sizeof(loc)); ptr+=sizeof(loc);
       gpu_->global_index_.put(id, loc);
@@ -1054,10 +1103,18 @@ DistributedStore::Stats DistributedStore::get_stats() {
   }
 
 #ifdef USE_MPI
-  MPI_Allreduce(&s.local_gpu_used, &s.cluster_gpu_used, 1, MPI_UNSIGNED_LONG,
+  unsigned long long local_gpu = s.local_gpu_used;
+  unsigned long long local_dram = s.local_dram_used;
+  unsigned long long cluster_gpu = 0;
+  unsigned long long cluster_dram = 0;
+
+  MPI_Allreduce(&local_gpu, &cluster_gpu, 1, MPI_UNSIGNED_LONG_LONG,
                 MPI_SUM, comm_);
-  MPI_Allreduce(&s.local_dram_used, &s.cluster_dram_used, 1, MPI_UNSIGNED_LONG,
+  MPI_Allreduce(&local_dram, &cluster_dram, 1, MPI_UNSIGNED_LONG_LONG,
                 MPI_SUM, comm_);
+  
+  s.cluster_gpu_used = static_cast<size_t>(cluster_gpu);
+  s.cluster_dram_used = static_cast<size_t>(cluster_dram);
 #else
   s.cluster_gpu_used = s.local_gpu_used;
   s.cluster_dram_used = s.local_dram_used;

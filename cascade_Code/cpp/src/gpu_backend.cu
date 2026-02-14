@@ -173,6 +173,7 @@ public:
     // Approximate — no lock for stats query
     return free_list_.size();
   }
+  void *get_base_ptr() const { return pool_base_; }
 
 private:
   struct FreeBlock {
@@ -558,6 +559,22 @@ void GPUBackend::sync_all() {
       cudaStreamSynchronize(static_cast<cudaStream_t>(cuda_streams_[i]));
     }
   }
+}
+
+uint8_t *GPUBackend::get_base_ptr() const {
+  if (memory_pool_)
+    return static_cast<uint8_t *>(memory_pool_->get_base_ptr());
+  return nullptr;
+}
+
+size_t GPUBackend::get_offset(const BlockId &id) const {
+  auto block_opt = index_.get(id);
+  if (!block_opt)
+    return 0;
+  if (!memory_pool_)
+    return 0;
+  return static_cast<uint8_t *>(block_opt->ptr) -
+         static_cast<uint8_t *>(memory_pool_->get_base_ptr());
 }
 
 } // namespace cascade

@@ -196,6 +196,10 @@ public:
     void clear();
     void sync_all();  // Sync all pending async transfers
     
+    // Remote access support
+    uint8_t* get_base_ptr() const;
+    size_t get_offset(const BlockId& id) const;
+    
 private:
     size_t capacity_;
     int device_id_;

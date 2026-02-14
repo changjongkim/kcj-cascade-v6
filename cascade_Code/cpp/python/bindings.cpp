@@ -154,7 +154,7 @@ PYBIND11_MODULE(cascade_cpp, m) {
         }, py::arg("block_id"), py::arg("data"), py::arg("is_prefix") = false)
         .def("get", [](cascade::distributed::DistributedStore& self, const std::string& block_id, py::array_t<uint8_t>& out_data) {
             py::buffer_info buf = out_data.request();
-            size_t size = 0;
+            size_t size = buf.size;
             bool found = self.get(block_id, static_cast<uint8_t*>(buf.ptr), &size);
             return py::make_tuple(found, size);
         })

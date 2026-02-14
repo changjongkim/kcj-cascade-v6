@@ -81,7 +81,7 @@ def test_distributed_dedup(rank, world):
     store = cascade_cpp.DistributedStore(cfg)
 
     # Shared prefix: same system prompt KV cache (all ranks write same blocks)
-    num_prefix_blocks = 20
+    num_prefix_blocks = 100
     prefix_blocks = []
     for i in range(num_prefix_blocks):
         bid = block_id(0, 0, i, prefix="shared_system_prompt")
@@ -113,7 +113,7 @@ def test_distributed_dedup(rank, world):
     print_rank0(f"    Prefix blocks: {stats.prefix_blocks}", rank)
 
     # Unique suffix: each rank writes its own KV cache
-    num_suffix_blocks = 30
+    num_suffix_blocks = 500
     t0 = time.time()
     for i in range(num_suffix_blocks):
         bid = block_id(0, 0, 100 + i, prefix=f"rank{rank}_query")
@@ -291,7 +291,7 @@ def test_scaling(rank, world):
     store = cascade_cpp.DistributedStore(cfg)
 
     # Pre-generate data to avoid measuring Python random/numpy overhead
-    num_blocks = 500
+    num_blocks = 10000
     block_size = 160 * 1024
     test_data = [np.random.randint(0, 255, block_size, dtype=np.uint8) for _ in range(num_blocks)]
     test_keys = [f"scale_r{rank}_b{i:06d}" for i in range(num_blocks)]
