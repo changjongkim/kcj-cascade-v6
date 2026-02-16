@@ -114,26 +114,54 @@ Cascade enables zero-copy access to hot data while providing near-infinite capac
     *   This translates to sub-second context loading (0.68s for 5.2GB) across 8 nodes, while baselines take over 3.7 seconds.
 
 ### ⏱️ 2. Peak Scale: Strong Scaling (Synthetic)
-*   **Scenario:** Fixed dataset (**12.21 GB**) distributed across up to 32 ranks (8 nodes).
+*   **Scenario:** Fixed dataset (**12.5 GB**) distributed across 1 to 8 nodes.
+*   **Objective:** Measure time-to-solution reduction as resources increase.
 
-| Nodes | Ranks | Write BW | **Read BW (Agg.)** | Speedup |
+| Nodes | Ranks | Write BW (Agg.) | **Read BW (Agg.)** | Efficiency |
 | :---: | :---: | :---: | :---: | :---: |
-| **1** | 4 | 1.35 GB/s | 19.90 GB/s | 1.0x |
-| **2** | 8 | 3.94 GB/s | 42.00 GB/s | 2.1x |
-| **4** | 16 | 7.86 GB/s | 95.40 GB/s | 4.8x |
-| **8** | 32 | **14.32 GB/s** | **163.76 GB/s** | **8.2x** |
+| **1** | 4 | 5.98 GB/s | 23.95 GB/s | 100% |
+| **2** | 8 | 11.80 GB/s | 45.64 GB/s | 96% |
+| **4** | 16 | 23.20 GB/s | 94.70 GB/s | 99% |
+| **8** | 32 | **48.00 GB/s** | **156.41 GB/s** | **82%** |
 
-> **Analysis:**
-> *   **Aggregated Read (163 GB/s):** Reaches memory-bandwidth speeds by successfully hitting distributed GPU/DRAM tiers.
-> *   **Super-linear Speedup:** 8.2x speedup on 8 nodes due to increased aggregate cache capacity reducing eviction frequency in strong-scaling scenarios.
+> **Analysis:** Cascade V6 achieves **156 GB/s aggregate bandwidth** at the 8-node scale, leveraging distributed DRAM/GPU tiers to overcome the physical limits of individual nodes.
 
-### 🔍 3. 5-Tier Verification (Hit Statistics)
+### 🚀 3. Peak Scale: Weak Scaling (Synthetic)
+*   **Scenario:** Fixed data per rank (**1.5 GB/rank**). As nodes increase, the total data scales from 1.5GB to 12.2GB.
+*   **Objective:** Measure performance stability as the cluster scales.
+
+| Nodes | Total Data | Write BW (Agg.) | Read BW (Agg.) | Per-Node BW |
+| :---: | :---: | :---: | :---: | :---: |
+| **1** | 1.5 GB | 5.98 GB/s | 11.23 GB/s | 11.23 GB/s |
+| **2** | 3.0 GB | 11.80 GB/s | 23.34 GB/s | 11.67 GB/s |
+| **4** | 6.1 GB | 23.20 GB/s | 53.28 GB/s | 13.32 GB/s |
+| **8** | 12.2 GB | 46.62 GB/s | 94.06 GB/s | 11.75 GB/s |
+
+> **Analysis:** Verified **98% scaling efficiency**. Cascade maintains nearly constant per-node throughput regardless of cluster size, making it ideal for massive LLM deployments.
+
+### 🎮 4. Real-Workload Strong Scaling (Fixed 40GB Data)
+*   **Experimental Objective**: Validate scaling using **real KV cache blocks (~164MB each)** across 8 nodes.
+*   **Setup**: Fixed 40GB total workload, evaluating all 5 systems in a non-contention parallel task.
+
+| System | 1 Node (Read) | 4 Nodes (Read) | 8 Nodes (Read) | **Avg Latency (8N)** |
+| :--- | :---: | :---: | :---: | :---: |
+| **Cascade V6** | **4.19 GB/s** | **16.33 GB/s** | **31.79 GB/s** | **24.36 ms** |
+| **HDF5** | 0.87 GB/s | 25.59 GB/s* | 54.08 GB/s* | 23.11 ms |
+| **vLLM-GPU** | 0.30 GB/s | 14.07 GB/s | 28.49 GB/s | 43.87 ms |
+| **PDC** | 0.80 GB/s | 13.96 GB/s | 28.59 GB/s | 43.71 ms |
+| **LMCache** | 0.50 GB/s | 6.86 GB/s | 13.78 GB/s | 90.68 ms |
+
+> **Analysis**:
+> *   **Cascade vs Baselines**: Cascade provides **2.3× faster** throughput and **4× lower latency** than LMCache at the 8-node scale.
+> *   **HDF5/vLLM Scaling**: High HDF5 throughput is aided by OS Page Caching on the local node; however, Cascade matches this responsiveness (24ms latency) while providing distributed memory pooling features baselines lack.
+
+### 5. 5-Tier Verification (Hit Statistics)
 Verified the fallback mechanism from HBM to Lustre under high pressure:
 *   **Local GPU Hit:** High (Active working set)
 *   **Remote Memory Hit:** Reliable (Neighbour context retrieval via RDMA)
 *   **Lustre Tier (New):** Successfully verified data persistence and retrieval when DRAM/GPU capacity is exceeded.
 
-### ❄️ 4. Lustre Tier Cold-Storage Benchmark (Disk Performance)
+### 6. Lustre Tier Cold-Storage Benchmark (Disk Performance)
 *   **Experimental Objective**: Evaluate the raw throughput of the **Lustre Backend (Tier 5)** by forcing disk reads using `posix_fadvise(DONTNEED)` to evict the OS Page Cache.
 *   **Methodology**: Comparing Cascade's C++ Backend against POSIX I/O, PDC, and HDF5 across 1-8 nodes.
 
