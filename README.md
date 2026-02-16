@@ -85,28 +85,32 @@ Cascade enables zero-copy access to hot data while providing near-infinite capac
 
 ## 📊 Evaluation & Performance Analysis (Updated Feb 16, 2026)
 
-### Experimental Setup
-*   **System:** NERSC Perlmutter (HPE Cray EX)
-*   **Nodes:** 8 Nodes (32x NVIDIA A100-40GB GPUs)
-*   **Interconnect:** Slingshot-11 (200 Gbps)
-*   **Workload:** 
-    *   **Synthetic:** LLaMA-3 70B Blocks (160KB size)
-    *   **Real-Data:** MLPerf OpenOrca Aggregated KV Cache (500GB+ dataset, 164MB blocks)
+### 📈 1. Real-Data Tiered Contention Benchmark (End-to-End)
+*   **Experimental Objective**: Validate Cascade's performance under **realistic LLM serving conditions** where multiple nodes compete for the same "Shared Prefix" (Hot Data) while managing massive KV cache misses.
+*   **Workload Configuration (Realistic Stress Test)**:
+    *   **Tier 1 (GPU VRAM)**: 40% Hit Rate (Simulated 400 GB/s)
+    *   **Tier 2 (Storage Backend)**: 60% Cache Miss (Reading from Cascade, HDF5, PDC, LMCache, or vLLM-GPU)
+    *   **Contention Scenario**: 4-8 nodes simultaneously reading the **exact same 6.5GB "Hot Prefix"** blocks.
+    *   **Total Data Scale**: Node-local 26GB unique blocks + Cluster-wide shared blocks (~100GB+ total).
 
-### 📈 1. Real-Data Workload Comparison (End-to-End)
-*   **Scenario:** Loading real KV cache from Lustre into Distributed tiers across 1, 2, and 4 nodes.
-*   **Objective:** Validate that per-node performance remains stable as the cluster scales.
+#### **Summary Table: Aggregate Throughput (GPU + Backend Combined)**
+| System | 1 Node (GB/s) | 2 Nodes (GB/s) | 4 Nodes (GB/s) | **Aggregate (4-Node)** | **Gain vs HDF5** |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Cascade V6** | **11.28** | **8.75** | **7.27** | **29.08 GB/s** | **4.4×** |
+| **PDC** | 1.91 | 2.10 | 1.53 | 6.12 GB/s | 0.9× |
+| **LMCache** | 1.90 | 1.72 | 1.86 | 7.44 GB/s | 1.1× |
+| **HDF5** | 11.51 | 1.64 | 1.66 | 6.64 GB/s | 1.0× |
+| **vLLM-GPU** | 1.91 | 1.43 | 1.54 | 6.16 GB/s | 0.9× |
 
-| Nodes | System | **Per-Node Read BW** | **Aggregate Read BW** | **Write BW (Node)** | Efficiency |
-| :---: | :--- | :---: | :---: | :---: | :---: |
-| **1** | **Cascade** | **7.11 GB/s** | **7.11 GB/s** | 0.75 GB/s | 100.0% |
-| | LMCache | 3.64 GB/s | 3.64 GB/s | 0.61 GB/s | - |
-| **2** | **Cascade** | **6.97 GB/s** | **13.94 GB/s** | 0.71 GB/s | **98.0%** |
-| | LMCache | 0.32 GB/s | 0.65 GB/s | 0.50 GB/s | - |
-| **4** | **Cascade** | **6.90 GB/s** | **27.60 GB/s** | 0.68 GB/s | **97.0%** |
-| | LMCache | 0.46 GB/s | 1.84 GB/s | 0.50 GB/s | - |
-
-> **Key Insight:** Cascade V6 maintains a stable **~7 GB/s per-node read bandwidth** regardless of the cluster size. This result proves that the total system capacity scales **linearly**, reaching **27.6 GB/s across 4 nodes**, whereas baselines suffer from contention and performance collapse in multi-node settings.
+#### **Key Insights & Analysis**
+1.  **HDF5 "Page Cache" Fallacy Exposed**:
+    *   On a **single node**, HDF5 shows high performance (11.5 GB/s) by exploiting the OS Kernel Page Cache (DRAM).
+    *   Once scaled to **multiple nodes** sharing the same file, Lustre's metadata lock contention causes HDF5 to collapse to **~1.6 GB/s**.
+2.  **Cascade's Scalability Advantage**:
+    *   Cascade maintains high bandwidth (**7.27 GB/s per node**) even under heavy shared-read contention.
+    *   **Total System Throughput (29.1 GB/s)**: Cascade delivers nearly **30 GB/s of actual context-loading bandwidth** to the cluster, while baselines are bottlenecked by the parallel file system.
+3.  **Real-World Impact (Llama-3 70B)**:
+    *   For a 128K context request (~5.2GB KV Cache), Cascade reduces the backend retrieval time from **3.4s (HDF5)** to **0.7s (Cascade)**, enabling sub-second response times even for massive context windows.
 
 ### ⏱️ 2. Peak Scale: Strong Scaling (Synthetic)
 *   **Scenario:** Fixed dataset (**12.21 GB**) distributed across up to 32 ranks (8 nodes).
