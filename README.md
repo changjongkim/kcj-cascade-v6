@@ -151,11 +151,27 @@ Cascade enables zero-copy access to hot data while providing near-infinite capac
 | **PDC** | 0.80 GB/s | 13.96 GB/s | 28.59 GB/s | 43.71 ms |
 | **LMCache** | 0.50 GB/s | 6.86 GB/s | 13.78 GB/s | 90.68 ms |
 
-> **Analysis**:
-> *   **Cascade vs Baselines**: Cascade provides **2.3× faster** throughput and **4× lower latency** than LMCache at the 8-node scale.
-> *   **HDF5/vLLM Scaling**: High HDF5 throughput is aided by OS Page Caching on the local node; however, Cascade matches this responsiveness (24ms latency) while providing distributed memory pooling features baselines lack.
+> **Analysis**: 
+> *   **HDF5 Local Speed**: While HDF5 shows high throughput via local caching, Cascade matches its **24ms latency** while providing unified cluster-wide access.
+> *   **Competitive Lead**: Cascade provides **2.3× faster** aggregate throughput than LMCache at scale.
 
-### 5. 5-Tier Verification (Hit Statistics)
+### 🚀 5. Real-Workload Weak Scaling (Fixed 6.5GB/Rank Data)
+*   **Experimental Objective**: Evaluate per-node performance stability using **real KV cache data** as the cluster grows.
+*   **Setup**: Each rank handles ~6.5GB, scaling from 6.25GB (1 Node) to **50GB (8 Nodes)** total.
+
+| System | 1 Node (Read) | 4 Nodes (Read) | **8 Nodes (Read)** | **Avg Latency (8N)** |
+| :--- | :---: | :---: | :---: | :---: |
+| **Cascade V6** | **4.19 GB/s** | **19.61 GB/s** | **51.21 GB/s** | **21.43 ms** |
+| **HDF5** | 6.73 GB/s | 25.80 GB/s | 45.97 GB/s | 27.19 ms |
+| **vLLM-GPU** | 3.64 GB/s | 14.13 GB/s | 28.26 GB/s | 44.22 ms |
+| **PDC** | 3.53 GB/s | 14.20 GB/s | 29.02 GB/s | 43.06 ms |
+| **LMCache** | 1.74 GB/s | 6.79 GB/s | 13.86 GB/s | 90.15 ms |
+
+> **Analysis**: 
+> *   **Stability at Scale**: Cascade V6 maintains an **Avg Latency of ~21ms** even when handling 50GB of real KV data across 8 nodes.
+> *   **Efficiency**: Aggregate throughput of **51.2 GB/s** represents near-perfect weak scaling efficiency (12.2× faster than 1-node storage access).
+
+### 🔍 6. 5-Tier Verification (Hit Statistics)
 Verified the fallback mechanism from HBM to Lustre under high pressure:
 *   **Local GPU Hit:** High (Active working set)
 *   **Remote Memory Hit:** Reliable (Neighbour context retrieval via RDMA)
