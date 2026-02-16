@@ -87,7 +87,9 @@ class CascadeAdapter(BaseStore):
         cfg.num_gpus_per_node = 4  # 4 GPUs/node
         cfg.dedup_enabled = True
         cfg.kv_compression = True
-        cfg.lustre_path = ""
+        self.lustre_dir = Path(f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/cascade_lustre_r{rank}")
+        self.lustre_dir.mkdir(parents=True, exist_ok=True)
+        cfg.lustre_path = str(self.lustre_dir)
         self.store = cascade_cpp.DistributedStore(cfg)
     
     def put(self, key, data):
@@ -95,6 +97,11 @@ class CascadeAdapter(BaseStore):
     
     def get(self, key, out):
         return self.store.get(key, out)
+
+    def cleanup(self):
+        import shutil
+        if self.lustre_dir.exists():
+            shutil.rmtree(self.lustre_dir)
 
 class HDF5Adapter(BaseStore):
     def __init__(self):
@@ -197,11 +204,22 @@ def run_bench(system_name, adapter, loader, block_ids):
     if hasattr(adapter, 'store'):
         adapter.store.barrier()
     
+    # ─── Pre-load Phase ───
+    # To measure pure WRITE performance, we must read from Lustre disk first
+    # and store in memory so the timer only measures the Storage System's speed.
+    loaded_data = []
+    print_rank0(f"  [{system_name}] Pre-loading {len(block_ids)} blocks to memory...")
+    for bid in block_ids:
+        loaded_data.append(loader.read_block(bid))
+    
+    if hasattr(adapter, 'store'):
+        adapter.store.barrier()
+    
     # ─── Write Phase ───
     t0 = time.time()
     total_bytes = 0
-    for bid in block_ids:
-        data = loader.read_block(bid)
+    for i, bid in enumerate(block_ids):
+        data = loaded_data[i]
         adapter.put(bid, data)
         total_bytes += data.nbytes
     
