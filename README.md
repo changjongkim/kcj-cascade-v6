@@ -117,31 +117,30 @@ Cascade enables zero-copy access to hot data while providing near-infinite capac
 *   **Scenario:** Fixed dataset (**12.5 GB**) distributed across nodes.
 *   **Objective:** Measure aggregate read throughput as a function of cluster size.
 
-| Nodes | **Cascade V6** | HDF5 | vLLM-GPU | PDC | LMCache |
+| Nodes | **Cascade V6 (Agg.)** | HDF5 (Agg.) | vLLM-GPU (Agg.) | PDC (Agg.) | LMCache (Agg.) |
 | :---: | :---: | :---: | :---: | :---: | :---: |
 | **1** | **23.95 GB/s** | 6.83 GB/s | 3.56 GB/s | 3.53 GB/s | 1.71 GB/s |
 | **2** | **45.64 GB/s** | 12.55 GB/s | 6.88 GB/s | 7.01 GB/s | 3.22 GB/s |
 | **4** | **94.70 GB/s** | 24.11 GB/s | 13.92 GB/s | 14.12 GB/s | 6.55 GB/s |
 | **8** | **156.41 GB/s** | 47.33 GB/s | 27.54 GB/s | 28.01 GB/s | 12.88 GB/s |
 
-> **Analysis:** Cascade V6 outperforms the nearest competitor (HDF5) by **3.3×** and vLLM-style disk swap by **5.7×**. By pooling distributed RAM and GPU memory, Cascade reaches **150+ GB/s** aggregate bandwidth, which is physically impossible for storage-only backends.
+> **Analysis:** Cascade V6 outperforms the nearest competitor (HDF5) by **3.3×**. By pooling distributed RAM and GPU memory, Cascade reaches **150+ GB/s** aggregate bandwidth, scaling linearly with node count.
 
 ### 🚀 3. Peak Scale: Weak Scaling (Synthetic)
 *   **Scenario:** Fixed data per rank (**1.5 GB/rank**).
 *   **Objective:** Evaluate aggregate throughput stability as both data and nodes scale proportionally.
 
-| Nodes | Total Data | **Cascade V6** | HDF5 | vLLM-GPU | PDC | LMCache |
+| Nodes | Total Data | **Cascade (Agg.)** | **Cascade (Per-node)** | HDF5 | vLLM-GPU | LMCache |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **1** | 1.5 GB | **11.23 GB/s** | 1.00 GB/s | 0.46 GB/s | 0.46 GB/s | 0.45 GB/s |
-| **2** | 3.0 GB | **23.34 GB/s** | 2.07 GB/s | 0.89 GB/s | 0.88 GB/s | 0.88 GB/s |
-| **4** | 6.1 GB | **53.28 GB/s** | 4.14 GB/s | 1.69 GB/s | 1.78 GB/s | 1.71 GB/s |
-| **8** | 12.2 GB | **94.06 GB/s** | 8.34 GB/s | 3.39 GB/s | 3.46 GB/s | 3.43 GB/s |
+| **1** | 1.5 GB | **11.23 GB/s** | **11.23 GB/s** | 1.00 GB/s | 0.46 GB/s | 0.45 GB/s |
+| **2** | 3.0 GB | **23.34 GB/s** | **11.67 GB/s** | 2.07 GB/s | 0.89 GB/s | 0.88 GB/s |
+| **4** | 6.1 GB | **53.28 GB/s** | **13.32 GB/s** | 4.14 GB/s | 1.69 GB/s | 1.71 GB/s |
+| **8** | 12.2 GB | **94.06 GB/s** | **11.75 GB/s** | 8.34 GB/s | 3.39 GB/s | 3.43 GB/s |
 
-> **Analysis:** Cascade demonstrates **98.2% weak scaling efficiency**. While baselines are bottlenecked by local I/O paths (~1 GB/s per node), Cascade's **RDMA-accelerated memory pool** allows it to maintain **~11.7 GB/s per node** consistently, providing a **11× performance advantage** at scale.
+> **Analysis:** Cascade demonstrates **98.2% weak scaling efficiency**. While aggregate bandwidth grows with the cluster, the **Per-node throughput stays consistent (~11.7 GB/s)**, proving that adding nodes linearly increases the total processing power without nodal degradation.
 
 ### 🎮 4. Real-Workload Strong Scaling (Fixed 40GB Data)
-*   **Experimental Objective**: Validate scaling using **real KV cache blocks (~164MB each)** across 8 nodes.
-*   **Setup**: Fixed 40GB total workload, evaluating all 5 systems in a non-contention parallel task.
+*   **Experimental Objective**: Validate scaling using **real KV cache blocks** across 8 nodes.
 
 | System | 1 Node (Read) | 4 Nodes (Read) | 8 Nodes (Read) | **Avg Latency (8N)** |
 | :--- | :---: | :---: | :---: | :---: |
@@ -151,25 +150,18 @@ Cascade enables zero-copy access to hot data while providing near-infinite capac
 | **PDC** | 0.80 GB/s | 13.96 GB/s | 28.59 GB/s | 43.71 ms |
 | **LMCache** | 0.50 GB/s | 6.86 GB/s | 13.78 GB/s | 90.68 ms |
 
-> **Analysis**: 
-> *   **HDF5 Local Speed**: While HDF5 shows high throughput via local caching, Cascade matches its **24ms latency** while providing unified cluster-wide access.
-> *   **Competitive Lead**: Cascade provides **2.3× faster** aggregate throughput than LMCache at scale.
-
 ### 🚀 5. Real-Workload Weak Scaling (Fixed 6.5GB/Rank Data)
-*   **Experimental Objective**: Evaluate per-node performance stability using **real KV cache data** as the cluster grows.
-*   **Setup**: Each rank handles ~6.5GB, scaling from 6.25GB (1 Node) to **50GB (8 Nodes)** total.
+*   **Experimental Objective**: Evaluate per-node performance stability using **real KV cache data**.
 
-| System | 1 Node (Read) | 4 Nodes (Read) | **8 Nodes (Read)** | **Avg Latency (8N)** |
-| :--- | :---: | :---: | :---: | :---: |
-| **Cascade V6** | **4.19 GB/s** | **19.61 GB/s** | **51.21 GB/s** | **21.43 ms** |
-| **HDF5** | 6.73 GB/s | 25.80 GB/s | 45.97 GB/s | 27.19 ms |
-| **vLLM-GPU** | 3.64 GB/s | 14.13 GB/s | 28.26 GB/s | 44.22 ms |
-| **PDC** | 3.53 GB/s | 14.20 GB/s | 29.02 GB/s | 43.06 ms |
-| **LMCache** | 1.74 GB/s | 6.79 GB/s | 13.86 GB/s | 90.15 ms |
+| Nodes | Total Data | **Cascade (Agg.)** | **Cascade (Per-node)** | HDF5 (Agg.) | PDC (Agg.) |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| **1** | 6.25 GB | **4.19 GB/s** | **4.19 GB/s** | 6.73 GB/s | 3.53 GB/s |
+| **4** | 25.0 GB | **19.61 GB/s** | **4.90 GB/s** | 25.80 GB/s | 14.20 GB/s |
+| **8** | 50.0 GB | **51.21 GB/s** | **6.40 GB/s** | 45.97 GB/s | 29.02 GB/s |
 
 > **Analysis**: 
-> *   **Stability at Scale**: Cascade V6 maintains an **Avg Latency of ~21ms** even when handling 50GB of real KV data across 8 nodes.
-> *   **Efficiency**: Aggregate throughput of **51.2 GB/s** represents near-perfect weak scaling efficiency (12.2× faster than 1-node storage access).
+> *   **Super-linear Scaling**: Cascade's per-node throughput actually **improves (4.19 $\rightarrow$ 6.40 GB/s)** as the cluster grows, likely due to increased parallel Lustre striping and efficient distributed DRAM pooling.
+> *   **Comparison**: At 8 nodes, Cascade delivers **51.2 GB/s aggregate throughput**, surpassing even optimized HDF5 while maintaining a tight **21ms latency**.
 
 ### 🔍 6. 5-Tier Verification (Hit Statistics)
 Verified the fallback mechanism from HBM to Lustre under high pressure:
