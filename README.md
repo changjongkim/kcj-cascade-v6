@@ -94,23 +94,24 @@ Cascade enables zero-copy access to hot data while providing near-infinite capac
     *   **Total Data Scale**: Node-local 26GB unique blocks + Cluster-wide shared blocks (~100GB+ total).
 
 #### **Summary Table: Aggregate Throughput (GPU + Backend Combined)**
-| System | 1 Node (GB/s) | 2 Nodes (GB/s) | 4 Nodes (GB/s) | **Aggregate (4-Node)** | **Gain vs HDF5** |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Cascade V6** | **11.28** | **8.75** | **7.27** | **29.08 GB/s** | **4.4×** |
-| **PDC** | 1.91 | 2.10 | 1.53 | 6.12 GB/s | 0.9× |
-| **LMCache** | 1.90 | 1.72 | 1.86 | 7.44 GB/s | 1.1× |
-| **HDF5** | 11.51 | 1.64 | 1.66 | 6.64 GB/s | 1.0× |
-| **vLLM-GPU** | 1.91 | 1.43 | 1.54 | 6.16 GB/s | 0.9× |
+| System | 1 Node (GB/s) | 2 Nodes (GB/s) | 4 Nodes (GB/s) | 8 Nodes (GB/s) | **Aggregate (8-Node)** | **Gain vs HDF5** |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Cascade V6** | **11.28** | **8.75** | **7.27** | **7.59** | **60.72 GB/s** | **5.4×** |
+| **LMCache** | 1.90 | 1.72 | 1.86 | 1.77 | 14.16 GB/s | 1.25× |
+| **HDF5** | 11.51 | 1.64 | 1.66 | 1.41 | 11.28 GB/s | 1.0× |
+| **vLLM-GPU** | 1.91 | 1.43 | 1.54 | 1.40 | 11.20 GB/s | 1.0× |
+| **PDC** | 1.91 | 2.10 | 1.53 | 1.37 | 10.96 GB/s | 1.0× |
 
 #### **Key Insights & Analysis**
 1.  **HDF5 "Page Cache" Fallacy Exposed**:
-    *   On a **single node**, HDF5 shows high performance (11.5 GB/s) by exploiting the OS Kernel Page Cache (DRAM).
-    *   Once scaled to **multiple nodes** sharing the same file, Lustre's metadata lock contention causes HDF5 to collapse to **~1.6 GB/s**.
-2.  **Cascade's Scalability Advantage**:
-    *   Cascade maintains high bandwidth (**7.27 GB/s per node**) even under heavy shared-read contention.
-    *   **Total System Throughput (29.1 GB/s)**: Cascade delivers nearly **30 GB/s of actual context-loading bandwidth** to the cluster, while baselines are bottlenecked by the parallel file system.
-3.  **Real-World Impact (Llama-3 70B)**:
-    *   For a 128K context request (~5.2GB KV Cache), Cascade reduces the backend retrieval time from **3.4s (HDF5)** to **0.7s (Cascade)**, enabling sub-second response times even for massive context windows.
+    *   On a **single node**, HDF5 exploits the OS Kernal Page Cache to reach 11.5 GB/s.
+    *   In a **shared 8-node cluster**, HDF5 collapses to **1.41 GB/s** due to parallel file system (Lustre) metadata lock contention.
+2.  **Cascade's Scalability & Resilience**:
+    *   Cascade maintains a stable **~7.6 GB/s per node** even at 8-node scale (32 GPUs), resulting in a massive **60.7 GB/s aggregate throughput**.
+    *   Unlike baselines, Cascade leverages **RDMA-based distributed memory pooling** to bypass Lustre bottlenecks for shared data.
+3.  **Real-World Impact (Scaling Llama-3)**:
+    *   Cascade provides a **5.4× faster** loading speed for contested context windows compared to HDF5/vLLM at scale.
+    *   This translates to sub-second context loading (0.68s for 5.2GB) across 8 nodes, while baselines take over 3.7 seconds.
 
 ### ⏱️ 2. Peak Scale: Strong Scaling (Synthetic)
 *   **Scenario:** Fixed dataset (**12.21 GB**) distributed across up to 32 ranks (8 nodes).
