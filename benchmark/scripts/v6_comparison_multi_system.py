@@ -25,7 +25,7 @@ except ImportError:
     comm = None
 
 # Cascade import
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../cascade_Code/cpp/build_mpi'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../cascade_Code/cpp/build_cascade_cpp'))
 try:
     import cascade_cpp
 except ImportError:

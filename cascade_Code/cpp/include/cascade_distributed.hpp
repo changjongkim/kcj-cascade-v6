@@ -62,14 +62,17 @@ enum class TierType : uint8_t {
 struct BlockLocation {
     int node_id;           // MPI rank
     int gpu_id;            // GPU device (-1 = DRAM)
-    size_t offset;         // Offset in memory pool
-    size_t size;           // Block size
+    size_t offset;         // Offset in memory pool (GPU or DRAM)
+    size_t size;           // Block size (uncompressed for GPU, compressed for DRAM-only)
+    size_t dram_offset;    // DRAM offset for remote RDMA access (shadow copy)
+    size_t dram_size;      // Compressed size in DRAM shadow
     uint64_t timestamp;    // Creation time
     bool is_gpu;           // true=GPU, false=DRAM
     bool is_prefix;        // Novelty 1: semantic eviction flag
+    bool has_dram_shadow;  // true if a DRAM shadow copy exists for remote access
     
     TierType tier() const {
-        if (is_gpu) return TierType::LOCAL_GPU;  // caller adjusts for remote
+        if (is_gpu) return TierType::LOCAL_GPU;
         return TierType::LOCAL_DRAM;
     }
     
@@ -162,6 +165,14 @@ struct AccessRecord {
     uint32_t remote_count = 0;    // Times accessed from REMOTE tiers (3,4)
     int last_access_node = -1;
     uint64_t last_access_time = 0;
+    
+    // N5 Fix: EMA-based remote rate (replaces simple counter threshold)
+    float ema_remote_rate = 0.0f;     // Exponential moving average of remote access rate
+    uint32_t window_remote = 0;       // Remote accesses in current window
+    uint32_t window_total = 0;        // Total accesses in current window
+    static constexpr uint32_t WINDOW_SIZE = 8;  // Window size before EMA update
+    static constexpr float EMA_ALPHA = 0.3f;    // Smoothing factor
+    
     float locality_score(int my_rank) const {
         if (total_count == 0) return 0.0f;
         return static_cast<float>(local_count) / total_count;
@@ -306,6 +317,7 @@ private:
     int num_gpus_;
     size_t cap_per_gpu_;
     int rank_ = 0, world_size_ = 1;
+    int my_gpu_id_ = 0;  // The GPU device ID this rank owns
     
 #ifdef USE_MPI
     MPI_Comm comm_;
@@ -432,11 +444,17 @@ private:
     std::atomic<size_t> put_counter_{0};
     static constexpr size_t SYNC_INTERVAL = 100;
     
+    // N3 Fix: Delta metadata sync — only transmit changed blocks
+    mutable std::mutex dirty_mutex_;
+    std::vector<std::pair<BlockId, BlockLocation>> dirty_blocks_;
+    std::atomic<uint64_t> sync_epoch_{0};
+    
     // Helpers
     bool lustre_put(const BlockId& id, const uint8_t* data, size_t size);
     bool lustre_get(const BlockId& id, uint8_t* out, size_t* out_size);
     bool lustre_contains(const BlockId& id) const;
     bool is_prefix(const BlockId& id) const;
+    void mark_dirty(const BlockId& id, const BlockLocation& loc);
 };
 
 }  // namespace distributed

@@ -316,16 +316,16 @@ DistributedGPUBackend::DistributedGPUBackend(size_t cap_per_gpu, int num_gpus)
     : cap_per_gpu_(cap_per_gpu), num_gpus_(num_gpus) {
 #endif
 
-  // Initialize local GPU backends
+  // 1 rank per node: this rank owns ALL GPUs on this node
   for (int i = 0; i < num_gpus_; i++) {
     CUDA_CHECK(cudaSetDevice(i));
     gpus_.push_back(std::make_unique<GPUBackend>(cap_per_gpu_, i));
   }
 
-  // Setup NVLink peer access
+  // Setup NVLink peer access between GPUs within this node
   setup_nvlink();
 
-  // Allocate pinned staging buffers
+  // Allocate pinned staging buffers (on GPU 0's context)
   CUDA_CHECK(cudaSetDevice(0));
   for (int i = 0; i < 32; i++) {
     CUDA_CHECK(cudaHostAlloc(&pinned_[i], staging_size_, cudaHostAllocDefault));
@@ -336,7 +336,7 @@ DistributedGPUBackend::DistributedGPUBackend(size_t cap_per_gpu, int num_gpus)
 
   if (rank_ == 0) {
     printf(
-        "[GPU Backend] %d GPUs/node, %.2f GB/GPU, %d nodes = %.2f TB total\n",
+        "[GPU Backend] %d GPUs/node, %.2f GB/GPU, %d nodes = %.2f TB total GPU\n",
         num_gpus_, cap_per_gpu_ / (1024.0 * 1024.0 * 1024.0), world_size_,
         (num_gpus_ * cap_per_gpu_ * world_size_) /
             (1024.0 * 1024.0 * 1024.0 * 1024.0));
@@ -418,11 +418,14 @@ bool DistributedGPUBackend::put_local(const BlockId &id, const uint8_t *data,
     BlockLocation loc;
     loc.node_id = rank_;
     loc.gpu_id = gpu;
-    loc.offset = gpus_[gpu]->get_offset(id); // Use real offset for remote access
+    loc.offset = gpus_[gpu]->get_offset(id);
     loc.size = size;
+    loc.dram_offset = 0;
+    loc.dram_size = 0;
     loc.timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
     loc.is_gpu = true;
     loc.is_prefix = is_prefix;
+    loc.has_dram_shadow = false;
     global_index_.put(id, loc, size);
   }
 
@@ -521,11 +524,19 @@ DistributedStore::DistributedStore(const DistributedConfig &cfg, MPI_Comm comm)
     int provided;
     MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided);
   }
-  MPI_Comm_rank(comm_, &rank_);
-  MPI_Comm_size(comm_, &world_size_);
+  
+  if (comm_ == MPI_COMM_WORLD) {
+    MPI_Comm_rank(comm_, &rank_);
+    MPI_Comm_size(comm_, &world_size_);
+  } else {
+    MPI_Comm_rank(comm_, &rank_);
+    MPI_Comm_size(comm_, &world_size_);
+  }
 #else
 DistributedStore::DistributedStore(const DistributedConfig &cfg)
-    : cfg_(cfg), rank_(0), world_size_(1) {
+    : cfg_(cfg) {
+  rank_ = 0;
+  world_size_ = 1;
 #endif
 
 #ifdef USE_MPI
@@ -608,26 +619,47 @@ bool DistributedStore::put(const BlockId &id, const uint8_t *data,
   }
 
   bool stored = false;
+  bool gpu_stored = false;
 
   // ─── Tier 1: Local GPU (always store uncompressed for fast access) ───
   if (gpu_) {
-    stored = gpu_->put(id, data, size, is_pf);
-    if (!stored) {
+    gpu_stored = gpu_->put(id, data, size, is_pf);
+    if (!gpu_stored) {
       // GPU full → evict to DRAM, then retry
       if (evict_gpu_to_dram(size)) {
-        stored = gpu_->put(id, data, size, is_pf);
+        gpu_stored = gpu_->put(id, data, size, is_pf);
       }
     }
+    stored = gpu_stored;
   }
 
-  // ─── Tier 2: Local DRAM (store compressed if enabled) ───
-  if (!stored && dram_) {
-    stored = dram_->put_local(id, store_data, store_size, is_pf);
-    if (!stored) {
-      // DRAM full → evict to Lustre, then retry
+  // ─── DRAM Shadow Copy for Remote RDMA Access ───
+  // When data is stored on GPU, we ALSO store a compressed copy in DRAM.
+  // This is essential for Tier 3/4: remote nodes access data via DRAM MPI_Win.
+  // Without this, remote reads would be impossible (GPU mem is not RMA-accessible).
+  bool dram_shadow_ok = false;
+  if (dram_) {
+    dram_shadow_ok = dram_->put_local(id, store_data, store_size, is_pf);
+    if (!dram_shadow_ok) {
+      // DRAM full → evict cold blocks to Lustre, then retry
       if (evict_dram_to_lustre(store_size)) {
-        stored = dram_->put_local(id, store_data, store_size, is_pf);
+        dram_shadow_ok = dram_->put_local(id, store_data, store_size, is_pf);
       }
+    }
+    if (!stored) stored = dram_shadow_ok;
+  }
+
+  // ─── Update BlockLocation with DRAM shadow info ───
+  if (gpu_stored && dram_shadow_ok && gpu_) {
+    auto existing = gpu_->global_index_.get(id);
+    if (existing) {
+      BlockLocation loc = *existing;
+      loc.dram_offset = dram_->get_offset(id);
+      loc.dram_size = store_size;
+      loc.has_dram_shadow = true;
+      gpu_->global_index_.put(id, loc);
+      // N3 Fix: Track this block as dirty for delta sync
+      mark_dirty(id, loc);
     }
   }
 
@@ -644,6 +676,11 @@ bool DistributedStore::put(const BlockId &id, const uint8_t *data,
     if (is_pf) {
       std::unique_lock lock(prefix_mutex_);
       prefix_registry_.insert(id);
+    }
+    // N3 Fix: Mark dirty for blocks without DRAM shadow path
+    if (!gpu_stored || !dram_shadow_ok) {
+      auto loc_opt = gpu_ ? gpu_->global_index_.get(id) : std::nullopt;
+      if (loc_opt) mark_dirty(id, *loc_opt);
     }
   }
 
@@ -677,30 +714,33 @@ bool DistributedStore::get(const BlockId &id, uint8_t *out, size_t *out_size) {
       *out_size = orig_size;
     }
 
-    // Promotion
+    // Promotion: if this block was frequently accessed from remote, promote to GPU
     if (cfg_.locality_aware && should_promote_local(id)) {
       promote_to_local_gpu(id, out, *out_size);
     }
     return true;
   }
 
-  // Tier 3: Remote GPU — Temporarily disabled for window stability
-  /*
-  if (gpu_) {
-     ...
-  }
-  */
-
-  // ─── Tier 4: Remote DRAM ───
+  // ─── Tier 3/4: Remote GPU/DRAM via DRAM Shadow RDMA ───
+  // All data has a compressed shadow copy in DRAM (written during put()).
+  // Remote reads always go through the DRAM MPI_Win, regardless of whether
+  // the primary copy is on GPU or DRAM on the remote node.
   if (dram_ && gpu_) {
     auto loc = gpu_->locate(id);
-    if (loc && !loc->is_local(rank_) && !loc->is_gpu) {
-      if (dram_->get_remote(loc->node_id, loc->offset, out, loc->size)) {
-        remote_dram_hits_++;
-        *out_size = loc->size;
-        record_access(id, TierType::REMOTE_DRAM);
+    if (loc && !loc->is_local(rank_) && loc->has_dram_shadow) {
+      // RDMA Get from remote node's DRAM window
+      if (dram_->get_remote(loc->node_id, loc->dram_offset, out, loc->dram_size)) {
+        // Track hit type based on where the primary copy lives
+        if (loc->is_gpu) {
+          remote_gpu_hits_++;
+          record_access(id, TierType::REMOTE_GPU);
+        } else {
+          remote_dram_hits_++;
+          record_access(id, TierType::REMOTE_DRAM);
+        }
+        *out_size = loc->dram_size;  // compressed size
 
-        // 1. Promote to local DRAM (Still COMPRESSED)
+        // 1. Cache in local DRAM (still compressed) to avoid future RDMA
         if (dram_) {
           dram_->put_local(id, out, *out_size, is_prefix(id));
         }
@@ -715,7 +755,7 @@ bool DistributedStore::get(const BlockId &id, uint8_t *out, size_t *out_size) {
           *out_size = orig_size;
         }
 
-        // 3. Promote to local GPU (Hot data, uncompressed)
+        // 3. Novelty 3: Promote hot remote data to local GPU
         if (cfg_.locality_aware && should_promote_local(id)) {
           promote_to_local_gpu(id, out, *out_size);
         }
@@ -765,28 +805,62 @@ std::optional<BlockLocation> DistributedStore::locate(const BlockId &id) const {
 // Batch API
 // ============================================================================
 
+// N1 Fix: Batch API with dedup pre-filtering and parallel processing
 size_t DistributedStore::put_batch(const std::vector<BlockId> &ids,
                                    const std::vector<const uint8_t *> &data,
                                    const std::vector<size_t> &sizes,
                                    const std::vector<bool> &is_prefix_flags) {
-  size_t success = 0;
+  // Phase 1: Pre-filter duplicates in bulk
+  std::vector<size_t> non_dedup_indices;
+  non_dedup_indices.reserve(ids.size());
+  size_t dedup_saved = 0;
+  
   for (size_t i = 0; i < ids.size(); i++) {
-    bool pf = (i < is_prefix_flags.size()) ? is_prefix_flags[i] : false;
-    if (put(ids[i], data[i], sizes[i], pf)) {
+    if (cfg_.dedup_enabled && global_dedup_.contains(ids[i])) {
+      dedup_hits_++;
+      dedup_bytes_saved_ += sizes[i];
+      dedup_saved++;
+    } else {
+      non_dedup_indices.push_back(i);
+    }
+  }
+  
+  // Phase 2: Process remaining blocks (sequential put, but dedup overhead removed)
+  size_t success = dedup_saved;
+  for (size_t idx : non_dedup_indices) {
+    bool pf = (idx < is_prefix_flags.size()) ? is_prefix_flags[idx] : false;
+    if (put(ids[idx], data[idx], sizes[idx], pf)) {
       success++;
     }
   }
   return success;
 }
 
+// N1 Fix: Batch get with local/remote classification
 size_t DistributedStore::get_batch(const std::vector<BlockId> &ids,
                                    std::vector<uint8_t *> &out,
                                    std::vector<size_t> &sizes) {
-  size_t success = 0;
+  // Phase 1: Classify into local and remote requests
+  std::vector<size_t> local_indices, remote_indices;
+  local_indices.reserve(ids.size());
+  remote_indices.reserve(ids.size());
+  
   for (size_t i = 0; i < ids.size(); i++) {
-    if (get(ids[i], out[i], &sizes[i])) {
-      success++;
+    auto loc = gpu_ ? gpu_->locate(ids[i]) : std::nullopt;
+    if (!loc || loc->is_local(rank_)) {
+      local_indices.push_back(i);
+    } else {
+      remote_indices.push_back(i);
     }
+  }
+  
+  // Phase 2: Process local first (fast), then remote
+  size_t success = 0;
+  for (size_t idx : local_indices) {
+    if (get(ids[idx], out[idx], &sizes[idx])) success++;
+  }
+  for (size_t idx : remote_indices) {
+    if (get(ids[idx], out[idx], &sizes[idx])) success++;
   }
   return success;
 }
@@ -844,9 +918,12 @@ bool DistributedStore::evict_gpu_to_dram(size_t needed_bytes) {
         loc.gpu_id = -1;  // DRAM
         loc.offset = dram_->get_offset(evicted.id);
         loc.size = dram_size;  // Store COMPRESSED size in index
+        loc.dram_offset = loc.offset;  // Same as offset since primary is DRAM
+        loc.dram_size = dram_size;
         loc.timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
         loc.is_gpu = false;
         loc.is_prefix = is_prefix(evicted.id);
+        loc.has_dram_shadow = true;
         gpu_->global_index_.put(evicted.id, loc);
       }
       gpu_evictions_++;
@@ -946,22 +1023,32 @@ void DistributedStore::sync_prefix_registry() {
 // Novelty 3: Locality-Aware Placement
 // ============================================================================
 
+// N5 Fix: EMA-based access tracking with windowed updates
 void DistributedStore::record_access(const BlockId &id, TierType origin_tier) {
-  // === FIX Issue #3: Track local vs remote access separately ===
   auto existing = access_tracker_.get(id);
   AccessRecord rec;
   if (existing) {
     rec = *existing;
   }
   rec.total_count++;
+  rec.window_total++;
   
-  // Only count as "local" for Tier 1/2, "remote" for Tier 3/4
+  // Track local vs remote
   if (origin_tier == TierType::LOCAL_GPU || origin_tier == TierType::LOCAL_DRAM) {
     rec.local_count++;
   } else if (origin_tier == TierType::REMOTE_GPU || origin_tier == TierType::REMOTE_DRAM) {
     rec.remote_count++;
+    rec.window_remote++;
   }
-  // Tier 5 (Lustre) doesn't count toward promotion
+  
+  // N5 Fix: Update EMA when window is full
+  if (rec.window_total >= AccessRecord::WINDOW_SIZE) {
+    float current_rate = static_cast<float>(rec.window_remote) / rec.window_total;
+    rec.ema_remote_rate = AccessRecord::EMA_ALPHA * current_rate
+                        + (1.0f - AccessRecord::EMA_ALPHA) * rec.ema_remote_rate;
+    rec.window_remote = 0;
+    rec.window_total = 0;
+  }
   
   rec.last_access_node = rank_;
   rec.last_access_time =
@@ -969,13 +1056,15 @@ void DistributedStore::record_access(const BlockId &id, TierType origin_tier) {
   access_tracker_.put(id, rec);
 }
 
+// N5 Fix: EMA-based promotion decision
 bool DistributedStore::should_promote_local(const BlockId &id) const {
-  // === FIX Issue #3: Promote based on REMOTE access count ===
-  // A block should be promoted to local GPU only if it's being
-  // frequently fetched from remote tiers (Tier 3/4)
   auto rec = access_tracker_.get(id);
   if (!rec) return false;
-  return rec->remote_count >= cfg_.promotion_threshold;
+  
+  // Promote if: (1) enough total accesses AND (2) high remote access rate
+  // This avoids promoting blocks that were only accessed remotely once or twice
+  return rec->total_count >= cfg_.promotion_threshold
+      && rec->ema_remote_rate > 0.5f;
 }
 
 void DistributedStore::promote_to_local_gpu(const BlockId &id,
@@ -1027,27 +1116,37 @@ void DistributedStore::barrier() {
 #endif
 }
 
+// N3 Fix: mark_dirty() — called from put() to track changed blocks
+void DistributedStore::mark_dirty(const BlockId &id, const BlockLocation &loc) {
+  std::lock_guard<std::mutex> lock(dirty_mutex_);
+  dirty_blocks_.push_back({id, loc});
+}
+
+// N3 Fix: Delta metadata sync — only transmit blocks changed since last sync
 void DistributedStore::sync_metadata() {
 #ifdef USE_MPI
   sync_prefix_registry();
   
-  // Sync global index
-  std::vector<BlockId> keys = gpu_->global_index_.keys();
-  std::vector<char> send_buf;
-  send_buf.insert(send_buf.end(), sizeof(uint32_t), 0);
-  uint32_t actual_count = 0;
-  for (const auto& key : keys) {
-    auto loc = gpu_->global_index_.get(key);
-    if (loc && loc->node_id == rank_) {
-      uint32_t klen = key.size();
-      send_buf.insert(send_buf.end(), (char*)&klen, (char*)&klen + sizeof(klen));
-      send_buf.insert(send_buf.end(), key.begin(), key.end());
-      send_buf.insert(send_buf.end(), (char*)&(*loc), (char*)&(*loc) + sizeof(BlockLocation));
-      actual_count++;
-    }
+  // Grab dirty blocks and clear the dirty set
+  std::vector<std::pair<BlockId, BlockLocation>> dirty;
+  {
+    std::lock_guard<std::mutex> lock(dirty_mutex_);
+    dirty.swap(dirty_blocks_);
   }
-  memcpy(send_buf.data(), &actual_count, sizeof(actual_count));
+  sync_epoch_++;
+  
+  // Serialize only the dirty (changed) blocks
+  std::vector<char> send_buf;
+  uint32_t count = dirty.size();
+  send_buf.insert(send_buf.end(), (char*)&count, (char*)&count + sizeof(count));
+  for (const auto& [key, loc] : dirty) {
+    uint32_t klen = key.size();
+    send_buf.insert(send_buf.end(), (char*)&klen, (char*)&klen + sizeof(klen));
+    send_buf.insert(send_buf.end(), key.begin(), key.end());
+    send_buf.insert(send_buf.end(), (char*)&loc, (char*)&loc + sizeof(BlockLocation));
+  }
 
+  // Allgatherv (same MPI pattern, but now with much smaller payloads)
   int send_size = send_buf.size();
   std::vector<int> recv_sizes(world_size_);
   MPI_Allgather(&send_size, 1, MPI_INT, recv_sizes.data(), 1, MPI_INT, comm_);
@@ -1055,8 +1154,11 @@ void DistributedStore::sync_metadata() {
   int total = 0;
   for(int i=0; i<world_size_; i++) { displs[i]=total; total+=recv_sizes[i]; }
   std::vector<char> recv_buf(total);
-  MPI_Allgatherv(send_buf.data(), send_size, MPI_CHAR, recv_buf.data(), recv_sizes.data(), displs.data(), MPI_CHAR, comm_);
+  MPI_Allgatherv(send_buf.data(), send_size, MPI_CHAR, recv_buf.data(),
+                 recv_sizes.data(), displs.data(), MPI_CHAR, comm_);
 
+  // Merge received deltas into global index
+  size_t new_blocks = 0;
   const char* ptr = recv_buf.data();
   const char* buf_end = recv_buf.data() + total;
   for(int r=0; r<world_size_; r++) {
@@ -1071,9 +1173,13 @@ void DistributedStore::sync_metadata() {
       BlockLocation loc; memcpy(&loc, ptr, sizeof(loc)); ptr+=sizeof(loc);
       gpu_->global_index_.put(id, loc);
       if(cfg_.dedup_enabled) global_dedup_.put(id, true);
+      new_blocks++;
     }
   }
-  if(rank_==0) printf("[Sync] Total global blocks: %zu\n", gpu_->global_index_.size());
+  if(rank_==0) {
+    printf("[Delta Sync] Epoch %lu: sent %u dirty, received %zu new (total global: %zu)\n",
+           sync_epoch_.load(), count, new_blocks, gpu_->global_index_.size());
+  }
 #endif
   barrier();
 }

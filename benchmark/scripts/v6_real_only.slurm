@@ -1,0 +1,40 @@
+#!/bin/bash
+#SBATCH -A m1248_g
+#SBATCH -C gpu
+#SBATCH -q debug
+#SBATCH -t 00:30:00
+#SBATCH -J v6_real_only
+#SBATCH --nodes=4
+#SBATCH --ntasks-per-node=1
+#SBATCH --gpus-per-node=4
+#SBATCH -o /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/real_only_%j.out
+#SBATCH -e /pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/logs/real_only_%j.err
+
+set -ex
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
+
+module reset 2>/dev/null || true
+module load PrgEnv-gnu gcc-native/12.3 cray-mpich cudatoolkit/12.4 craype-accel-nvidia80
+
+export CASCADE_BUILD_DIR=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/cpp/build_cascade_cpp
+export PYTHONPATH=$CASCADE_BUILD_DIR:$PYTHONPATH
+export LD_LIBRARY_PATH=/opt/cray/pe/gcc/12.2.0/snos/lib64:/opt/cray/pe/lib64:$LD_LIBRARY_PATH
+export MPICH_GPU_SUPPORT_ENABLED=1
+
+PYTHON_BIN=/global/homes/s/sgkim/.conda/envs/kcj_qsim_mpi/bin/python3
+
+echo "###################################################################"
+echo " Real Data Comparison (Cascade only, 1 rank/node)"
+echo "###################################################################"
+
+for N in 1 2 4; do
+    BLOCKS=$((160 / N))
+    [ $BLOCKS -lt 1 ] && BLOCKS=1
+    echo "--- Cascade Real Data N=$N nodes ($N ranks), $BLOCKS blocks/rank ---"
+    srun -N $N -n $N --gpus-per-node=4 \
+        $PYTHON_BIN benchmark/scripts/v6_real_comparison.py Cascade --blocks-per-rank $BLOCKS
+done
+
+echo "###################################################################"
+echo " REAL DATA TESTS COMPLETE"
+echo "###################################################################"

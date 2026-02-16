@@ -12,7 +12,7 @@ echo "╚═══════════════════════�
 
 # Load required modules
 module load PrgEnv-gnu 2>/dev/null || true
-module load gcc-native/13.2 2>/dev/null || true
+module load gcc-native/12.3 2>/dev/null || true
 module load cudatoolkit/12.4 2>/dev/null || true
 module load cmake/3.24 2>/dev/null || true
 module load cray-python 2>/dev/null || true
