@@ -254,6 +254,9 @@ def main():
     parser.add_argument("--model", default="llama-3-70b", choices=["llama-3-70b", "qwen-2.5-72b", "qwen-2.5-32b", "qwen-2.5-7b"])
     parser.add_argument("--systems", default="Cascade,HDF5,vLLM-GPU,PDC,LMCache")
     parser.add_argument("--cold", action="store_true", help="Force read from Lustre (Tier 5) by clearing memory after put.")
+    parser.add_argument("--hit-rate", type=float, default=1.0, help="Simulated cache hit rate (0.0 to 1.0). If < 1.0, we clear cache after hit-read.")
+    parser.add_argument("--write-ratio", type=float, default=0.0, help="Fraction of operations that are writes (0.0 to 1.0). Interleaved with reads.")
+    parser.add_argument("--num-blocks", type=int, default=0, help="Override number of blocks (0=use default).")
     args = parser.parse_args()
     
     # Initialize Global Store for Barrier (MUST be done first)
@@ -270,12 +273,12 @@ def main():
         is_qwen = "qwen" in args.model
         
         if args.mode == "strong":
-            TOTAL_BLOCKS = 128
+            TOTAL_BLOCKS = args.num_blocks if args.num_blocks > 0 else 128
             read_keys = loader.block_ids[:TOTAL_BLOCKS] if not is_qwen else [f"qwen_b{i}" for i in range(TOTAL_BLOCKS)]
             write_keys = read_keys if rank == 0 else []
         else:
-            GLOBAL_BLOCKS = 40
-            LOCAL_BLOCKS = 20
+            GLOBAL_BLOCKS = (args.num_blocks * 2 // 3) if args.num_blocks > 0 else 40
+            LOCAL_BLOCKS = (args.num_blocks // 3) if args.num_blocks > 0 else 20
             global_keys = (loader.block_ids[:GLOBAL_BLOCKS] if not is_qwen else [f"qwen_g{i}" for i in range(GLOBAL_BLOCKS)])
             local_keys = [f"rank{rank}_b{i}" for i in range(LOCAL_BLOCKS)]
             read_keys = global_keys + local_keys
@@ -345,24 +348,73 @@ def main():
         if hasattr(adapter, 'open_for_read'):
             adapter.open_for_read()
         
-        # 2. Read Phase (The Contention Test)
+        # 2. Read Phase (The Contention Test with Hit Rate)
+        num_hits = int(len(read_keys) * args.hit_rate)
+        hit_keys = read_keys[:num_hits]
+        miss_keys = read_keys[num_hits:]
+        
+        # 2.0 Interleaved Write Operations (Mixed Workload)
+        num_writes = int(len(read_keys) * args.write_ratio)
+        mixed_write_keys = [f"mixed_w{rank}_{i}" for i in range(num_writes)]
+        mixed_write_data = {k: generate_block(abs(hash(k)) % (2**32), block_size) for k in mixed_write_keys}
+        
         latencies = []
+        write_latencies = []
         adapter.barrier()
         t_start = time.time()
-        for k in read_keys:
+        
+        # 2.1 Hit Phase (Hot) with interleaved writes
+        write_idx = 0
+        write_interval = max(1, len(hit_keys) // max(1, num_writes)) if num_writes > 0 else 0
+        for i, k in enumerate(hit_keys):
             t0 = time.time()
             buf = np.empty(block_size, dtype=np.uint8)
             adapter.get(k, buf)
             latencies.append((time.time() - t0) * 1000)
+            # Interleave writes
+            if write_interval > 0 and i % write_interval == 0 and write_idx < num_writes:
+                wk = mixed_write_keys[write_idx]
+                tw0 = time.time()
+                adapter.put(wk, mixed_write_data[wk])
+                write_latencies.append((time.time() - tw0) * 1000)
+                write_idx += 1
+        
+        adapter.barrier()
+
+        # 2.2 Miss Phase (Cold fallback)
+        if len(miss_keys) > 0:
+            # Force miss by clearing cache
+            if name == "Cascade":
+                adapter.store.clear()
+            adapter.barrier()
+            
+            for k in miss_keys:
+                t0 = time.time()
+                buf = np.empty(block_size, dtype=np.uint8)
+                adapter.get(k, buf)
+                latencies.append((time.time() - t0) * 1000)
+        
+        # Remaining writes
+        while write_idx < num_writes:
+            wk = mixed_write_keys[write_idx]
+            tw0 = time.time()
+            adapter.put(wk, mixed_write_data[wk])
+            write_latencies.append((time.time() - tw0) * 1000)
+            write_idx += 1
         
         if hasattr(adapter, 'barrier'): adapter.barrier()
         t_total = time.time() - t_start
         
-        # Aggregate Throughput
-        aggr_bw = total_read_data_gb / t_total
-        avg_lat = np.mean(latencies)
+        # Aggregate Throughput (reads + writes counted together)
+        total_ops_gb = total_read_data_gb + (num_writes * world * block_size) / 1024**3
+        aggr_bw = total_ops_gb / t_total
+        avg_read_lat = np.mean(latencies) if latencies else 0
+        avg_write_lat = np.mean(write_latencies) if write_latencies else 0
 
-        print_rank0(f"{name:12} | {aggr_bw:22.2f} | {avg_lat:22.2f}")
+        if args.write_ratio > 0:
+            print_rank0(f"{name:12} | {aggr_bw:22.2f} | {avg_read_lat:12.2f} R / {avg_write_lat:.2f} W")
+        else:
+            print_rank0(f"{name:12} | {aggr_bw:22.2f} | {avg_read_lat:22.2f}")
         # Note: In cold mode, we DON'T cleanup Lustre files before the read,
         # but adapter.cleanup() will handle it at the end.
         adapter.cleanup()

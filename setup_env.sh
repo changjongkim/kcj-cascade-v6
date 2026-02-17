@@ -33,7 +33,7 @@ export CRAY_CPU_TARGET=x86-64
 
 # 6. Add Cascade Build directory to PYTHONPATH
 REPO_ROOT=$(pwd)
-export PYTHONPATH=$REPO_ROOT/cascade_Code/cpp/build:$PYTHONPATH
+export PYTHONPATH=$REPO_ROOT/cascade_Code/cpp/build_cascade_cpp:$PYTHONPATH
 export PYTHONPATH=$REPO_ROOT:$PYTHONPATH
 
 echo "--------------------------------------------------------"

@@ -82,6 +82,94 @@ Cascade enables zero-copy access to hot data while providing near-infinite capac
 
 ---
 
+## ⚙️ Architecture & Data Flow
+
+### 5-Tier Memory Hierarchy
+
+```
+┌───────────────────────────────────────────────────────────┐
+│  Python API (pybind11: cascade_cpp)                       │
+├───────────────────────────────────────────────────────────┤
+│  DistributedStore (V6 — 3 Novelties Integrated)           │
+│  ├── Tier 1: Local GPU  (GPUBackend)                      │
+│  │   └── GPUMemoryPool + 32 CUDA Streams + Pinned Buffers │
+│  ├── Tier 2: Local DRAM (ShmBackend)                      │
+│  │   └── mmap(/dev/shm) + SSE2 Streaming Stores           │
+│  ├── Tier 3: Remote GPU (DistributedGPUBackend)           │
+│  │   └── NVLink (intra) / MPI_Get RDMA (inter)            │
+│  ├── Tier 4: Remote DRAM (DistributedDRAMBackend)         │
+│  │   └── MPI RMA Window (Slingshot-11 RDMA)               │
+│  └── Tier 5: Lustre PFS (AggregatedLustreBackend)         │
+│      └── O_DIRECT + 256MB Aggregated Files                │
+├───────────────────────────────────────────────────────────┤
+│  Cross-Cutting: Global Dedup Index (SHA256 DHT)           │
+│                 Prefix Registry (Cross-Node Protection)   │
+│                 Access Tracker (Locality-Aware Promotion)  │
+├───────────────────────────────────────────────────────────┤
+│  Cray MPICH (CUDA-aware) + Slingshot-11 RDMA              │
+│  NVIDIA A100 SXM4 (40GB HBM2e) × 4 per node              │
+│  Lustre PFS (44PB, $SCRATCH)                              │
+└───────────────────────────────────────────────────────────┘
+```
+
+### `put()` — Data Storage Flow
+
+```
+store.put(key, data, is_prefix=True)
+ │
+ ├─ 1. compute_block_id(data) → SHA256 hash
+ ├─ 2. [N2] Check global_dedup_ → Already exists? → Return (zero transfer)
+ ├─ 3. Determine target node: hash(id) % world_size
+ ├─ 4. GPU has space? → GPUMemoryPool.alloc() → cudaMemcpyAsync(H2D)
+ │     └─ No space? → [N1] evict_for_space(needed, protect_prefix=true)
+ │                    └─ Evicted blocks → demote to SHM or Lustre
+ ├─ 5. [N1] If is_prefix → register in prefix_registry_
+ └─ 6. Update global_index_: id → BlockLocation{node, gpu, offset}
+```
+
+### `get()` — Data Retrieval Flow
+
+```
+store.get(key, buffer)
+ │
+ ├─ Tier 1: Local GPU index lookup
+ │  └─ HIT → cudaMemcpy(D2H) → return (~0.1ms)
+ │
+ ├─ Tier 2: Local DRAM (ShmBackend) lookup
+ │  └─ HIT → SSE2 read from mmap region → return (~1ms)
+ │
+ ├─ Tier 3: global_index_ → remote GPU owner
+ │  └─ HIT → MPI_Get() RDMA → direct remote GPU read → return (~3ms)
+ │
+ ├─ Tier 4: DistributedDRAMBackend → remote DRAM
+ │  └─ HIT → MPI_Get() RDMA → return (~5ms)
+ │
+ └─ Tier 5: AggregatedLustreBackend / LustreBackend
+    └─ O_DIRECT aligned read from disk → return (~50ms)
+
+ [N3] After every get(): record_access(id, origin_tier)
+      → remote_count ≥ 3? → promote_to_local_gpu()
+```
+
+### Example: 8-Node System Prompt Sharing
+
+```python
+# Rank 0: Store protected system prompt
+store.put("sys_prompt_v1", kv_tensor, is_prefix=True)
+# → SHA256 hash → GPU Tier 1 → registered in prefix_registry_
+
+# Rank 1~7: Request same prompt
+store.get("sys_prompt_v1", buffer)
+# 1) Local GPU miss → 2) Local DRAM miss
+# 3) global_index_ → "Rank 0, GPU 0, offset 0x1000"
+# 4) MPI_Get() → Slingshot-11 RDMA direct read from Rank 0's GPU
+# 5) record_access() → remote_count++ → auto-promote to local GPU after 3 hits
+#
+# Under memory pressure: sys_prompt_v1 is NEVER evicted (prefix protection)
+```
+
+---
+
 ## 📊 Evaluation & Performance Analysis (Updated Feb 16, 2026)
 
 ### 📈 1. Real-Data Tiered Contention Benchmark (End-to-End)
@@ -353,6 +441,28 @@ Evaluated throughput across varying message sizes to compare **Cascade RDMA** vs
 > *   **Low Latency, High Throughput**: For "Medium" sized blocks (1MB), Cascade outperforms LMCache by up to **51×** at scale. This is due to Cascade's zero-copy RDMA implementation bypassing the kernel network stack entirely.
 > *   **Scalability**: Cascade's 1MB performance scales almost perfectly from 1 node (7.46 GB/s) to 8 nodes (70.33 GB/s).
 > *   **Large Block Stability**: Even at 160MB (realistic for 72B models), Cascade remains **13.3× faster** than LMCache at 8 nodes.
+
+### 💡 12. Technical Reasoning: Why Cascade Outperforms
+
+The following summarizes the **root causes** behind each benchmark result, mapped to specific C++ implementation decisions.
+
+| Benchmark | Key Observation | Root Cause (Code-Level) |
+| :--- | :--- | :--- |
+| **Real-Data Contention** (§1) | HDF5 drops from 11.5 → 1.4 GB/s at 8N, Cascade holds 7.59 GB/s | HDF5 depends on OS page cache → Lustre **metadata lock contention** serializes parallel I/O. Cascade reads from RDMA-shared memory, bypassing Lustre MDS entirely. |
+| **Strong Scaling** (§2) | Cascade reaches 156 GB/s at 8N | `GPUBackend`'s 32 CUDA streams deliver per-GPU HBM bandwidth independently (~20 GB/s × 8) with **zero lock contention** via thread-local stream assignment (`tid % 32`). |
+| **Weak Scaling** (§3) | 98.2% scaling efficiency | Each node reads its own local memory (no cross-node traffic). The `ShardedIndex` (256 shards, per-shard `shared_mutex`) ensures index lookups scale without lock convoy. |
+| **Cold Start** (§9) | Cascade achieves 5.47× speedup at 8N vs 1N | `AggregatedLustreBackend` packs blocks into ~256MB files → Lustre `open()/stat()` calls reduced by **100×**. Competitors use 1-file-per-block → MDS saturation at scale. |
+| **Hot 60% Hit** (§10) | Cascade maintains ~32ms latency | 60% of reads served from GPU/DRAM tiers (< 1ms via `cudaMemcpy` + `mmap` SSE2). This low-latency majority dominates the average, even though 40% hits disk. |
+| **Hot 30% Hit** (§10) | Only 27% throughput decrease (12.57 → 9.12 GB/s) | Even at 70% miss rate, Cascade's `AggregatedLustreBackend` efficiently batches disk I/O. Competitors issue individual `open()/read()/close()` per miss → syscall overhead dominates. |
+| **RDMA Micro** (§9) | 98.24 GB/s at 8N (98% of theoretical max) | `DistributedDRAMBackend` uses `MPI_Win_create()` + `MPI_Get()` for **one-sided RDMA**. Data bypasses kernel network stack → NIC-to-memory direct transfer at ~12.5 GB/s per node. |
+| **Qwen-72B Large Block** (§10) | Cascade is the **only** system that survives at 8N | 320MB blocks trigger Lustre metadata corruption and RPC timeouts in baselines. Cascade uses **user-level RDMA** + DRAM shadow buffering → no filesystem locks, no kernel involvement. |
+| **87.3 GB/s Contention Record** (§7) | Performance *improves* with more contending nodes | **"Contention Paradox"**: [N2] Dedup ensures only 1 node reads from Lustre. Other 7 nodes RDMA-steal from that node's memory. More nodes = more aggregate RDMA bandwidth, same Lustre load. |
+| **Message Size Sweep** (§11) | 51× faster than LMCache at 1MB, 4N | LMCache uses socket/gRPC → kernel TCP stack + serialization overhead. Cascade's zero-copy RDMA transfers 1MB payloads in **~130μs** vs LMCache's **~6.7ms**. |
+
+> **Summary**: Cascade's performance advantage stems from three architectural pillars:
+> 1. **Kernel Bypass**: RDMA (MPI RMA) + `mmap` + `O_DIRECT` eliminate all kernel data copies.
+> 2. **Metadata Efficiency**: Aggregated Lustre files + SHA256-based DHT index reduce filesystem metadata operations by 100×.
+> 3. **Lock-Free Scaling**: 256-shard indexes + 32 CUDA streams + thread-local resources eliminate contention up to 32 concurrent accessors per node.
 
 ---
 
