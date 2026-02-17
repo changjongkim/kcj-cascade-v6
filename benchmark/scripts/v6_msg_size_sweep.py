@@ -119,11 +119,12 @@ def main():
     print_rank0(f"{'Size':10} | {'Cascade (GB/s)':>20} | {'LMCache (GB/s)':>20}")
     print_rank0("-" * 70)
     
+    # Initialize Cascade once
+    cas = CascadeAdapter("all_sizes")
+    
     for label, size in msg_sizes.items():
         # Cascade
-        cas = CascadeAdapter(label)
         cas_bw = run_bench(cas, size)
-        cas.cleanup()
         
         # LMCache
         lm = LMCacheAdapter(label)
@@ -131,6 +132,8 @@ def main():
         lm.cleanup()
         
         print_rank0(f"{label:10} | {cas_bw:20.2f} | {lm_bw:20.2f}")
+    
+    cas.cleanup()
 
 if __name__ == "__main__":
     main()
