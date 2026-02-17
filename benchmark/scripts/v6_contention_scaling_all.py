@@ -7,14 +7,12 @@ import numpy as np
 import argparse
 from pathlib import Path
 
-# MPI Configuration
-from mpi4py import MPI
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-world = comm.Get_size()
+# MPI Configuration (using SLURM env vars for rank info)
+rank = int(os.environ.get('SLURM_PROCID', 0))
+world = int(os.environ.get('SLURM_NTASKS', 1))
 
 # Path setup
-default_build = '../../cascade_Code/cpp/build_cascade_cpp'
+default_build = '../../cascade_Code/cpp/build'
 build_dir = os.environ.get('CASCADE_BUILD_DIR', default_build)
 if not os.path.isabs(build_dir):
     build_dir = os.path.join(os.path.dirname(__file__), build_dir)
@@ -73,7 +71,7 @@ def init_global_store(mode):
     if GLOBAL_STORE is None:
         cfg = cascade_cpp.DistributedConfig()
         cfg.gpu_capacity_per_device = 38 * 1024**3
-        cfg.dram_capacity = 128 * 1024**3
+        cfg.dram_capacity = 160 * 1024**3
         cfg.num_gpus_per_node = 4
         cfg.dedup_enabled = True
         cfg.kv_compression = True
@@ -224,6 +222,7 @@ def main():
     parser.add_argument("--data-type", choices=["synthetic", "real"], required=True)
     parser.add_argument("--model", default="llama-3-70b", choices=["llama-3-70b", "qwen-2.5-72b", "qwen-2.5-32b", "qwen-2.5-7b"])
     parser.add_argument("--systems", default="Cascade,HDF5,vLLM-GPU,PDC,LMCache")
+    parser.add_argument("--cold", action="store_true", help="Force read from Lustre (Tier 5) by clearing memory after put.")
     args = parser.parse_args()
     
     # Initialize Global Store for Barrier (MUST be done first)
@@ -274,7 +273,7 @@ def main():
         data_cache = {k: generate_block(abs(hash(k)) % (2**32), block_size) for k in read_keys}
 
     total_read_data_gb = (len(read_keys) * world * block_size) / 1024**3
-    print_rank0(f"=== {args.model.upper()} Benchmark Configuration ===")
+    print_rank0(f"=== {args.model.upper()} Benchmark Configuration ({'COLD' if args.cold else 'HOT'}) ===")
     print_rank0(f"Block Size: {block_size / 1024**2:.2f} MB")
     
     print_rank0(f"CONTENTION SCALING | Type: {args.data_type.upper()} | Mode: {args.mode.upper()} | World: {world}")
@@ -293,12 +292,19 @@ def main():
         
         if not adapter: continue
 
-        # 1. Write Phase (Prepare shared data)
+        # 1. Write Phase (Prepare data in storage)
         for k in write_keys:
             adapter.put(k, data_cache[k])
         
         # Sync until everyone has written
         adapter.barrier()
+
+        # COLD START LOGIC: If cold, we re-initialize the store to clear RAM/GPU caches
+        if args.cold:
+            if name == "Cascade":
+                adapter.store.clear()
+            adapter.barrier()
+
         if hasattr(adapter, 'open_for_read'):
             adapter.open_for_read()
         
@@ -317,18 +323,11 @@ def main():
         
         # Aggregate Throughput
         aggr_bw = total_read_data_gb / t_total
-        local_avg_lat = np.mean(latencies)
-        
-        # Gather per-node stats
-        all_bw = comm.gather(aggr_bw / world, root=0) # Estimated per-rank share
-        all_lats = comm.gather(local_avg_lat, root=0)
+        avg_lat = np.mean(latencies)
 
-        if rank == 0:
-            print_rank0(f"{name:12} | {aggr_bw:22.2f} | {local_avg_lat:22.2f}")
-            node_bw_str = ", ".join([f"{b:.1f}" for b in all_bw])
-            node_lat_str = ", ".join([f"{l:.1f}" for l in all_lats])
-            print_rank0(f"  [Detail] Per-node BW:  {node_bw_str}")
-            print_rank0(f"  [Detail] Per-node Lat: {node_lat_str}")
+        print_rank0(f"{name:12} | {aggr_bw:22.2f} | {avg_lat:22.2f}")
+        # Note: In cold mode, we DON'T cleanup Lustre files before the read,
+        # but adapter.cleanup() will handle it at the end.
         adapter.cleanup()
 
     print_rank0("="*90)

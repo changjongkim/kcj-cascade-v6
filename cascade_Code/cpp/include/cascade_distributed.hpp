@@ -245,6 +245,7 @@ public:
     size_t count() const { return index_.size(); }
     void barrier();
     size_t get_offset(const BlockId& id) const;
+    void clear();
     
     DistributedIndex<DRAMBlock> index_;
     
@@ -302,6 +303,7 @@ public:
     int get_target_gpu(const BlockId& id) const;
     void sync_all();
     void barrier();
+    void clear();
     
     // Eviction: evict LRU blocks from a specific GPU, returning evicted data
     std::vector<GPUBackend::EvictedBlock> evict_gpu_for_space(
@@ -377,6 +379,7 @@ public:
     
     void barrier();
     void sync_metadata();
+    void clear();
     
     struct Stats {
         // Usage

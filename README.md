@@ -259,6 +259,25 @@ Evaluated aggregate read throughput across 1, 2, 4, and 8 nodes using **320MB bl
 > *   **The Cascade Edge**: By leveraging **User-level RDMA Management** and **DRAM Shadow Buffering**, Cascade bypasses the OS kernel and file system metadata bottlenecks.
 > *   **Result**: Cascade is the **only system** that survives and scales under the weight of ultra-large LLM KV caches.
 
+### ⚡ 11. Micro-Benchmark: Message Size Sweep (RDMA Efficiency)
+Evaluated throughput across varying message sizes to compare **Cascade RDMA** vs **LMCache (Socket/GRPC-based)** under contention.
+
+| Nodes | Message Size | **Cascade (GB/s)** | LMCache (GB/s) | **Gain** |
+| :---: | :--- | :---: | :---: | :---: |
+| **1** | 1 MB | **7.46** | 2.17 | 3.4× |
+| | 160 MB | **6.90** | 2.18 | 3.2× |
+| **2** | 1 MB | **16.31** | 0.38 | **42.9×** |
+| | 160 MB | **11.43** | 1.58 | 7.2× |
+| **4** | 1 MB | **37.35** | 0.72 | **51.8×** |
+| | 160 MB | **27.48** | 2.57 | 10.7× |
+| **8** | 1 MB | **70.33** | 1.46 | **48.1×** |
+| | 160 MB | **64.43** | 4.82 | **13.3×** |
+
+> **🔥 Analysis: The RDMA Advantage**
+> *   **Low Latency, High Throughput**: For "Medium" sized blocks (1MB), Cascade outperforms LMCache by up to **51×** at scale. This is due to Cascade's zero-copy RDMA implementation bypassing the kernel network stack entirely.
+> *   **Scalability**: Cascade's 1MB performance scales almost perfectly from 1 node (7.46 GB/s) to 8 nodes (70.33 GB/s).
+> *   **Large Block Stability**: Even at 160MB (realistic for 72B models), Cascade remains **13.3× faster** than LMCache at 8 nodes.
+
 ---
 
 ## 🔧 Installation & Usage

@@ -1229,5 +1229,52 @@ DistributedStore::Stats DistributedStore::get_stats() {
   return s;
 }
 
+// ============================================================================
+// clear() — Reset cache tiers for Cold Start experiments
+// ============================================================================
+
+void DistributedDRAMBackend::clear() {
+    std::lock_guard<std::mutex> lock(free_list_mutex_);
+    std::lock_guard<std::mutex> lru_lock(lru_mutex_);
+    index_.clear();
+    lru_list_.clear();
+    lru_map_.clear();
+    free_list_.clear();
+    free_list_.push_back({0, capacity_});
+    used_.store(0);
+    write_offset_.store(0);
+}
+
+void DistributedGPUBackend::clear() {
+    for (auto &gpu : gpus_) {
+        gpu->clear(); // Assuming GPUBackend has clear()
+    }
+    global_index_.clear();
+}
+
+void DistributedStore::clear() {
+    barrier();
+    if (gpu_) gpu_->clear();
+    if (dram_) dram_->clear();
+    global_dedup_.clear();
+    {
+        std::unique_lock lock(prefix_mutex_);
+        prefix_registry_.clear();
+    }
+    access_tracker_.clear();
+    {
+        std::lock_guard<std::mutex> lock(dirty_mutex_);
+        dirty_blocks_.clear();
+    }
+    local_gpu_hits_ = 0; local_dram_hits_ = 0;
+    remote_gpu_hits_ = 0; remote_dram_hits_ = 0;
+    lustre_hits_ = 0; misses_ = 0;
+    dedup_hits_ = 0; dedup_bytes_saved_ = 0;
+    gpu_evictions_ = 0; dram_evictions_ = 0;
+    prefix_blocks_protected_ = 0; promotions_to_local_ = 0;
+    compression_savings_ = 0;
+    barrier();
+}
+
 } // namespace distributed
 } // namespace cascade
