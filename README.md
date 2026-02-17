@@ -474,32 +474,32 @@ Results from 4-node stress tests evaluating architecture robustness under varyin
 ### 📍 13. Sensitivity: Block Size (Metadata Overhead)
 Evaluated aggregate bandwidth as block sizes decrease (increasing metadata/IOPS pressure).
 
-| Model | Block Size | **Cascade (GB/s)** | HDF5 (GB/s) | vLLM/LMC (GB/s) |
-| :--- | :---: | :---: | :---: | :---: |
-| Qwen-2.5-7B | 56 MB | **33.55** | 4.35 | 3.99 |
-| **Qwen-2.5-32B** | **256 MB** | **45.17** | **2.98** | **4.22** |
-| Qwen-2.5-72B | 320 MB | **49.00** | 3.45 | 4.29 |
+| Model | Block Size | **Cascade** | HDF5 | vLLM-GPU | PDC | LMCache |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| Qwen-2.5-7B | 56 MB | **33.55** | 4.35 | 4.03 | 4.02 | 3.99 |
+| Qwen-2.5-32B | 256 MB | **45.17** | 2.98 | 3.53 | 4.22 | 4.22 |
+| Qwen-2.5-72B | 320 MB | **49.00** | 3.45 | 4.31 | 4.29 | 4.29 |
 
 > **Reasoning**: As blocks get smaller, the number of system calls and metadata operations grows. Cascade's aggregated I/O remains efficient, while baselines get stuck in Lustre `open/stat` loops.
 
 ### 📍 14. Sensitivity: Write Ratio (Mixed R/W Workload) — [🔄 Executing 1hr Stress Test]
 Evaluated performance with interleaved "Put" (Write) and "Get" (Read) operations using Qwen-72B blocks.
 
-| Write Ratio | **Cascade (GB/s)** | Baselines (HDF5/vLLM) |
-| :--- | :---: | :--- |
-| **0% (Pure Read)** | **48.26** | ~2.5 GB/s (I/O Bound) |
-| **20% Write** | **11.60** | **Timed Out / System Hang** |
+| Write Ratio | **Cascade (GB/s)** | HDF5 | vLLM-GPU | PDC | LMCache |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **0% (Pure Read)** | **48.26** | 2.04 | 2.13 | 2.59 | 2.81 |
+| **20% Write** | **11.60** | T/O | T/O | T/O | T/O |
 
 > **Reasoning**: Interleaved writes trigger SHA256 hashing and Dedup index updates in Cascade, causing a performance drop vs pure reads. However, baselines **completely fail** under this mixed load due to write-lock contention. Cascade is the only system to survive and deliver >10 GB/s under mixed pressure.
 
 ### 📍 15. Sensitivity: Concurrent Request Scaling — [🔄 Executing 1hr Stress Test]
 Evaluated how bandwidth changes as the number of concurrent block requests increases at 4 nodes.
 
-| Concurrent Blocks | **Cascade (GB/s)** | HDF5 (GB/s) | vLLM-GPU (GB/s) |
-| :--- | :---: | :---: | :---: |
-| **20 Blocks** | **45.31** | 4.76 | 4.35 |
-| **60 Blocks** | **49.81** | 2.64 | 3.36 |
-| **120 Blocks** | **31.29** | 0.79 | 2.59 |
+| Concurrent Blocks | **Cascade** | HDF5 | vLLM-GPU | PDC | LMCache |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **20 Blocks** | **45.31** | 4.76 | 4.35 | 4.34 | 4.36 |
+| **60 Blocks** | **49.81** | 2.64 | 3.36 | 3.36 | 3.33 |
+| **120 Blocks** | **31.29** | 0.79 | 2.59 | 2.64 | 3.13 |
 
 > **Reasoning**: As concurrency increases, HDF5's performance collapses (**6× drop**) due to file system contention. Cascade maintains high utilization, even as memory pressure begins to trigger background tiering.
 
