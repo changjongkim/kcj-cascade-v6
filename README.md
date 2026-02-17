@@ -172,6 +172,32 @@ store.get("sys_prompt_v1", buffer)
 
 ## 📊 Evaluation & Performance Analysis (Updated Feb 16, 2026)
 
+### 🏢 Experimental Setup & Cluster Configuration
+To ensure reproducibility and realistic scaling, all experiments were conducted on the **NERSC Perlmutter Supercomputer**.
+
+#### **1. Hardware Specification**
+| Component | Details |
+| :--- | :--- |
+| **Compute Cluster** | 1 to 16 Nodes (Aggregating 4 to 64 GPUs) |
+| **GPU per Node** | 4× NVIDIA A100-SXM4 (40GB HBM2e) |
+| **Node Interconnect** | HPE Slingshot-11 (RDMA-capable via RoCE v2, 200 Gbps/node) |
+| **System Memory** | 512 GB DDR4-3200 per node |
+| **Parallel FS** | Lustre $SCRATCH (44PB capacity, peaked at ~50+ GB/s) |
+
+#### **2. Cascade Hierarchical Cache Tiers**
+Cascade V6 manages data across 5 distinct tiers to balance latency and capacity:
+*   **Tier 1: Device Memory (HBM)** — Local GPU memory (38GB/GPU allocated).
+*   **Tier 2: Host Memory (DRAM)** — Local pinned DRAM staged via `mmap`.
+*   **Tier 3: Remote GPU (RDMA)** — Peered node GPU memory via one-sided MPI Get.
+*   **Tier 4: Remote DRAM (RDMA)** — Peered node host memory via one-sided MPI Get.
+*   **Tier 5: Lustre PFS** — High-capacity cold storage using **Aggregated Lustre Engine**.
+
+#### **3. Benchmark Methodology**
+*   **Full-Scale Evaluation (1-16 Nodes)**: Measures aggregate throughput and inter-node coordination efficiency.
+*   **System Sensitivity (Fixed 4 Nodes)**: Conducted on a stable 4-node (16 GPU) subset to isolate software overheads related to metadata, mixed R/W ratios, and concurrent locking.
+
+---
+
 ### 📈 1. Real-Data Tiered Contention Benchmark (End-to-End)
 *   **Experimental Objective**: Validate Cascade's performance under **realistic LLM serving conditions** where multiple nodes compete for the same "Shared Prefix" (Hot Data) while managing massive KV cache misses.
 *   **Workload Configuration (Realistic Stress Test)**:
@@ -226,7 +252,7 @@ store.get("sys_prompt_v1", buffer)
 
 > **Analysis:** Cascade demonstrates **98.2% weak scaling efficiency**. While aggregate bandwidth grows with the cluster, the **Per-node throughput stays consistent (~11.7 GB/s)**, proving that adding nodes linearly increases the total processing power without nodal degradation.
 
-### 🎮 4. Real-Workload Strong Scaling (Fixed 40GB Data)
+### 🚀 4. Real-Workload Strong Scaling (Fixed 40GB Data)
 *   **Experimental Objective**: Validate scaling using **real KV cache blocks** across 8 nodes.
 
 | System | 1 Node (Read) | 4 Nodes (Read) | 8 Nodes (Read) | **Avg Latency (8N)** |
