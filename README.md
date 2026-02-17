@@ -339,19 +339,19 @@ Validated Cascade on the latest **Qwen 2.5** model series under **Cold Start (Lu
 *   **Reasoning**: This stress test exposes the "Scalability Wall" of parallel file systems. As nodes increase, metadata contention on shared files typically causes performance to collapse.
 
 #### **Summary Table: Aggregate Read BW (Aggr. GB/s)**
-| System | 1 Node | 2 Nodes | 4 Nodes | 8 Nodes | **Speedup (1N → 8N)** |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Cascade V6** | **1.10** | **2.52** | **3.01** | **6.02** | **5.47×** |
-| **vLLM-GPU** | 1.02 | 1.98 | 3.01 | 2.46 | 2.41× |
-| **LMCache** | 1.01 | 1.54 | 2.59 | 1.93 | 1.91× |
-| **HDF5** | 0.90 | 1.82 | 2.15 | 1.96 | 2.17× |
-| **PDC** | 0.69 | 1.23 | 2.57 | 1.67 | 2.42× |
+| System | 1 Node | 2 Nodes | 4 Nodes | 8 Nodes | 16 Nodes | **Speedup (16N)** |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Cascade V6** | **1.10** | **2.52** | **3.01** | **6.02** | **9.09** | **8.26×** |
+| **PDC** | 0.69 | 1.23 | 2.57 | 1.67 | 8.82 | 12.78× |
+| **vLLM-GPU** | 1.02 | 1.98 | 3.01 | 2.46 | 8.65 | 8.48× |
+| **HDF5** | 0.90 | 1.82 | 2.15 | 1.96 | 4.24 | 4.71× |
+| **LMCache** | 1.01 | 1.54 | 2.59 | 1.93 | Timeout | Failed |
 
 #### **🔥 Analysis: Breaking the Scalability Wall**
-1.  **Linear-like Speedup**: Cascade V6 is the **only system** that maintains a steady performance increase up to 8 nodes, achieving a **5.47× speedup**.
-2.  **The Metadata Collapse**: Traditional systems (HDF5, PDC, vLLM-GPU) hit a "Scalability Wall" at 8 nodes, where aggregate bandwidth actually **decreases** compared to 4 nodes. This is a classic symptom of Lustre metadata lock contention.
-3.  **Cascade's Edge**: By utilizing its **Aggregated Lustre Engine** and internal **Shadow Buffering**, Cascade decouples logical block requests from physical file system operations, allowing it to scale where others fail. 
-4.  **Real-World Impact**: For a 41GB Qwen-72B context, Cascade reduces the cold-load time from **36s (1 node)** to just **6.6s (8 nodes)**, whereas HDF5 remains stuck at ~20s.
+1.  **Linear Speedup to 8N**: Cascade demonstrates steady performance increase up to 8 nodes (**5.47× speedup**).
+2.  **16-Node Strong Scaling Limit**: At 16 nodes (64 processes), the workload per process drops to **~640MB**, where system startup overhead begins to dominate IO time. While performance continues to scale to **9.09 GB/s**, efficiency drops.
+3.  **Lustre Saturation**: Cascade, PDC, and vLLM all converge around ~9 GB/s, suggesting the physical random-read limit of the Lustre OSS for this block size/count configuration.
+4.  **HDF5 Lag**: HDF5 remains significantly slower at 4.24 GB/s due to metadata overhead. LMCache timeouts at 16 nodes, likely due to connection handling overhead.
 
 ---
 
