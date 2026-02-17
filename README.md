@@ -227,7 +227,7 @@ Cascade V6 manages data across 5 distinct tiers to balance latency and capacity:
     *   Cascade provides a **5.4× faster** loading speed for contested context windows compared to HDF5/vLLM at scale.
     *   This translates to sub-second context loading (0.68s for 5.2GB) across 8 nodes, while baselines take over 3.7 seconds.
 
-### ⏱️ 2. Peak Scale: Strong Scaling (Llama-3-70B Pattern)
+### ⏱️ 2. Peak Scale: Strong Scaling (Synthetic Benchmark)
 *   **Scenario:** Fixed dataset (**12.5 GB / 80 Blocks**) distributed across nodes.
 *   **Objective:** Measure aggregate read throughput as a function of cluster size.
 
@@ -240,7 +240,7 @@ Cascade V6 manages data across 5 distinct tiers to balance latency and capacity:
 
 > **Analysis:** Cascade V6 outperforms the nearest competitor (HDF5) by **3.3×**. By pooling distributed RAM and GPU memory, Cascade reaches **150+ GB/s** aggregate bandwidth, scaling linearly with node count.
 
-### 🚀 3. Peak Scale: Weak Scaling (Llama-3-70B Pattern)
+### 🚀 3. Peak Scale: Weak Scaling (Synthetic Benchmark)
 *   **Scenario:** Fixed data per rank (**1.5 GB/rank / 10 Blocks**).
 *   **Objective:** Evaluate aggregate throughput stability as both data and nodes scale proportionally.
 
