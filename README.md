@@ -522,7 +522,8 @@ Evaluated aggregate bandwidth as block sizes decrease (increasing metadata/IOPS 
 > **Reasoning**: As blocks get smaller, the number of system calls and metadata operations grows. Cascade's aggregated I/O remains efficient, while baselines get stuck in Lustre `open/stat` loops.
 
 ### 📍 14. Sensitivity: Write Ratio (Mixed R/W Workload)
-Evaluated performance with interleaved "Put" (Write) and "Get" (Read) operations using Qwen-72B blocks.
+*   **Condition**: **Hot Cache** (Data pre-loaded in Tier 1/2).
+*   **Workload**: Random Read/Write Interleaved on Qwen-72B blocks (320MB).
 
 | Write Ratio | **Cascade (GB/s)** | HDF5 | vLLM-GPU | PDC | LMCache |
 | :--- | :---: | :---: | :---: | :---: | :---: |
@@ -532,18 +533,20 @@ Evaluated performance with interleaved "Put" (Write) and "Get" (Read) operations
 > **Reasoning**: Interleaved writes trigger SHA256 hashing and Dedup index updates in Cascade, causing a performance drop vs pure reads. However, baselines **completely fail** under this mixed load due to write-lock contention. Cascade is the only system to survive and deliver >10 GB/s under mixed pressure.
 
 ### 📍 15. Sensitivity: Concurrent Request Scaling
-Evaluated how bandwidth changes as the number of concurrent block requests increases at 4 nodes.
+*   **Condition**: **Hot Cache** (Data pre-loaded).
+*   **Workload**: **Burst Random Reads**. Simulating 4 nodes requesting N distinct blocks simultaneously.
 
-| Concurrent Blocks | **Cascade (GB/s)** | **Latency** | HDF5 (GB/s) | vLLM-GPU | LMCache |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **20 Blocks** | **47.93** | **26.07 ms** | 4.70 | 4.40 | 4.37 |
-| **60 Blocks** | **46.94** | **26.63 ms** | 2.93 | 3.57 | 3.59 |
-| **120 Blocks** | **36.03** | **27.75 ms** | 1.96 | 1.91 | 1.77 |
+| Concurrent Blocks | **Total Data** | **Cascade (GB/s)** | **Latency** | HDF5 (GB/s) |
+| :--- | :--- | :---: | :---: | :---: |
+| **20 Blocks** | 6.4 GB | **47.93** | **26.07 ms** | 4.70 |
+| **60 Blocks** | 19.2 GB | **46.94** | **26.63 ms** | 2.93 |
+| **120 Blocks** | 38.4 GB | **36.03** | **27.75 ms** | 1.96 |
 
 > **Reasoning**: As concurrency increases, HDF5's performance collapses (**60% drop**) due to file system contention. Cascade maintains high utilization (75% retention), even as memory pressure begins to trigger background tiering.
 
 ### ⏱️ 16. Inference Latency: TTFT (Time To First Token)
-Time required to load the full KV cache context from storage to GPU before generation can start. Measured on Qwen-2.5-72B.
+*   **Condition**: **Hot Cache** (Simulating prompt reuse / warm start).
+*   **Workload**: **Sequential Context Load**. Loading full KV cache context (Prefix) from storage to GPU.
 
 | Context Length | Data Size | **Cascade (Hot)** | HDF5 (Hot) | vLLM-GPU | **Speedup** |
 | :--- | :--- | :---: | :---: | :---: | :---: |
