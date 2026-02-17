@@ -24,15 +24,10 @@ export MPICH_GPU_SUPPORT_ENABLED=1
 PYTHON_BIN=/global/homes/s/sgkim/.conda/envs/kcj_qsim_mpi/bin/python3
 
 # Install missing dependencies if needed
-$PYTHON_BIN -m pip install h5py redis -q || echo "Pip install failed, trying to continue..."
+$PYTHON_BIN -m pip install h5py -q || echo "Pip install failed, trying to continue..."
 
 # Create tmp directory for baselines
 mkdir -p benchmark/tmp
-
-# Start Redis for the Redis baseline on ALL nodes
-srun -N 4 -n 4 --ntasks-per-node=1 redis-server --port 16379 --save "" --appendonly no &
-REDIS_PID=$!
-sleep 10
 
 echo "###################################################################"
 echo " Real Data Full Comparison (Cascade vs Baselines)"
@@ -41,15 +36,11 @@ echo "###################################################################"
 SYSTEMS="Cascade,LMCache,HDF5"
 
 for N in 1 2 4; do
-    BLOCKS=$((160 / N))
-    [ $BLOCKS -lt 1 ] && BLOCKS=1
+    BLOCKS=160
     echo "--- Scaling Test N=$N nodes ($N ranks), $BLOCKS blocks/rank ---"
     srun -N $N -n $N --gpus-per-node=4 \
         $PYTHON_BIN benchmark/scripts/v6_real_comparison.py $SYSTEMS --blocks-per-rank $BLOCKS
 done
-
-# Cleanup Redis
-kill $REDIS_PID
 
 echo "###################################################################"
 echo " FULL REAL DATA TESTS COMPLETE"

@@ -226,21 +226,21 @@ class PDCAdapter(BaseStore):
 # Execution Loop
 # ============================================================
 
-def run_bench(system_name, adapter, block_ids, loaded_data_dict):
+def run_contention_bench(system_name, adapter, write_ids, read_ids, loaded_data_dict):
     """
-    system_name: Name of system
-    adapter: BaseStore adapter
-    block_ids: List of block IDs to test
-    loaded_data_dict: Dict mapping bid -> pre-loaded numpy buffer
+    Contention Scenario:
+    1. Write Unique blocks (to populate storage)
+    2. Read SAME blocks across all ranks (Contention on the 'Hot Prefix')
     """
-    total_bytes = sum(loaded_data_dict[bid].nbytes for bid in block_ids)
+    write_bytes = sum(loaded_data_dict[bid].nbytes for bid in write_ids)
+    read_bytes = sum(loaded_data_dict[bid].nbytes for bid in read_ids)
     
     if hasattr(adapter, 'store'):
         adapter.store.barrier()
     
-    # ─── Write Phase ───
+    # ─── Phase 1: Unique Write (Preparation) ───
     t0 = time.time()
-    for bid in block_ids:
+    for bid in write_ids:
         adapter.put(bid, loaded_data_dict[bid])
     
     if hasattr(adapter, 'store'):
@@ -251,12 +251,17 @@ def run_bench(system_name, adapter, block_ids, loaded_data_dict):
         adapter.store.sync_metadata()
         adapter.store.barrier()
     
-    # ─── Read Phase ───
-    # We read in the same order as write (warm cache test)
-    # and then random order (scaling test)
+    # ─── Phase 2: Contended Read (The 'Hot Prefix' Test) ───
+    # All ranks read EXACTLY the same read_ids at the same time
+    print_rank0(f"  [{system_name}] Starting contention read of {len(read_ids)} shared blocks...")
+    
+    # Special case: For HDF5/LMCache, data must exist in the shared/local path for all ranks
+    # In our current adapter, HDF5 uses local file per rank. To simulate contention,
+    # we would need a single shared HDF5 file. (For now, we use the fact that they
+    # all hit the same keys if shared storage was used).
+    
     t1 = time.time()
-    for bid in block_ids:
-        # We need a buffer. Since blocks are ~164MB, we reuse it.
+    for bid in read_ids:
         size = loaded_data_dict[bid].nbytes
         buf = np.empty(size, dtype=np.uint8)
         adapter.get(bid, buf)
@@ -265,16 +270,17 @@ def run_bench(system_name, adapter, block_ids, loaded_data_dict):
         adapter.store.barrier()
     t_read = time.time() - t1
     
-    # Aggregated metrics
-    local_gb = total_bytes / 1024**3
-    global_gb = local_gb  # In 1-rank-per-node MPI, each rank's data represents its share
+    # Metrics
+    local_write_gb = write_bytes / 1024**3
+    local_read_gb = read_bytes / 1024**3
         
     if rank == 0:
-        write_bw = global_gb / t_write
-        read_bw = global_gb / t_read
-        print(f"  {system_name:10} | Write: {write_bw:7.2f} GB/s | Read: {read_bw:7.2f} GB/s", flush=True)
+        write_bw = local_write_gb / t_write
+        read_bw = local_read_gb / t_read
+        print(f"  {system_name:10} | Unique Write: {write_bw:7.2f} GB/s | Contended Read: {read_bw:7.2f} GB/s", flush=True)
         return (write_bw, read_bw)
-    return (global_gb/t_write, global_gb/t_read) # Return values for all ranks to avoid None
+    return (local_write_gb/t_write, local_read_gb/t_read)
+ # Return values for all ranks to avoid None
 
 def main():
     import argparse
@@ -287,17 +293,27 @@ def main():
     num_blocks = args.blocks_per_rank
 
     loader = RealKVLoader()
-    my_block_ids = loader.get_my_blocks(rank, world, limit=num_blocks)
+    # Total blocks available for this test
+    total_workload = num_blocks 
+    num_hot = num_blocks // 4  # 25% is hot
+    num_unique = num_blocks - num_hot
     
-    print_rank0(f" Blocks/rank: {len(my_block_ids)}, ~{len(my_block_ids)*164/1024:.1f} GB/rank")
-    print_rank0(f" [Global] Pre-loading data once to memory to avoid redundant Lustre reads...")
-    loaded_data_dict = loader.read_blocks(my_block_ids)
+    # 1. Unique blocks for each rank to write
+    write_ids = loader.get_my_blocks(rank, world, limit=num_unique)
+    # 2. Hot blocks (same for all ranks)
+    read_ids = loader.block_ids[:num_hot]
+    
+    all_needed = list(set(write_ids + read_ids))
+    print_rank0(f" Contention Config: {num_unique} unique writes, {num_hot} shared reads")
+    print_rank0(f" [Global] Pre-loading {len(all_needed)} blocks to memory...")
+    loaded_data_dict = loader.read_blocks(all_needed)
     
     import gc
     gc.collect()
     
-    print_rank0(f" Testing: {', '.join(systems_to_test)}")
+    print_rank0(f" Testing Contention: {', '.join(systems_to_test)}")
     print_rank0("="*80)
+    print_rank0(f"{'System':12} | {'Write BW':>15} | {'Contended Read':>15}")
     
     final_results = {}
     
@@ -306,13 +322,21 @@ def main():
         try:
             if name == "Cascade":
                 adapter = CascadeAdapter()
-            elif name == "HDF5": adapter = HDF5Adapter()
-            elif name == "LMCache": adapter = LMCacheAdapter()
-            elif name == "Redis": adapter = RedisAdapter()
-            elif name == "PDC": adapter = PDCAdapter()
+            elif name == "HDF5": 
+                adapter = HDF5Adapter()
+                # For HDF5 contention read to work in this script, all ranks need the hot data
+                # We simulate this by having all ranks write the hot blocks first if they don't have it
+                for bid in read_ids:
+                    if bid not in write_ids:
+                        adapter.put(bid, loaded_data_dict[bid])
+            elif name == "LMCache": 
+                adapter = LMCacheAdapter()
+                for bid in read_ids:
+                    if bid not in write_ids:
+                        adapter.put(bid, loaded_data_dict[bid])
             
             if adapter:
-                res = run_bench(name, adapter, my_block_ids, loaded_data_dict)
+                res = run_contention_bench(name, adapter, write_ids, read_ids, loaded_data_dict)
                 if rank == 0 and res: final_results[name] = res
                 adapter.cleanup()
         except Exception as e:

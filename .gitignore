@@ -139,3 +139,4 @@ cascade_Code/cpp/build_mpi/
 benchmark/data_external/
 mpi_test_bin
 
+benchmark/tmp/
