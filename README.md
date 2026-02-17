@@ -200,7 +200,8 @@ Cascade V6 manages data across 5 distinct tiers to balance latency and capacity:
 
 ### 📈 1. Real-Data Tiered Contention Benchmark (End-to-End)
 *   **Experimental Objective**: Validate Cascade's performance under **realistic LLM serving conditions** where multiple nodes compete for the same "Shared Prefix" (Hot Data) while managing massive KV cache misses.
-*   **Workload Configuration (Realistic Stress Test)**:
+*   **Workload Configuration (Llama-3-70B Stress Test)**:
+    *   **Model**: Llama-3-70B (160MB per block)
     *   **Tier 1 (GPU VRAM)**: 40% Hit Rate (Simulated 400 GB/s)
     *   **Tier 2 (Storage Backend)**: 60% Cache Miss (Reading from Cascade, HDF5, PDC, LMCache, or vLLM-GPU)
     *   **Contention Scenario**: 4-8 nodes simultaneously reading the **exact same 6.5GB "Hot Prefix"** blocks.
@@ -226,8 +227,8 @@ Cascade V6 manages data across 5 distinct tiers to balance latency and capacity:
     *   Cascade provides a **5.4× faster** loading speed for contested context windows compared to HDF5/vLLM at scale.
     *   This translates to sub-second context loading (0.68s for 5.2GB) across 8 nodes, while baselines take over 3.7 seconds.
 
-### ⏱️ 2. Peak Scale: Strong Scaling (Synthetic)
-*   **Scenario:** Fixed dataset (**12.5 GB**) distributed across nodes.
+### ⏱️ 2. Peak Scale: Strong Scaling (Llama-3-70B Pattern)
+*   **Scenario:** Fixed dataset (**12.5 GB / 80 Blocks**) distributed across nodes.
 *   **Objective:** Measure aggregate read throughput as a function of cluster size.
 
 | Nodes | **Cascade V6 (Agg.)** | HDF5 (Agg.) | vLLM-GPU (Agg.) | PDC (Agg.) | LMCache (Agg.) |
@@ -239,8 +240,8 @@ Cascade V6 manages data across 5 distinct tiers to balance latency and capacity:
 
 > **Analysis:** Cascade V6 outperforms the nearest competitor (HDF5) by **3.3×**. By pooling distributed RAM and GPU memory, Cascade reaches **150+ GB/s** aggregate bandwidth, scaling linearly with node count.
 
-### 🚀 3. Peak Scale: Weak Scaling (Synthetic)
-*   **Scenario:** Fixed data per rank (**1.5 GB/rank**).
+### 🚀 3. Peak Scale: Weak Scaling (Llama-3-70B Pattern)
+*   **Scenario:** Fixed data per rank (**1.5 GB/rank / 10 Blocks**).
 *   **Objective:** Evaluate aggregate throughput stability as both data and nodes scale proportionally.
 
 | Nodes | Total Data | **Cascade (Agg.)** | **Cascade (Per-node)** | HDF5 | vLLM-GPU | LMCache |
@@ -252,8 +253,8 @@ Cascade V6 manages data across 5 distinct tiers to balance latency and capacity:
 
 > **Analysis:** Cascade demonstrates **98.2% weak scaling efficiency**. While aggregate bandwidth grows with the cluster, the **Per-node throughput stays consistent (~11.7 GB/s)**, proving that adding nodes linearly increases the total processing power without nodal degradation.
 
-### 🚀 4. Real-Workload Strong Scaling (Fixed 40GB Data)
-*   **Experimental Objective**: Validate scaling using **real KV cache blocks** across 8 nodes.
+### 🚀 4. Real-Workload Strong Scaling (Llama-3-70B Fixed 40GB Data)
+*   **Experimental Objective**: Validate scaling using **real Llama-3-70B KV cache blocks (160MB)** across 8 nodes.
 
 | System | 1 Node (Read) | 4 Nodes (Read) | 8 Nodes (Read) | **Avg Latency (8N)** |
 | :--- | :---: | :---: | :---: | :---: |
@@ -263,8 +264,8 @@ Cascade V6 manages data across 5 distinct tiers to balance latency and capacity:
 | **PDC** | 0.80 GB/s | 13.96 GB/s | 28.59 GB/s | 43.71 ms |
 | **LMCache** | 0.50 GB/s | 6.86 GB/s | 13.78 GB/s | 90.68 ms |
 
-### 🚀 5. Real-Workload Weak Scaling (Fixed 6.5GB/Rank Data)
-*   **Experimental Objective**: Evaluate per-node performance stability using **real KV cache data**.
+### 🚀 5. Real-Workload Weak Scaling (Llama-3-70B Fixed 6.5GB/Rank Data)
+*   **Experimental Objective**: Evaluate per-node performance stability using **real Llama-3-70B KV cache data (160MB)**.
 
 | Nodes | Total Data | **Cascade (Agg.)** | **Cascade (Per-node)** | HDF5 (Agg.) | PDC (Agg.) |
 | :---: | :---: | :---: | :---: | :---: | :---: |
