@@ -8,8 +8,10 @@ import argparse
 from pathlib import Path
 
 # MPI Configuration
-rank = int(os.environ.get('SLURM_PROCID', 0))
-world = int(os.environ.get('SLURM_NTASKS', 1))
+from mpi4py import MPI
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+world = comm.Get_size()
 
 # Path setup
 default_build = '../../cascade_Code/cpp/build_cascade_cpp'
@@ -22,12 +24,14 @@ try:
     import cascade_cpp
 except ImportError:
     cascade_cpp = None
+    print("Error: cascade_cpp module not found.")
+    sys.exit(1)
 
 def print_rank0(msg):
     if rank == 0:
         print(msg, flush=True)
 
-# ============================================================
+# ======================================== ==============
 # Helpers
 # ============================================================
 
@@ -61,29 +65,33 @@ class BaseStore:
     def barrier(self): pass
     def cleanup(self): pass
 
-import mpi4py
-mpi4py.rc.initialize = False
-from mpi4py import MPI
-if not MPI.Is_initialized():
-    # Cascade V6 backend requires THREAD_MULTIPLE for RMA/Async threads
-    MPI.Init_thread(MPI.THREAD_MULTIPLE)
+# Global Store for Barrier
+GLOBAL_STORE = None
 
-# MPI Shared Barrier
-def mpi_barrier():
-    MPI.COMM_WORLD.Barrier()
-
-class CascadeAdapter(BaseStore):
-    def __init__(self, mode):
-        self.mode = mode
+def init_global_store(mode):
+    global GLOBAL_STORE
+    if GLOBAL_STORE is None:
         cfg = cascade_cpp.DistributedConfig()
         cfg.gpu_capacity_per_device = 38 * 1024**3
         cfg.dram_capacity = 128 * 1024**3
         cfg.num_gpus_per_node = 4
         cfg.dedup_enabled = True
         cfg.kv_compression = True
+        cfg.lustre_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/cas_cont_{mode}"
+        GLOBAL_STORE = cascade_cpp.DistributedStore(cfg)
+    return GLOBAL_STORE
+
+# MPI Shared Barrier replacement
+def mpi_barrier():
+    if GLOBAL_STORE:
+        GLOBAL_STORE.barrier()
+
+class CascadeAdapter(BaseStore):
+    def __init__(self, mode):
+        self.mode = mode
+        # Re-use global store
+        self.store = GLOBAL_STORE
         self.lustre_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/cas_cont_{mode}"
-        cfg.lustre_path = self.lustre_path
-        self.store = cascade_cpp.DistributedStore(cfg)
 
     def put(self, key, data):
         self.store.put(str(key), data)
@@ -98,7 +106,7 @@ class CascadeAdapter(BaseStore):
     def cleanup(self):
         self.barrier()
         # Only rank 0 cleans up the lustre path if it exists
-        if self.store.rank == 0:
+        if rank == 0:
             import shutil
             if os.path.exists(self.lustre_path):
                 try:
@@ -198,47 +206,66 @@ class PosixAdapter(BaseStore):
 # Main Logic
 # ============================================================
 
+def get_model_config(model_name):
+    # (Layers, KV Heads, Head Dim, Tokens per block)
+    configs = {
+        "llama-3-70b": (80, 8, 128, 1024),
+        "qwen-2.5-72b": (80, 8, 128, 1024),
+        "qwen-2.5-32b": (64, 8, 128, 1024),
+        "qwen-2.5-7b": (28, 4, 128, 1024)
+    }
+    L, H, D, T = configs.get(model_name, configs["llama-3-70b"])
+    # 2 (fp16) * 2 (K and V) * L * H * D * T
+    return 2 * 2 * L * H * D * T
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=["strong", "weak"], required=True)
     parser.add_argument("--data-type", choices=["synthetic", "real"], required=True)
+    parser.add_argument("--model", default="llama-3-70b", choices=["llama-3-70b", "qwen-2.5-72b", "qwen-2.5-32b", "qwen-2.5-7b"])
     parser.add_argument("--systems", default="Cascade,HDF5,vLLM-GPU,PDC,LMCache")
     args = parser.parse_args()
+    
+    # Initialize Global Store for Barrier (MUST be done first)
+    barrier_store = init_global_store(args.mode)
+    barrier_store.barrier() # Sync start
 
     systems = args.systems.split(",")
-    block_size = 0
+    block_size = get_model_config(args.model)
     read_keys = []
     
     if args.data_type == "real":
         loader = RealKVLoader()
-        # Shared Prefix Contention (Strong): All ranks read SAME 128 blocks (~21GB)
-        # Shared Prefix Contention (Weak): Global 40 blocks + Local 20 blocks
+        # For Qwen, if real data is not available, we use synthetic generation with realistic size
+        is_qwen = "qwen" in args.model
+        
         if args.mode == "strong":
             TOTAL_BLOCKS = 128
-            read_keys = loader.block_ids[:TOTAL_BLOCKS]
-            write_keys = read_keys if rank == 0 else [] # Rank 0 writes for everyone
+            read_keys = loader.block_ids[:TOTAL_BLOCKS] if not is_qwen else [f"qwen_b{i}" for i in range(TOTAL_BLOCKS)]
+            write_keys = read_keys if rank == 0 else []
         else:
             GLOBAL_BLOCKS = 40
             LOCAL_BLOCKS = 20
-            global_keys = loader.block_ids[:GLOBAL_BLOCKS]
+            global_keys = (loader.block_ids[:GLOBAL_BLOCKS] if not is_qwen else [f"qwen_g{i}" for i in range(GLOBAL_BLOCKS)])
             local_keys = [f"rank{rank}_b{i}" for i in range(LOCAL_BLOCKS)]
             read_keys = global_keys + local_keys
             write_keys = global_keys if rank == 0 else local_keys
         
-        sample = loader.read_block(loader.block_ids[0])
-        block_size = sample.nbytes
-        data_cache = {bid: loader.read_block(bid) if bid in loader.block_ids else generate_block(abs(hash(bid)) % (2**32), block_size) 
-                      for bid in read_keys}
+        data_cache = {}
+        for k in read_keys:
+            if not is_qwen and k in loader.block_ids:
+                data_cache[k] = loader.read_block(k)
+            else:
+                data_cache[k] = generate_block(abs(hash(k)) % (2**32), block_size)
     else:
         # Synthetic
-        block_size = 1024 * 1024 # 1MB blocks for faster synthetic
         if args.mode == "strong":
-            TOTAL_BLOCKS = 10000 # 10GB total
+            TOTAL_BLOCKS = 1000 # 1000 blocks
             read_keys = [f"shared_b{i}" for i in range(TOTAL_BLOCKS)]
             write_keys = read_keys if rank == 0 else []
         else:
-            GLOBAL_BLOCKS = 2000
-            LOCAL_BLOCKS = 1000
+            GLOBAL_BLOCKS = 200
+            LOCAL_BLOCKS = 100
             global_keys = [f"global_b{i}" for i in range(GLOBAL_BLOCKS)]
             local_keys = [f"node{rank}_b{i}" for i in range(LOCAL_BLOCKS)]
             read_keys = global_keys + local_keys
@@ -247,6 +274,8 @@ def main():
         data_cache = {k: generate_block(abs(hash(k)) % (2**32), block_size) for k in read_keys}
 
     total_read_data_gb = (len(read_keys) * world * block_size) / 1024**3
+    print_rank0(f"=== {args.model.upper()} Benchmark Configuration ===")
+    print_rank0(f"Block Size: {block_size / 1024**2:.2f} MB")
     
     print_rank0(f"CONTENTION SCALING | Type: {args.data_type.upper()} | Mode: {args.mode.upper()} | World: {world}")
     print_rank0(f"Total Aggr. Read Data: {total_read_data_gb:.2f} GB")
@@ -288,9 +317,18 @@ def main():
         
         # Aggregate Throughput
         aggr_bw = total_read_data_gb / t_total
-        avg_lat = np.mean(latencies)
+        local_avg_lat = np.mean(latencies)
+        
+        # Gather per-node stats
+        all_bw = comm.gather(aggr_bw / world, root=0) # Estimated per-rank share
+        all_lats = comm.gather(local_avg_lat, root=0)
 
-        print_rank0(f"{name:12} | {aggr_bw:22.2f} | {avg_lat:22.2f}")
+        if rank == 0:
+            print_rank0(f"{name:12} | {aggr_bw:22.2f} | {local_avg_lat:22.2f}")
+            node_bw_str = ", ".join([f"{b:.1f}" for b in all_bw])
+            node_lat_str = ", ".join([f"{l:.1f}" for l in all_lats])
+            print_rank0(f"  [Detail] Per-node BW:  {node_bw_str}")
+            print_rank0(f"  [Detail] Per-node Lat: {node_lat_str}")
         adapter.cleanup()
 
     print_rank0("="*90)

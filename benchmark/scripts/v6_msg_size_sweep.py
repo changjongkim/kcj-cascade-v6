@@ -5,10 +5,6 @@ import numpy as np
 import argparse
 from pathlib import Path
 
-# MPI Configuration
-rank = int(os.environ.get('SLURM_PROCID', 0))
-world = int(os.environ.get('SLURM_NTASKS', 1))
-
 # Path setup
 default_build = 'cascade_Code/cpp/build_cascade_cpp'
 build_dir = os.environ.get('CASCADE_BUILD_DIR', default_build)
@@ -20,15 +16,19 @@ try:
     import cascade_cpp
 except ImportError:
     cascade_cpp = None
+    print("Error: cascade_cpp module not found. Please ensure CASCADE_BUILD_DIR is correct.")
+    sys.exit(1)
 
-import mpi4py
-mpi4py.rc.initialize = False
-from mpi4py import MPI
-if not MPI.Is_initialized():
-    MPI.Init_thread(MPI.THREAD_MULTIPLE)
+# MPI Configuration via SLURM
+rank = int(os.environ.get('SLURM_PROCID', 0))
+world = int(os.environ.get('SLURM_NTASKS', 1))
+
+# Global barrier helper
+GLOBAL_BARRIER_STORE = None
 
 def mpi_barrier():
-    MPI.COMM_WORLD.Barrier()
+    if GLOBAL_BARRIER_STORE:
+        GLOBAL_BARRIER_STORE.barrier()
 
 def print_rank0(msg):
     if rank == 0:
@@ -42,13 +42,17 @@ class BaseStore:
 
 class CascadeAdapter(BaseStore):
     def __init__(self, msg_size_name):
+        global GLOBAL_BARRIER_STORE
         cfg = cascade_cpp.DistributedConfig()
         cfg.gpu_capacity_per_device = 38 * 1024**3
         cfg.dram_capacity = 128 * 1024**3
         cfg.num_gpus_per_node = 4
         cfg.lustre_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/cas_msg_{msg_size_name}"
         self.store = cascade_cpp.DistributedStore(cfg)
-        self.lustre_path = cfg.lustre_path # Added this line to define self.lustre_path
+        self.lustre_path = cfg.lustre_path 
+        # Register as global barrier store
+        GLOBAL_BARRIER_STORE = self.store
+        
     def put(self, key, data): self.store.put(str(key), data)
     def get(self, key, out): return self.store.get(str(key), out)[0]
     def barrier(self): self.store.barrier()
@@ -79,22 +83,25 @@ class LMCacheAdapter(BaseStore):
         import shutil
         if rank == 0 and self.dir.exists(): shutil.rmtree(self.dir)
 
-def run_bench(adapter, msg_size, num_blocks=10):
-    # Prepare data
-    data = np.random.randint(0, 255, msg_size, dtype=np.uint8)
-    keys = [f"msg_{i}" for i in range(num_blocks)]
+def run_bench(adapter, msg_size, label, num_blocks=10):
+    # Prepare data (Rank 0 generates, others just alloc buffer)
+    # We use 'label' in key to avoid cross-test conflicts/caching
+    keys = [f"{label}_{i}" for i in range(num_blocks)]
     
     # Write phase (Rank 0 writes)
     if rank == 0:
+        # Use a different seed per call to ensure no pattern reuse
+        np.random.seed(int(time.time() * 1000) % 2**32)
+        data = np.random.randint(0, 255, msg_size, dtype=np.uint8)
         for k in keys:
             adapter.put(k, data)
     adapter.barrier()
     
-    # Read phase (All ranks read same data)
+    # Read phase (All ranks read same data - Broadcast Pattern)
     t_start = time.time()
     for k in keys:
         buf = np.empty(msg_size, dtype=np.uint8)
-        adapter.get(k, buf)
+        ret = adapter.get(k, buf)
     adapter.barrier()
     t_end = time.time()
     
@@ -124,11 +131,11 @@ def main():
     
     for label, size in msg_sizes.items():
         # Cascade
-        cas_bw = run_bench(cas, size)
+        cas_bw = run_bench(cas, size, f"cas_{label}")
         
         # LMCache
         lm = LMCacheAdapter(label)
-        lm_bw = run_bench(lm, size)
+        lm_bw = run_bench(lm, size, f"lm_{label}")
         lm.cleanup()
         
         print_rank0(f"{label:10} | {cas_bw:20.2f} | {lm_bw:20.2f}")
