@@ -181,7 +181,7 @@ To ensure reproducibility and realistic scaling, all experiments were conducted 
 | **Compute Cluster** | 1 to 16 Nodes (Aggregating 4 to 64 GPUs) |
 | **GPU per Node** | 4× NVIDIA A100-SXM4 (40GB HBM2e) |
 | **Node Interconnect** | HPE Slingshot-11 (RDMA-capable via RoCE v2, 200 Gbps/node) |
-| **System Memory** | 512 GB DDR4-3200 per node |
+| **System Memory** | 256 GB DDR4-3200 per node |
 | **Parallel FS** | Lustre $SCRATCH (44PB capacity, peaked at ~50+ GB/s) |
 
 #### **2. Cascade Hierarchical Cache Tiers**
@@ -496,6 +496,19 @@ The following summarizes the **root causes** behind each benchmark result, mappe
 ## 🧪 System Overhead Sensitivity Analysis
 
 Results from 4-node stress tests evaluating architecture robustness under varying conditions.
+
+### 🏗️ Sensitivity Test Environment
+To isolate purely system-level overheads (Metadata management, Concurrent Locking, and Memory Allocation) from physical disk I/O limits, these tests utilize the following configuration:
+
+| Parameter | Configuration |
+| :--- | :--- |
+| **Node Count** | Fixed 4-Node Cluster (16 A100 GPUs) |
+| **Memory Capacity** | 160 GB HBM (40GBx4) + 256 GB DRAM per node |
+| **Initial Cache State** | **Hot Start** (Data resides in Tier 1/2) |
+| **Metadata Config** | 256-shard DHT Index, Distributed Dedup Enabled |
+| **Tiering Logic** | Locality-aware promotion DISABLED (to prevent dynamic state changes during measurements) |
+
+---
 
 ### 📍 13. Sensitivity: Block Size (Metadata Overhead)
 Evaluated aggregate bandwidth as block sizes decrease (increasing metadata/IOPS pressure).

@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH -A m1248_g
 #SBATCH -C gpu
-#SBATCH -q debug
-#SBATCH -t 00:30:00
+#SBATCH -q regular
+#SBATCH -t 01:00:00
 #SBATCH -N 4
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
@@ -17,7 +17,7 @@ source setup_env.sh
 export CASCADE_BUILD_DIR=/pscratch/sd/s/sgkim/kcj/Cascade-kcj/cascade_Code/cpp/build_cascade_cpp
 
 echo "###################################################################"
-echo " SENSITIVITY ANALYSIS 3: Concurrent Request Scaling"
+echo " SENSITIVITY ANALYSIS 3: Concurrent Request Scaling (1hr Stress Test)"
 echo " Fixed: 4 Nodes, Weak Scaling, Qwen-72B"
 echo " Variable: Block Count 20, 60, 120, 200"
 echo "###################################################################"
