@@ -664,8 +664,10 @@ bool DistributedStore::put(const BlockId &id, const uint8_t *data,
   }
 
   // ─── Tier 5: Lustre (bottomless cold storage) ───
-  if (!stored) {
-    stored = lustre_put(id, store_data, store_size);
+  // N6: Always write to Lustre if configured, for persistence and cold-start benchmarks.
+  if (lustre_ || agg_lustre_) {
+    bool l_ok = lustre_put(id, store_data, store_size);
+    if (!stored) stored = l_ok;
   }
 
   // ─── Track dedup + prefix ───
@@ -1273,6 +1275,16 @@ void DistributedStore::clear() {
     gpu_evictions_ = 0; dram_evictions_ = 0;
     prefix_blocks_protected_ = 0; promotions_to_local_ = 0;
     compression_savings_ = 0;
+    if (rank_ == 0) {
+        printf("[Cascade] Memory tiers and indices cleared.\n");
+    }
+    barrier();
+}
+
+void DistributedStore::flush() {
+    barrier();
+    if (lustre_) lustre_->flush();
+    if (agg_lustre_) agg_lustre_->flush();
     barrier();
 }
 

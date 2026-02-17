@@ -379,6 +379,7 @@ public:
     
     void barrier();
     void sync_metadata();
+    void flush();
     void clear();
     
     struct Stats {

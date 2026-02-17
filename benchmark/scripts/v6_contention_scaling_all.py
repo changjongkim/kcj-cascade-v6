@@ -10,9 +10,10 @@ from pathlib import Path
 # MPI Configuration (using SLURM env vars for rank info)
 rank = int(os.environ.get('SLURM_PROCID', 0))
 world = int(os.environ.get('SLURM_NTASKS', 1))
+job_id = os.environ.get('SLURM_JOB_ID', 'local')
 
 # Path setup
-default_build = '../../cascade_Code/cpp/build'
+default_build = '../../cascade_Code/cpp/build_cascade_cpp'
 build_dir = os.environ.get('CASCADE_BUILD_DIR', default_build)
 if not os.path.isabs(build_dir):
     build_dir = os.path.join(os.path.dirname(__file__), build_dir)
@@ -75,7 +76,7 @@ def init_global_store(mode):
         cfg.num_gpus_per_node = 4
         cfg.dedup_enabled = True
         cfg.kv_compression = True
-        cfg.lustre_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/cas_cont_{mode}"
+        cfg.lustre_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/cas_cont_{mode}_{job_id}"
         GLOBAL_STORE = cascade_cpp.DistributedStore(cfg)
     return GLOBAL_STORE
 
@@ -117,11 +118,15 @@ class HDF5Adapter(BaseStore):
         import h5py
         self.h5py = h5py
         # We separate shared (rank 0 writes) and local (each rank writes)
-        self.shared_path = Path(f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/hdf5_shared_cont_{mode}.h5")
-        self.local_path = Path(f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/hdf5_local_cont_{mode}_r{rank}.h5")
+        self.shared_path = Path(f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/hdf5_shared_cont_{mode}_{job_id}.h5")
+        self.local_path = Path(f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/hdf5_local_cont_{mode}_{job_id}_r{rank}.h5")
         self.file_write = None
         self.file_read_shared = None
         self.file_read_local = None
+        # Clean up existing files to avoid corruption
+        if rank == 0 and self.shared_path.exists(): self.shared_path.unlink()
+        if self.local_path.exists(): self.local_path.unlink()
+        mpi_barrier()
 
     def put(self, key, data):
         # If it's a shared key (doesn't contain 'rank' or 'node'), only rank 0 writes to shared file
@@ -139,11 +144,33 @@ class HDF5Adapter(BaseStore):
                 self.file_write.create_dataset(str(key), data=data)
                 self.file_write.flush()
 
+    def flush(self):
+        if self.file_write:
+            self.file_write.flush()
+            self.file_write.close()
+            self.file_write = None
+        mpi_barrier()
+        # N6: Lustre metadata propagation delay
+        if rank == 0:
+             time.sleep(2) 
+        mpi_barrier()
+
     def open_for_read(self):
-        if self.file_write: self.file_write.close()
-        self.file_write = None
+        if self.file_write: 
+            self.file_write.close()
+            self.file_write = None
+        mpi_barrier() # Ensure rank 0 has closed the file
+        # Lustre metadata sync wait
+        time.sleep(3)
         if self.shared_path.exists():
-            self.file_read_shared = self.h5py.File(self.shared_path, 'r')
+            try:
+                self.file_read_shared = self.h5py.File(self.shared_path, 'r')
+            except Exception as e:
+                print(f"[Rank {rank}] Error opening shared HDF5: {e}")
+                # Retry once after another short sleep
+                time.sleep(2)
+                try: self.file_read_shared = self.h5py.File(self.shared_path, 'r')
+                except: pass
         if self.local_path.exists():
             self.file_read_local = self.h5py.File(self.local_path, 'r')
 
@@ -168,9 +195,13 @@ class HDF5Adapter(BaseStore):
 
 class PosixAdapter(BaseStore):
     def __init__(self, name, mode):
-        self.shared_dir = Path(f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/{name}_shared_cont_{mode}")
-        self.local_dir = Path(f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/{name}_local_cont_{mode}_r{rank}")
-        if rank == 0: self.shared_dir.mkdir(parents=True, exist_ok=True)
+        self.shared_dir = Path(f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/{name}_shared_cont_{mode}_{job_id}")
+        self.local_dir = Path(f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/{name}_local_cont_{mode}_{job_id}_r{rank}")
+        import shutil
+        if rank == 0:
+            if self.shared_dir.exists(): shutil.rmtree(self.shared_dir)
+            self.shared_dir.mkdir(parents=True, exist_ok=True)
+        if self.local_dir.exists(): shutil.rmtree(self.local_dir)
         self.local_dir.mkdir(parents=True, exist_ok=True)
         mpi_barrier()
 
@@ -296,6 +327,12 @@ def main():
         for k in write_keys:
             adapter.put(k, data_cache[k])
         
+        # Flush to persistent storage if possible (important for COLD start)
+        if hasattr(adapter, 'flush'):
+            adapter.flush()
+        elif hasattr(adapter, 'store') and hasattr(adapter.store, 'flush'):
+            adapter.store.flush()
+
         # Sync until everyone has written
         adapter.barrier()
 

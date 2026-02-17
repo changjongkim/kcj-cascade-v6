@@ -164,6 +164,7 @@ PYBIND11_MODULE(cascade_cpp, m) {
         .def("sync_metadata", &cascade::distributed::DistributedStore::sync_metadata)
         .def("barrier", &cascade::distributed::DistributedStore::barrier)
         .def("clear", &cascade::distributed::DistributedStore::clear)
+        .def("flush", &cascade::distributed::DistributedStore::flush)
         .def_property_readonly("rank", &cascade::distributed::DistributedStore::rank)
         .def_property_readonly("world_size", &cascade::distributed::DistributedStore::world_size);
 #endif
