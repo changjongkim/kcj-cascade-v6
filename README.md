@@ -558,6 +558,17 @@ Evaluated aggregate bandwidth as block sizes decrease (increasing metadata/IOPS 
 > *   **User Experience**: For a 128K ultra-long context, Cascade starts generation in **5 seconds**, whereas competitors force the user to wait over **1 minute**.
 > *   **Scalability**: The speedup gap widens as context grows (11x → 13x), proving Cascade's O(1) metadata lookup efficiency vs O(N) file system overhead.
 
+### 💡 17. Technical Reasoning: Sensitivity Analysis
+
+Summary of root causes for the sensitivity analysis results, mapping observed behavior to Cascade's architectural decisions.
+
+| Sensitivity Factor | Key Observation | Root Cause (Code-Level) |
+| :--- | :--- | :--- |
+| **Small Block Size** (§13) | Cascade maintains ~50 GB/s even at 320MB blocks | **Aggregated Lustre Backend**: Instead of creating 1 file per block (causing MDS saturation), Cascade aggregates thousands of blocks into large 256MB shards, reducing `open()`/`stat()` syscalls by 100x. |
+| **Write Ratio** (§14) | Cascade survives 20% write load (12 GB/s) while others freeze | **Lock-Free Deduplication**: Competitors use POSIX file locks or extensive metadata locking for consistency. Cascade uses a **Content-Addressed DHT** where writes are append-only and lock-free for unique data. |
+| **Concurrency** (§15) | Throughput remains stable (36 GB/s) under 120x concurrency | **User-Level RDMA**: HDF5/PDC rely on kernel TCP/IP or file system locking which serializes requests. Cascade's `DistributedGPUBackend` uses `MPI_Get` (RDMA) to serve parallel requests directly from remote GPU memory without CPU interruption. |
+| **TTFT/TBT** (§16) | 13x Faster Prefill (5s vs 71s) for 128K context | **Zero-Copy Path**: Loading data in Cascade involves a direct RDMA copy from Source GPU → Target GPU. Competitors must go through `Storage -> PageCache -> User Buffer -> GPU`, incurring 3 extra copies and context switches. |
+
 ---
 
 ## 🔧 Installation & Usage
