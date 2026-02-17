@@ -368,17 +368,17 @@ Validated Cascade on the latest **Qwen 2.5** model series under **Cold Start (Lu
 #### **Summary Table: Aggregate Read BW (Aggr. GB/s)**
 | System | 1 Node | 2 Nodes | 4 Nodes | 8 Nodes | 16 Nodes | **Speedup (16N)** |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Cascade V6** | **1.10** | **2.52** | **3.01** | **6.02** | **18.56** | **16.87×** |
-| **PDC** | 0.69 | 1.23 | 2.57 | 1.67 | Timeout | - |
-| **vLLM-GPU** | 1.02 | 1.98 | 3.01 | 2.46 | Timeout | - |
-| **HDF5** | 0.90 | 1.82 | 2.15 | 1.96 | 0.55 | 0.6× |
-| **LMCache** | 1.01 | 1.54 | 2.59 | 1.93 | Timeout | Failed |
+| **Cascade V6** | **1.10** | **2.52** | **3.01** | **6.02** | **11.58** | **10.53×** |
+| **vLLM-GPU** | 1.02 | 1.98 | 3.01 | 2.46 | 2.75 | 2.7× |
+| **PDC** | 0.69 | 1.23 | 2.57 | 1.67 | 2.19 | 3.1× |
+| **HDF5** | 0.90 | 1.82 | 2.15 | 1.96 | 0.39 | 0.4× |
+| **LMCache** | 1.01 | 1.54 | 2.59 | 1.93 | Failed (OOM) | - |
 
 #### **🔥 Analysis: Breaking the Scalability Wall**
-1.  **Linear-plus Speedup**: Cascade achieves a **16.87× speedup** across 16 nodes, while traditional systems like HDF5 collapse to **0.55 GB/s** (a 97% performance drop from Cascade).
-2.  **The Metadata Barrier**: At 16 nodes, concurrent file-system based systems (HDF5, PDC) suffer from critical Lustre metadata lock contention, while Cascade's **Aggregated Engine** scales by minimizing file system calls.
-3.  **Efficiency**: Cascade remains the only system capable of utilizing the full cluster I/O bandwidth under a cold-start strong-scaling scenario. 
-4.  **Real-World Impact**: Loading a 41GB context on 16 nodes takes only **2.2 seconds** with Cascade, compared to **74 seconds** with HDF5.
+1.  **Sustainable Scaling**: Cascade achieves **11.58 GB/s** aggregate throughput across 16 nodes under extreme contention (640GB aggregate read), while traditional systems like HDF5 collapse to **0.39 GB/s** (a 96% performance drop).
+2.  **The Metadata Barrier**: At 16 nodes, concurrent file-system based systems (HDF5) suffer from critical Lustre metadata lock contention, while Cascade's **Aggregated Engine** remains functional.
+3.  **Resilience**: Mid-tier baselines (vLLM, PDC) achieve limited performance (~2 GB/s), while LMCache fails due to Out-Of-Memory (OOM) errors at this scale.
+4.  **Real-World Impact**: Loading a 41GB context on 16 nodes takes only **3.5 seconds** with Cascade, compared to over **105 seconds** with HDF5.
 
 ---
 
