@@ -476,12 +476,13 @@ Evaluated aggregate bandwidth as block sizes decrease (increasing metadata/IOPS 
 
 | Model | Block Size | **Cascade (GB/s)** | HDF5 (GB/s) | vLLM/LMC (GB/s) |
 | :--- | :---: | :---: | :---: | :---: |
-| Qwen-2.5-7B | 56 MB | **33.55** | 4.35 | ~4.0 |
-| Qwen-2.5-72B | 320 MB | **49.00** | 3.45 | ~4.3 |
+| Qwen-2.5-7B | 56 MB | **33.55** | 4.35 | 3.99 |
+| **Qwen-2.5-32B** | **256 MB** | **45.17** | **2.98** | **4.22** |
+| Qwen-2.5-72B | 320 MB | **49.00** | 3.45 | 4.29 |
 
 > **Reasoning**: As blocks get smaller, the number of system calls and metadata operations grows. Cascade's aggregated I/O remains efficient, while baselines get stuck in Lustre `open/stat` loops.
 
-### 📍 14. Sensitivity: Write Ratio (Mixed R/W Workload)
+### 📍 14. Sensitivity: Write Ratio (Mixed R/W Workload) — [🔄 Executing 1hr Stress Test]
 Evaluated performance with interleaved "Put" (Write) and "Get" (Read) operations using Qwen-72B blocks.
 
 | Write Ratio | **Cascade (GB/s)** | Baselines (HDF5/vLLM) |
@@ -491,7 +492,7 @@ Evaluated performance with interleaved "Put" (Write) and "Get" (Read) operations
 
 > **Reasoning**: Interleaved writes trigger SHA256 hashing and Dedup index updates in Cascade, causing a performance drop vs pure reads. However, baselines **completely fail** under this mixed load due to write-lock contention. Cascade is the only system to survive and deliver >10 GB/s under mixed pressure.
 
-### 📍 15. Sensitivity: Concurrent Request Scaling
+### 📍 15. Sensitivity: Concurrent Request Scaling — [🔄 Executing 1hr Stress Test]
 Evaluated how bandwidth changes as the number of concurrent block requests increases at 4 nodes.
 
 | Concurrent Blocks | **Cascade (GB/s)** | HDF5 (GB/s) | vLLM-GPU (GB/s) |
