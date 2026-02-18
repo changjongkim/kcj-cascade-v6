@@ -122,6 +122,9 @@ class HDF5Adapter(BaseStore):
             try: self.path.unlink()
             except: pass
         mpi_barrier()
+        if rank == 0:
+            with self.h5py.File(self.path, 'w') as f: pass
+        mpi_barrier()
 
 class PosixAdapter(BaseStore):
     def __init__(self, name, tag):
@@ -156,6 +159,9 @@ class PosixAdapter(BaseStore):
         if rank == 0 and self.dir.exists():
             import shutil
             shutil.rmtree(self.dir, ignore_errors=True)
+        mpi_barrier()
+        if rank == 0:
+            self.dir.mkdir(parents=True, exist_ok=True)
         mpi_barrier()
 
 def make_adapter(name, tag, gpu_cap_gb=38.0):
