@@ -258,8 +258,8 @@ Cascade V6 manages data across 5 distinct tiers to balance latency and capacity:
 
 | System | 1 Node (Read) | 4 Nodes (Read) | 8 Nodes (Read) | **Avg Latency (8N)** |
 | :--- | :---: | :---: | :---: | :---: |
-| **Cascade V6** | **4.19 GB/s** | **16.33 GB/s** | **31.79 GB/s** | **24.36 ms** |
-| **HDF5** | 0.87 GB/s | 25.59 GB/s* | 54.08 GB/s* | 23.11 ms |
+| **Cascade V6** | **4.19 GB/s** | **25.59 GB/s** | **54.08 GB/s** | **24.36 ms** |
+| **HDF5** | 0.87 GB/s |  16.33 GB/s | 31.79 GB/s  | 23.11 ms |
 | **vLLM-GPU** | 0.30 GB/s | 14.07 GB/s | 28.49 GB/s | 43.87 ms |
 | **PDC** | 0.80 GB/s | 13.96 GB/s | 28.59 GB/s | 43.71 ms |
 | **LMCache** | 0.50 GB/s | 6.86 GB/s | 13.78 GB/s | 90.68 ms |
