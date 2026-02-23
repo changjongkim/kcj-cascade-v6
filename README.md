@@ -1,4 +1,4 @@
-# 🚀 Cascade V6: Distributed 5-Tier KV Cache for HPC-Scale LLM Inference
+# 🚀 Cascade V6: Distributed 5-Tier KV Cache Storage Layer for HPC-Scale LLM Serving
 
 <p align="center">
   <img src="https://img.shields.io/badge/SC'26-Target-blue?style=for-the-badge" alt="SC'26"/>
@@ -7,8 +7,8 @@
   <img src="https://img.shields.io/badge/Scale-8%20Nodes%20Verified-orange?style=for-the-badge" alt="Scale"/>
 </p>
 
-> **Core Metric:** Breakthrough **99.3 GB/s** Aggregate Read Throughput for **Qwen 2.5-72B KV Cache** @ 8 Nodes.
-> **Peak Bandwidth:** Reached **112.4 GB/s** for Qwen 2.5-7B tasks with ultra-low latency (**7.4ms**).
+> **Core Metric:** Breakthrough **99.3 GB/s** Aggregate KV Cache Read Throughput (from in-memory tiers) for **Qwen 2.5-72B** @ 8 Nodes.
+> **Peak Bandwidth:** Reached **112.4 GB/s** for Qwen 2.5-7B KV cache serving with ultra-low latency (**7.4ms**).
 
 ---
 
@@ -20,13 +20,13 @@ As Large Language Models (LLMs) like Llama-3-70B scale to **128K+ context window
 2.  **Bandwidth Wall:** Evicting to disk (Lustre) is **1000x slower** than HBM, causing massive latency spikes during cache misses.
 3.  **Redundancy:** In multi-tenant serving, identical "System Prompts" are duplicated across thousands of requests, wasting memory.
 
-**Cascade V6** addresses these challenges via a **novel distributed hierarchy** that aggregates memory resources across HPC clusters.
+**Cascade V6** is a **distributed KV cache storage layer** that addresses these challenges by aggregating memory resources (GPU HBM, DRAM, and parallel file systems) across HPC clusters. It does not perform model inference itself; rather, it serves as the high-performance storage backend that inference engines rely on for KV cache management.
 
 ---
 
 ## 🏗️ 5-Tier Memory Hierarchy Architecture
 
-Cascade enables zero-copy access to hot data while providing near-infinite capacity for cold data.
+Cascade enables low-latency access to hot KV cache data while providing near-infinite capacity for cold data via hierarchical tiering.
 
 | Tier | Resource | Bandwidth (Measured) | Latency | Capacity (Per Node) | Logical Role |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -38,7 +38,7 @@ Cascade enables zero-copy access to hot data while providing near-infinite capac
 
 ### Data Flow Diagram
 ```
-[Inference Request]
+[KV Cache Request from Inference Engine]
        │
        ▼
    (Tier 1: GPU HBM) ── Hit? ──► [Zero-Copy Access]
@@ -127,10 +127,10 @@ store.put(key, data, is_prefix=True)
  └─ 6. Update global_index_: id → BlockLocation{node, gpu, offset}
 ```
 
-### `get()` — Data Retrieval Flow
+### `get()` — KV Cache Retrieval Flow (5-Tier Fallback)
 
 ```
-store.get(key, buffer)
+store.get(key, output_buffer_ptr)
  │
  ├─ Tier 1: Local GPU index lookup
  │  └─ HIT → cudaMemcpy(D2H) → return (~0.1ms)
@@ -494,6 +494,45 @@ The following summarizes the **root causes** behind each benchmark result, mappe
 
 ---
 
+### 🌍 13. Huge-Scale Scientific Simulations (Checkpoint & Ensemble, 640GB+)
+*   **Experimental Objective**: Demonstrate Cascade's capability to handle traditional HPC scientific workloads (Iterative Solvers and Ensemble Pipelines) at **Lustre-saturating scales (up to 640GB)**, validating the tiering and deduplication engines beyond LLM serving.
+*   **Scale**: 1, 2, 4, and 8 Nodes (up to 32 GPUs).
+
+#### **[App 1] Continuous Checkpoint/Restart (CFD Solver - 640GB)**
+Simulates a classic HPC solver writing 80GB checkpoints periodically (Total 640GB).
+
+| Nodes (Data) | System | Restart BW | Write BW | Storage Used | **Dedup %** | **Speedup (Restart)** |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| **1 Node** (80GB) | **Cascade** | **10.30 GB/s** | **1.37 GB/s** | **8.14 GB** | **89.8%** | **2.9×** |
+| | HDF5 | 3.50 GB/s | 0.36 GB/s | 80.03 GB | 0.0% | - |
+| **2 Nodes** (160GB)| **Cascade** | **19.84 GB/s** | **2.58 GB/s** | **16.28 GB** | **89.8%** | **18.2×** |
+| | HDF5 | 1.09 GB/s | 0.67 GB/s | 160.06 GB | 0.0% | - |
+| **4 Nodes** (320GB)| **Cascade** | **41.03 GB/s** | **4.63 GB/s** | **32.55 GB** | **89.8%** | **2.9×** |
+| | HDF5 | 14.15 GB/s | 1.39 GB/s | 320.12 GB | 0.0% | - |
+| **8 Nodes** (640GB)| **Cascade** | **81.30 GB/s** | **9.33 GB/s** | **65.10 GB** | **89.8%** | **17.1×** |
+| | HDF5 | 4.75 GB/s | 2.68 GB/s | 640.24 GB | 0.0% | - |
+
+> **Analysis**:
+> *   **Linear Restart Scalability**: Cascade scales perfectly from 10.3 to 81.3 GB/s. Restoring a 640GB checkpoint takes only **~8 seconds** cluster-wide, accelerating job recovery.
+> *   **Implicit Data Diet**: The **Distributed Dedup** engine transparently reduces the 640GB Lustre I/O burden down to just **65.1 GB**, freeing up 90% of parallel file system bandwidth.
+
+#### **[App 2] Climate Ensemble Pipeline (Shared IC & Exchange - 580GB)**
+Simulates an 8-member weather ensemble where all nodes read a shared Initial Condition (IC) and exchange boundary data via RDMA.
+
+| Nodes | Total Data | **IC Read (Cascade)** | IC Read (HDF5) | **Analysis (Cascade)** | Analysis (HDF5) | **Exchange Latency (Cascade)** | Exchange (HDF5) |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **1** | 160 GB | **8.01 GB/s** | 0.57 GB/s | **5.13 GB/s** | 1.02 GB/s | **0.00 ms** | 0.00 ms |
+| **2** | 220 GB | **13.70 GB/s** | 1.16 GB/s | **4.59 GB/s** | 2.11 GB/s | **0.02 ms** | 1,593 ms |
+| **4** | 340 GB | **24.08 GB/s** | 2.52 GB/s | **4.86 GB/s** | 3.69 GB/s | **0.02 ms** | 3,622 ms |
+| **8** | 580 GB | **51.73 GB/s** | *Timeout* | **12.76 GB/s**| *Timeout* | **0.01 ms** | *Timeout* |
+
+> **Analysis**:
+> *   **The 10× Sharing Advantage**: By storing the 100GB Initial Condition once and sharing it via RDMA, Cascade loads shared states ~10× faster than HDF5 across all node counts.
+> *   **Zero-Overhead Communication**: In the Boundary Exchange phase, traditional HPC formats (HDF5) trigger Lustre metadata locks, causing multi-second (>3,000ms) pauses. Cascade's **Double-Sync** peer-to-peer memory transfers drop this latency to an imperceptible **0.01ms**.
+> *   **8-Node Survival**: At 580GB scale, HDF5 failed to complete within the 1-hour job limit due to MDS saturation. Cascade completed the entire workload flawlessly in ~54 minutes.
+
+---
+
 ## 🧪 System Overhead Sensitivity Analysis
 
 Results from 4-node stress tests evaluating architecture robustness under varying conditions.
@@ -545,9 +584,9 @@ Evaluated aggregate bandwidth as block sizes decrease (increasing metadata/IOPS 
 
 > **Reasoning**: As concurrency increases, HDF5's performance collapses (**60% drop**) due to file system contention. Cascade maintains high utilization (75% retention), even as memory pressure begins to trigger background tiering.
 
-### ⏱️ 16. Inference Latency: TTFT (Time To First Token)
+### ⏱️ 16. KV Cache Loading Latency: TTFT (Time To First Token)
 *   **Condition**: **Hot Cache** (Simulating prompt reuse / warm start).
-*   **Workload**: **Sequential Context Load**. Loading full KV cache context (Prefix) from storage to GPU.
+*   **Workload**: **Sequential Context Load**. Loading full KV cache context (Prefix) from storage to GPU. This measures the **storage-level overhead** that contributes to TTFT in real LLM serving; actual end-to-end TTFT includes additional compute overhead from the inference engine.
 
 | Context Length | Data Size | **Cascade (Hot)** | HDF5 (Hot) | vLLM-GPU | **Speedup** |
 | :--- | :--- | :---: | :---: | :---: | :---: |
@@ -568,7 +607,7 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 | **Small Block Size** (§13) | Cascade maintains ~50 GB/s even at 320MB blocks | **Aggregated Lustre Backend**: Instead of creating 1 file per block (causing MDS saturation), Cascade aggregates thousands of blocks into large 256MB shards, reducing `open()`/`stat()` syscalls by 100x. |
 | **Write Ratio** (§14) | Cascade survives 20% write load (12 GB/s) while others freeze | **Lock-Free Deduplication**: Competitors use POSIX file locks or extensive metadata locking for consistency. Cascade uses a **Content-Addressed DHT** where writes are append-only and lock-free for unique data. |
 | **Concurrency** (§15) | Throughput remains stable (36 GB/s) under 120x concurrency | **User-Level RDMA**: HDF5/PDC rely on kernel TCP/IP or file system locking which serializes requests. Cascade's `DistributedGPUBackend` uses `MPI_Get` (RDMA) to serve parallel requests directly from remote GPU memory without CPU interruption. |
-| **TTFT/TBT** (§16) | 13x Faster Prefill (5s vs 71s) for 128K context | **Zero-Copy Path**: Loading data in Cascade involves a direct RDMA copy from Source GPU → Target GPU. Competitors must go through `Storage -> PageCache -> User Buffer -> GPU`, incurring 3 extra copies and context switches. |
+| **TTFT/TBT** (§16) | 13x Faster KV Cache Prefill (5s vs 71s) for 128K context | **RDMA-Assisted Path**: Loading data in Cascade involves GPU→DRAM shadow copy (during `put`), then RDMA transfer via `MPI_Get` to pinned buffer, then `cudaMemcpy` to target GPU. This eliminates filesystem metadata overhead and kernel-level data copies. Competitors must go through `Storage -> PageCache -> User Buffer -> GPU`, incurring additional copies and context switches. |
 
 ---
 
@@ -596,22 +635,26 @@ sbatch -N 4 v6_distributed_bench.slurm
 
 ### Step 3: Python API Example
 ```python
-from cascade_cpp import DistributedStore, CascadeConfig
+import cascade_cpp
+import numpy as np
 
 # 1. Initialize with V6 Features Enabled
-cfg = CascadeConfig()
+cfg = cascade_cpp.DistributedConfig()
+cfg.gpu_capacity_per_device = 38 * 1024**3   # 38 GB per A100
+cfg.dram_capacity = 160 * 1024**3             # 160 GB pinned DRAM
+cfg.num_gpus_per_node = 4
 cfg.dedup_enabled = True
-cfg.semantic_eviction = True
-cfg.locality_aware = True
-store = DistributedStore(cfg)
+cfg.kv_compression = True
+store = cascade_cpp.DistributedStore(cfg)
 
-# 2. Put Data (Auto-Tiering + Dedup)
-# 'is_prefix=True' marks this as a protected block
-store.put("sys_prompt_v1", data_tensor.numpy(), is_prefix=True)
+# 2. Put KV Cache Block (Auto-Tiering + Dedup)
+# All data is stored in GPU → DRAM shadow → Lustre cascade
+kv_block = np.random.randint(0, 255, 320 * 1024**2, dtype=np.uint8)
+store.put("sys_prompt_v1", kv_block)
 
-# 3. Get Data (Transparent Retrieval from any Tier)
-result = np.empty_like(data_tensor)
-store.get("sys_prompt_v1", result)
+# 3. Get KV Cache Block (Transparent Retrieval from any Tier)
+buf = np.empty_like(kv_block)
+found, size = store.get("sys_prompt_v1", buf)
 ```
 
 ---
