@@ -253,16 +253,17 @@ Cascade V6 manages data across 5 distinct tiers to balance latency and capacity:
 
 > **Analysis:** Cascade demonstrates **98.2% weak scaling efficiency**. While aggregate bandwidth grows with the cluster, the **Per-node throughput stays consistent (~11.7 GB/s)**, proving that adding nodes linearly increases the total processing power without nodal degradation.
 
-### 🚀 4. Real-Workload Strong Scaling (Llama-3-70B Fixed 40GB Data)
-*   **Experimental Objective**: Validate scaling using **real Llama-3-70B KV cache blocks (160MB)** across 8 nodes.
+### 🚀 4. Real-Workload Strong Scaling (Llama-3-70B 160MB Blocks) **<font color="red">(New Exp)</font>**
+*   **Experimental Objective**: Validate scaling using **real Llama-3-70B KV cache blocks (160MB)** across 1, 2, 4, 8 nodes.
+*   **Setup**: Cold Start (Lustre -> GPU), Strong Scaling mode.
 
-| System | 1 Node (Read) | 4 Nodes (Read) | 8 Nodes (Read) | **Avg Latency (8N)** |
-| :--- | :---: | :---: | :---: | :---: |
-| **Cascade V6** | **4.19 GB/s** | **25.59 GB/s** | **54.08 GB/s** | **24.36 ms** |
-| **HDF5** | 0.87 GB/s |  16.33 GB/s | 31.79 GB/s  | 23.11 ms |
-| **vLLM-GPU** | 0.30 GB/s | 14.07 GB/s | 28.49 GB/s | 43.87 ms |
-| **PDC** | 0.80 GB/s | 13.96 GB/s | 28.59 GB/s | 43.71 ms |
-| **LMCache** | 0.50 GB/s | 6.86 GB/s | 13.78 GB/s | 90.68 ms |
+| System | 1 Node | 2 Nodes | 4 Nodes | 8 Nodes | **Avg Latency (8N)** |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Cascade V6** | **1.81 GB/s** | **2.05 GB/s** | **7.31 GB/s** | **14.44 GB/s** | **86.55 ms** |
+| **HDF5** | 3.47 GB/s | 1.94 GB/s | 2.69 GB/s | 5.04 GB/s | 152.00 ms |
+| **LMCache** | 2.54 GB/s | 1.51 GB/s | 3.00 GB/s | 4.35 GB/s | 45.93 ms |
+| **PDC** | 2.41 GB/s | 1.51 GB/s | 3.00 GB/s | 3.33 GB/s | 45.80 ms |
+| **vLLM-GPU** | 2.21 GB/s | 1.51 GB/s | 3.02 GB/s | 2.90 GB/s | 46.15 ms |
 
 ### 🚀 5. Real-Workload Weak Scaling (Llama-3-70B Fixed 6.5GB/Rank Data)
 *   **Experimental Objective**: Evaluate per-node performance stability using **real Llama-3-70B KV cache data (160MB)**.

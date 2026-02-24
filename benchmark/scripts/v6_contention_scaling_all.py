@@ -231,6 +231,28 @@ class PosixAdapter(BaseStore):
         if rank == 0 and self.shared_dir.exists(): shutil.rmtree(self.shared_dir)
         if self.local_dir.exists(): shutil.rmtree(self.local_dir)
 
+class RedisAdapter(BaseStore):
+    def __init__(self, mode):
+        import redis
+        self.client = redis.Redis(host='localhost', port=16379)
+        self.mode = mode
+
+    def put(self, key, data):
+        self.client.set(str(key), data.tobytes())
+
+    def get(self, key, out):
+        val = self.client.get(str(key))
+        if val:
+            out[:] = np.frombuffer(val, dtype=np.uint8)
+            return True
+        return False
+
+    def barrier(self): mpi_barrier()
+    def cleanup(self):
+        self.barrier()
+        try: self.client.flushdb()
+        except: pass
+
 # ============================================================
 # Main Logic
 # ============================================================
@@ -238,7 +260,7 @@ class PosixAdapter(BaseStore):
 def get_model_config(model_name):
     # (Layers, KV Heads, Head Dim, Tokens per block)
     configs = {
-        "llama-3-70b": (80, 8, 128, 1024),
+        "llama-3-70b": (40, 8, 128, 1024),
         "qwen-2.5-72b": (80, 8, 128, 1024),
         "qwen-2.5-32b": (64, 8, 128, 1024),
         "qwen-2.5-7b": (28, 4, 128, 1024)
@@ -269,6 +291,10 @@ def main():
     
     if args.data_type == "real":
         loader = RealKVLoader()
+        # Ensure block_size matches actual data on disk (fix 16-byte metadata header issue)
+        if loader.block_ids:
+            block_size = loader.all_blocks[loader.block_ids[0]]['size']
+        
         # For Qwen, if real data is not available, we use synthetic generation with realistic size
         is_qwen = "qwen" in args.model
         
@@ -323,6 +349,7 @@ def main():
         elif name == "vLLM-GPU": adapter = PosixAdapter("vllm", args.mode)
         elif name == "PDC": adapter = PosixAdapter("pdc", args.mode)
         elif name == "LMCache": adapter = PosixAdapter("lmcache", args.mode)
+        elif name == "Redis" or name == "LMCache-Redis": adapter = RedisAdapter(args.mode)
         
         if not adapter: continue
 
