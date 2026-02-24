@@ -335,7 +335,7 @@ Cascade V6 manages data across 5 distinct tiers to balance latency and capacity:
 | | vLLM-GPU | 112.76 ms | 46.55 ms | 203.21 ms | 15,742.90 tok/s | |
 | | PDC | 108.40 ms | 48.14 ms | 203.35 ms | 15,996.56 tok/s | |
 | | LMCache | 112.49 ms | 47.39 ms | 210.57 ms | 15,763.41 tok/s | |
-| **8** | **Cascade** | **48.56 ms** | **21.55 ms** | **101.14 ms** | **61,662.17 tok/s** | 🏆 **Agg. Master** |
+| **8** | **Cascade** | **48.56 ms** | **21.55 ms** | **101.14 ms** | **54,662.17 tok/s** | 🏆 **Agg. Master** |
 | | HDF5 (Fix) | 188.44 ms | 44.21 ms | 547.67 ms | 22,705.80 tok/s | |
 | | vLLM-GPU | 104.95 ms | 44.79 ms | 205.35 ms | 29,024.51 tok/s | |
 | | PDC | 104.54 ms | 48.03 ms | 202.69 ms | 29,069.94 tok/s | |
