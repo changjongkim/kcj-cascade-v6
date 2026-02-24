@@ -264,6 +264,7 @@ Cascade V6 manages data across 5 distinct tiers to balance latency and capacity:
 | **LMCache** | 2.54 GB/s | 1.51 GB/s | 3.00 GB/s | 4.35 GB/s | 45.93 ms |
 | **PDC** | 2.41 GB/s | 1.51 GB/s | 3.00 GB/s | 3.33 GB/s | 45.80 ms |
 | **vLLM-GPU** | 2.21 GB/s | 1.51 GB/s | 3.02 GB/s | 2.90 GB/s | 46.15 ms |
+| **LMCache-Redis** | 0.40 GB/s | 0.61 GB/s | 2.68 GB/s | 2.58 GB/s | 483.81 ms |
 
 ### 🚀 5. Real-Workload Weak Scaling (Llama-3-70B Fixed 6.5GB/Rank Data)
 *   **Experimental Objective**: Evaluate per-node performance stability using **real Llama-3-70B KV cache data (160MB)**.
