@@ -335,12 +335,16 @@ Cascade V6 manages data across 5 distinct tiers to balance latency and capacity:
 | | vLLM-GPU | 112.76 ms | 46.55 ms | 203.21 ms | 15,742.90 tok/s | |
 | | PDC | 108.40 ms | 48.14 ms | 203.35 ms | 15,996.56 tok/s | |
 | | LMCache | 112.49 ms | 47.39 ms | 210.57 ms | 15,763.41 tok/s | |
-| **8** | - | - | - | - | - | ⏳ **In Progress** |
+| **8** | **Cascade** | **48.56 ms** | **21.55 ms** | **101.14 ms** | **41,662.17 tok/s** | 🏆 **Agg. Master** |
+| | HDF5 (Fix) | 188.44 ms | 44.21 ms | 547.67 ms | 22,705.80 tok/s | |
+| | vLLM-GPU | 104.95 ms | 44.79 ms | 205.35 ms | 29,024.51 tok/s | |
+| | PDC | 104.54 ms | 48.03 ms | 202.69 ms | 29,069.94 tok/s | |
+| | LMCache | 104.10 ms | 46.08 ms | 204.21 ms | 29,104.51 tok/s | |
 
 #### **Key Analysis**
-1.  **Deterministic 20ms Response (The "Hot" Barrier)**: On any cluster scale (1N to 4N), Cascade's **P50 TTFT (Hit) remains locked at 20-21ms**. Unlike baselines that jump between 43ms to 118ms, Cascade's local layering guarantees that hot context is served at near-memory speeds regardless of node count.
-2.  **Baseline Resilience**: After fixing the HDF5/Lustre contention (using per-rank files), HDF5 and other baselines can now complete 128-request high-load tests. However, Cascade still outperforms HDF5 by **2.2x in P50 latency** and **1.5x in total throughput**.
-3.  **Throughput Dominance**: At 4 nodes, Cascade reaches **22,061 tok/s**, significantly outpacing vLLM-GPU (15.7k) and LMCache (15.7k). This demonstrates Cascade's superior I/O path efficiency in handling massive concurrent requests in a distributed environment.
+1.  **Deterministic 20ms Response (The "Hot" Barrier)**: Across the entire cluster scale (1N to 8N), Cascade's **P50 TTFT (Hit) remains locked at 20-21ms**. Unlike baselines that jump between 43ms to 188ms, Cascade's local layering guarantees that hot context is served at near-memory speeds regardless of the system size.
+2.  **Baseline Resilience**: After fixing the HDF5/Lustre contention (using per-rank files), HDF5 and other baselines can now complete 128-request high-load tests. However, Cascade still outperforms HDF5 by **2.2x in P50 latency** and **1.8x in total throughput**.
+3.  **Throughput Dominance**: At 8 nodes, Cascade reaches **41,662 tok/s**, significantly outpacing vLLM-GPU (29k) and LMCache (29k). This demonstrates Cascade's superior I/O path efficiency in handling massive concurrent requests in a distributed environment.
 4.  **Stability under Contention**: While vLLM and LMCache show increased variability in P90 latency under heavy load, Cascade's hierarchical approach (VRAM -> DRAM -> Lustre) provides a smoother latency profile for hit requests.
 
 ### 🧬 5. Real HPC Workload: AMReX MultiFab I/O **<font color="red">(New Exp)</font>**
