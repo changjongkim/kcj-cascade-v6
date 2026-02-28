@@ -257,18 +257,12 @@ Cascade V6 manages data across 5 distinct tiers to balance latency and capacity:
 *   **Experimental Objective**: Validate scaling using **real Llama-3-70B KV cache blocks (160MB)** across 1, 2, 4, 8 nodes.
 *   **Setup**: Cold Start (Lustre -> GPU), Strong Scaling mode.
 
-| System | 1 Node | 2 Nodes | 4 Nodes | 8 Nodes | **Avg Latency (8N)** |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Cascade V6** | **1.81 GB/s** | **2.05 GB/s** | **7.31 GB/s** | **14.44 GB/s** | **86.55 ms** |
-| **HDF5** | 3.47 GB/s | 1.94 GB/s | 2.69 GB/s | 5.04 GB/s | 152.00 ms |
-| **LMCache** | 2.54 GB/s | 1.51 GB/s | 3.00 GB/s | 4.35 GB/s | 45.93 ms |
-| **PDC** | 2.41 GB/s | 1.51 GB/s | 3.00 GB/s | 3.33 GB/s | 45.80 ms |
-| **vLLM-GPU** | 2.21 GB/s | 1.51 GB/s | 3.02 GB/s | 2.90 GB/s | 46.15 ms |
-| **LMCache-Redis** | 0.40 GB/s | 0.61 GB/s | 2.68 GB/s | 2.58 GB/s | 483.81 ms |
-
-### 🚀 4. Real-Workload Strong Scaling (Llama-3-70B 160MB Blocks) **<font color="red">(New Exp)</font>**
-*   **Experimental Objective**: Validate scaling using **real Llama-3-70B KV cache blocks (160MB)** across 1, 2, 4, 8 nodes.
-*   **Setup**: Cold Start (Lustre -> GPU), Strong Scaling mode.
+> **💡 Why 160MB? (Llama-3-70B Mathematical Validation)**
+> The `160MB` payload is not arbitrary. It mathematically corresponds to a **512-token KV cache chunk** for a 70B-class LLM.
+> * **Llama-3-70B Architecture**: 80 layers, 8 KV heads (GQA), 128 head dimension, FP16 (2 bytes).
+> * **1 Token Size**: `2 (K,V) * 80 (layers) * 8 (KV heads) * 128 (head dim) * 2 (bytes) = 327,680 Bytes (~320 KB)`
+> * **512-Token Block Size**: `320 KB * 512 = 163,840 KB ≈ 160 MB`
+> Thus, this benchmark perfectly simulates the physical network and storage I/O incurred when transferring or loading a 512-token context segment for a state-of-the-art 70B model.
 
 | System | 1 Node | 2 Nodes | 4 Nodes | 8 Nodes | **Avg Latency (8N)** |
 | :--- | :---: | :---: | :---: | :---: | :---: |
