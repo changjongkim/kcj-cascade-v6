@@ -74,45 +74,24 @@ def file_barrier(name, run_id=None):
         time.sleep(1)
     time.sleep(2)
 
-class RealKVLoader:
-    def __init__(self, base_dir="/pscratch/sd/s/sgkim/cascade_kv_cache"):
-        self.base_dir = Path(base_dir)
-        self.all_blocks = {}
-        self.block_ids = []
-        index_path = self.base_dir / "global_index.json"
-        
-        if index_path.exists():
-            try:
-                import json
-                with open(index_path, 'r') as f:
-                    data = json.load(f)
-                    self.all_blocks = data['blocks']
-                    self.block_ids = list(self.all_blocks.keys())
-            except Exception as e:
-                print_rank0(f"Error loading real KV index: {e}")
-        
-    def load(self, block_id):
-        if not self.all_blocks:
-            import numpy as np
-            # Synthetic fallback with some compressible pattern
-            data = np.zeros(160*1024*1024, dtype=np.uint8).tobytes()
-            mid = len(data) // 2
-            return data[:mid], data[mid:]
-            
-        loc = self.all_blocks[block_id]
-        path = self.base_dir / loc['file']
-        with open(path, 'rb') as f:
-            f.seek(loc['offset'])
-            data = f.read(loc['size'])
-            mid = len(data) // 2
-            return data[:mid], data[mid:]
+# Block size will be determined after argparse (supports --block-size-mb)
+# loader initialized inside run_benchmark()
 
-loader = RealKVLoader()
-if getattr(loader, "block_ids", []):
-    print_rank0(f"KV data loader initialized with {len(loader.block_ids)} real blocks.")
-else:
-    print_rank0("WARNING: Real KV data not found! Using synthetic fallback.")
-    loader.block_ids = [f"synth_b{i}" for i in range(100)]
+class SyntheticKVLoader:
+    """Generates synthetic KV blocks of arbitrary size for Qwen/custom experiments."""
+    def __init__(self, block_size_bytes: int, num_blocks: int = 3200):
+        self.block_size = block_size_bytes
+        self.block_ids = [f"synth_b{i}" for i in range(num_blocks)]
+        print_rank0(f"Synthetic loader: {num_blocks} blocks x {block_size_bytes/1024/1024:.0f} MB")
+    
+    def load(self, block_id: str):
+        # Deterministic pseudo-random data (not all zeros to avoid trivial compression)
+        seed = abs(hash(block_id)) % (2**31)
+        rng = np.random.default_rng(seed)
+        data = rng.integers(0, 256, self.block_size, dtype=np.uint8).tobytes()
+        mid = len(data) // 2
+        return data[:mid], data[mid:]
+
 
 def run_benchmark():
     parser = argparse.ArgumentParser()
@@ -121,12 +100,55 @@ def run_benchmark():
     parser.add_argument("--gen-tokens", type=int, default=32)
     parser.add_argument("--use-mpi-io", action="store_true", help="Force MPI-IO for HDF5")
     parser.add_argument("--run-id", type=str, default=None, help="Unique ID for this run within a job")
+    parser.add_argument("--block-size-mb", type=int, default=160,
+                        help="Block size in MB (default: 160 for Llama-3-70B, use 320 for Qwen-2.5-72B)")
     args = parser.parse_args()
+
+    # Initialize loader based on block size
+    block_size_bytes = args.block_size_mb * 1024 * 1024
+    real_block_size = 160 * 1024 * 1024  # Real dataset is always 160MB Llama
+    if args.block_size_mb != 160:
+        # Use synthetic blocks for non-Llama block sizes (e.g. Qwen 320MB)
+        loader = SyntheticKVLoader(block_size_bytes, num_blocks=3200)
+        print_rank0(f"Using SYNTHETIC {args.block_size_mb}MB blocks (Qwen-2.5-72B equivalent)")
+    else:
+        # Use real Llama dataset
+        real_loader = type('RealKVLoader', (), {})()
+        real_loader.base_dir = Path("/pscratch/sd/s/sgkim/cascade_kv_cache")
+        real_loader.all_blocks = {}
+        real_loader.block_ids = []
+        index_path = real_loader.base_dir / "global_index.json"
+        if index_path.exists():
+            try:
+                with open(index_path, 'r') as f:
+                    data = json.load(f)
+                    real_loader.all_blocks = data['blocks']
+                    real_loader.block_ids = list(real_loader.all_blocks.keys())
+            except Exception as e:
+                print_rank0(f"Error loading real KV index: {e}")
+        if real_loader.block_ids:
+            print_rank0(f"KV data loader initialized with {len(real_loader.block_ids)} real 160MB blocks.")
+            # Patch load method
+            def _load(block_id):
+                if not real_loader.all_blocks:
+                    data = np.zeros(160*1024*1024, dtype=np.uint8).tobytes()
+                    return data[:len(data)//2], data[len(data)//2:]
+                loc = real_loader.all_blocks[block_id]
+                path = real_loader.base_dir / loc['file']
+                with open(path, 'rb') as f:
+                    f.seek(loc['offset'])
+                    d = f.read(loc['size'])
+                    return d[:len(d)//2], d[len(d)//2:]
+            real_loader.load = _load
+            loader = real_loader
+        else:
+            print_rank0("WARNING: Real KV data not found! Using synthetic 160MB fallback.")
+            loader = SyntheticKVLoader(160*1024*1024, num_blocks=3200)
 
     name = args.system
     rid = args.run_id or job_id
     print_rank0(f"\n" + "="*60)
-    print_rank0(f"🚀 Standalone Benchmark: {name} (Rank {rank}/{world}, RunID: {rid})")
+    print_rank0(f"🚀 Standalone Benchmark: {name} | {args.block_size_mb}MB blocks (Rank {rank}/{world}, RunID: {rid})")
     print_rank0("="*60)
     
     # 1. Configuration
@@ -205,6 +227,12 @@ def run_benchmark():
             force_lustre_sync(REPO_ROOT / "benchmark" / f"{store_type}_store")
             force_lustre_sync(REPO_ROOT / "benchmark" / "tmp")
 
+        # Explicit barrier before read phase: ensures ALL ranks have completed
+        # propagation before any rank starts cross-node RMA reads.
+        # This replaces the implicit synchronization that sync_metadata() provided
+        # inside the read retry loop (which caused O(N^2) overhead).
+        file_barrier(f"{name}_ready_to_read", rid)
+
         # Use a more explicit neighbor fetch pattern
         target_rank = (rank + 1) % world
         my_read_reqs = req_keys[target_rank::world]
@@ -219,6 +247,7 @@ def run_benchmark():
         
         read_latencies = []
         f0 = time.time()
+        synced_once = False  # sync_metadata called at most once across all blocks
         for rk in my_read_reqs:
             t_req = time.time()
             res = None
@@ -226,14 +255,16 @@ def run_benchmark():
             for attempt in range(max_attempts): 
                 res = adapter.get(rk)
                 if res: break
-                if "redis" not in name.lower() and name.lower() != "cascade":
-                    # Force sync on specific missing key if possible
+                if name.lower() == "cascade" and not synced_once:
+                    # sync_metadata() acts as MPI_Allgather barrier ensuring both
+                    # sides have consistent global_index before RMA reads.
+                    # Called at most ONCE (not per-block) to avoid O(N²) overhead.
+                    if hasattr(adapter, "sync_metadata"):
+                        adapter.sync_metadata()
+                    synced_once = True
+                elif "redis" not in name.lower() and name.lower() != "cascade":
                     store_type = name.lower().split('-')[0]
                     force_lustre_sync(REPO_ROOT / "benchmark" / f"{store_type}_store" / f"{rk}.kv")
-                # FIX: DO NOT call sync_metadata() inside the per-block read loop.
-                # sync_metadata() issues MPI_Allgather across ALL nodes → O(N²) overhead.
-                # At 16N/32N/64N this caused TTFT to spike to 300-558ms.
-                # The single sync_metadata() call after write phase is sufficient.
                 time.sleep(0.5)
             
             if res:
