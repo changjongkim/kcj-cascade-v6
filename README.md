@@ -888,7 +888,7 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 | **Cascade V6 🔥** | TBD | TBD | TBD | TBD |
 | **LMCACHE-DISK** | 92.43 / 10.81 | 407.19 / 4.91 | 413.33 / 9.68 | 412.82 / 19.38 |
 | **LMCACHE-REDIS** | TBD | TBD | TBD | TBD |
-| **PDC** | TBD | TBD | TBD | TBD |
+| **PDC** | 89.76 / 11.13 | 412.61 / 4.85 | 411.75 / 9.71 | 414.66 / 19.29 |
 | **LLM-GPU** | TBD | TBD | TBD | TBD |
 | **HDF5-INDEP** | 191.47 / 5.22 | 513.71 / 3.89 | 570.40 / 7.15 | 636.75 / 13.09 |
 
@@ -898,15 +898,15 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 | **Cascade V6 🔥** | TBD | TBD | TBD | TBD |
 | **LMCACHE-DISK** | 87.69 / 11.40 | 406.41 / 4.92 | 412.67 / 9.69 | 404.53 / 19.78 |
 | **LMCACHE-REDIS** | TBD | TBD | TBD | TBD |
-| **PDC** | TBD | TBD | TBD | TBD |
+| **PDC** | 91.20 / 10.96 | 314.00 / 6.37 | 403.17 / 9.92 | 409.19 / 19.55 |
 | **LLM-GPU** | TBD | TBD | TBD | TBD |
 | **HDF5-INDEP** | 189.03 / 5.29 | 506.99 / 3.94 | 592.23 / 6.84 | 707.35 / 11.88 |
 
-> **Analysis (Preliminary — HDF5-Indep, LMCache-Disk)**
-> 1. **Block Size Impact**: At 320MB blocks (2× Llama), LMCache-Disk 1N TTFT is ~92ms vs ~47ms for Llama-160MB — roughly 2×, consistent with larger I/O size. HDF5-Indep shows similar ratio (191ms vs 80ms).
-> 2. **Cross-Node Contention**: 2N+ TTFT stabilizes at ~407-413ms for LMCache-Disk and ~514-637ms for HDF5-Indep, reflecting Lustre I/O lock contention. Both show the same saturation pattern as Llama benchmarks.
-> 3. **Throughput Scaling**: LMCache-Disk scales from 10.81 → 19.38 req/s (1N→8N) in Weak mode, near-linear as load grows proportionally.
-> *(Results for Cascade, LMCache-Redis, PDC, LLM-GPU pending — TBD after ongoing jobs complete.)*
+> **Analysis (Preliminary — HDF5-Indep, LMCache-Disk, PDC)**
+> 1. **Block Size Impact**: At 320MB blocks (2× Llama), Lustre-based systems show ~2× TTFT increase at 1N (LMCache-Disk: 92ms, PDC: 90ms, HDF5: 191ms vs their Llama counterparts).
+> 2. **Cross-Node Contention**: 2N+ TTFT saturates at ~407-415ms for LMCache-Disk/PDC (Lustre lock contention), ~514-637ms for HDF5-Indep.
+> 3. **Throughput Scaling**: All Lustre-based systems scale near-linearly in throughput with node count. Weak ≈ Strong throughput values are expected (mathematically equivalent when per-request TTFT is I/O-bound and constant).
+> *(Results for Cascade, LMCache-Redis, LLM-GPU pending — TBD after ongoing jobs complete.)*
 
 ---
 
