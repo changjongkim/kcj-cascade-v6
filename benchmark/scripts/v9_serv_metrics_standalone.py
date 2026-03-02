@@ -133,9 +133,11 @@ def run_benchmark():
     if name.lower() == "cascade":
         config = {"gpu_capacity_gb": 30.0, "shm_capacity_gb": 140.0, "use_gpu": True}
     elif "redis" in name.lower():
-        # Redis server starts on each node in the slurm script
-        config = {"host": "127.0.0.1", "port": 16379}
-        # Give some time for redis-server to start on all nodes
+        # Use env vars if provided (from slurm script), else fallback to localhost
+        r_host = os.environ.get("REDIS_HOST", "127.0.0.1")
+        r_port = int(os.environ.get("REDIS_PORT", 16379))
+        config = {"host": r_host, "port": r_port}
+        # Give some time for redis-server to start
         time.sleep(5)
     elif name.lower() == "lmcache":
         config = {"storage_path": f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/lmcache_store_{rid}"}
@@ -197,7 +199,7 @@ def run_benchmark():
             force_lustre_sync(REPO_ROOT / "benchmark" / f"{store_type}_store")
             force_lustre_sync(REPO_ROOT / "benchmark" / "tmp")
 
-        # Read Phase (Fetch from rank + 1)
+        # Use a more explicit neighbor fetch pattern
         target_rank = (rank + 1) % world
         my_read_reqs = req_keys[target_rank::world]
         
@@ -207,7 +209,7 @@ def run_benchmark():
             adapter.host = target_host
             adapter.initialize()
 
-        print_rank0(f"[{name}] Read Phase: fetching {len(my_read_reqs)} blocks from rank {target_rank}...")
+        print(f"[Rank {rank}] Read Phase: fetching {len(my_read_reqs)} blocks from rank {target_rank}...", flush=True)
         
         read_latencies = []
         f0 = time.time()
@@ -233,19 +235,36 @@ def run_benchmark():
             local_duration = time.time() - f0
             local_throughput = len(read_latencies) / local_duration
             
-            # Aggregate stats across ranks for print_rank0
-            # For weak scaling, aggregate throughput = sum(local_throughputs)
-            # Since we use print_rank0, we just calculate it as local_throughput * world
-            # (Assuming fairly balanced load, which is true for our sweep)
-            agg_throughput = local_throughput * world
-            total_read_count = len(read_latencies) * world
-
-            print_rank0(f"\n--- ✨ {name} Benchmark Results ({world} Nodes) ---")
-            print_rank0(f"Avg TTFT (Per Req): {local_avg_ttft:.2f} ms")
-            print_rank0(f"Aggregate Throughput: {agg_throughput:.2f} req/s")
-            print_rank0(f"Total Read Count: {total_read_count} blocks")
+            # Aggregate stats across ranks using a temporary file (simplest multi-node reduction without relying on mpi4py)
+            stats_dir = REPO_ROOT / "benchmark" / "tmp" / f"stats_{rid}"
+            stats_dir.mkdir(parents=True, exist_ok=True)
+            with open(stats_dir / f"rank_{rank}.json", 'w') as f:
+                json.dump({"ttft": local_avg_ttft, "thru": local_throughput, "total": len(read_latencies)}, f)
+            
+            file_barrier(f"{name}_stats_ready", rid)
+            
+            if rank == 0:
+                all_ttfts = []
+                all_thrus = []
+                total_blocks = 0
+                for r in range(world):
+                    try:
+                        with open(stats_dir / f"rank_{r}.json", 'r') as f:
+                            s = json.load(f)
+                            all_ttfts.append(s["ttft"])
+                            all_thrus.append(s["thru"])
+                            total_blocks += s["total"]
+                    except: continue
+                
+                final_avg_ttft = np.mean(all_ttfts)
+                final_agg_thru = np.sum(all_thrus)
+                
+                print(f"\n--- ✨ {name} Benchmark Results ({world} Nodes) ---")
+                print(f"Avg TTFT (Per Req): {final_avg_ttft:.2f} ms")
+                print(f"Aggregate Throughput: {final_agg_thru:.2f} req/s")
+                print(f"Total Read Count: {total_blocks} blocks")
         else:
-            print_rank0(f"❌ [{name}] All read requests failed.")
+            print(f"[Rank {rank}] ❌ [{name}] All read requests failed.")
             
     except Exception as e:
         print_rank0(f"❌ [{name}] Crash: {e}")
