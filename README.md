@@ -896,7 +896,7 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 | System | 1N | 2N | 4N | 8N |
 | :--- | :---: | :---: | :---: | :---: |
 | **Cascade V6 🔥** | TBD | TBD | TBD | TBD |
-| **LMCACHE-DISK** | 87.69 / 11.40 | 406.41 / 4.92 | 412.67 / 9.69 | TBD |
+| **LMCACHE-DISK** | 87.69 / 11.40 | 406.41 / 4.92 | 412.67 / 9.69 | 404.53 / 19.78 |
 | **LMCACHE-REDIS** | TBD | TBD | TBD | TBD |
 | **PDC** | TBD | TBD | TBD | TBD |
 | **LLM-GPU** | TBD | TBD | TBD | TBD |
