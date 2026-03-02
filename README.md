@@ -886,7 +886,7 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 | System | 1N | 2N | 4N | 8N |
 | :--- | :---: | :---: | :---: | :---: |
 | **Cascade V6 🔥** | TBD | TBD | TBD | TBD |
-| **LMCACHE-DISK** | TBD | TBD | TBD | TBD |
+| **LMCACHE-DISK** | 92.43 / 10.81 | 407.19 / 4.91 | 413.33 / 9.68 | 412.82 / 19.38 |
 | **LMCACHE-REDIS** | TBD | TBD | TBD | TBD |
 | **PDC** | TBD | TBD | TBD | TBD |
 | **LLM-GPU** | TBD | TBD | TBD | TBD |
@@ -896,17 +896,17 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 | System | 1N | 2N | 4N | 8N |
 | :--- | :---: | :---: | :---: | :---: |
 | **Cascade V6 🔥** | TBD | TBD | TBD | TBD |
-| **LMCACHE-DISK** | TBD | TBD | TBD | TBD |
+| **LMCACHE-DISK** | 87.69 / 11.40 | 406.41 / 4.92 | 412.67 / 9.69 | TBD |
 | **LMCACHE-REDIS** | TBD | TBD | TBD | TBD |
 | **PDC** | TBD | TBD | TBD | TBD |
 | **LLM-GPU** | TBD | TBD | TBD | TBD |
 | **HDF5-INDEP** | 189.03 / 5.29 | 506.99 / 3.94 | 592.23 / 6.84 | 707.35 / 11.88 |
 
-> **Analysis (Preliminary — HDF5-Indep only)**
-> 1. **Block Size Impact**: At 320MB blocks (2× Llama), HDF5-Indep 1N TTFT is ~191ms vs ~80ms for Llama-160MB — roughly 2.4×, consistent with the larger I/O size.
-> 2. **Cross-Node Contention**: 2N TTFT spikes to ~514ms (Weak) / ~507ms (Strong), reflecting Lustre I/O lock contention on cross-node reads — the same pattern observed in Llama benchmarks.
-> 3. **Throughput Scaling**: Aggregate throughput scales from 5.22 → 13.09 req/s (1N→8N) in Weak mode, showing near-linear scaling as load grows proportionally.
-> *(Results for Cascade, LMCache-Disk, LMCache-Redis, PDC, LLM-GPU pending — TBD after ongoing jobs complete.)*
+> **Analysis (Preliminary — HDF5-Indep, LMCache-Disk)**
+> 1. **Block Size Impact**: At 320MB blocks (2× Llama), LMCache-Disk 1N TTFT is ~92ms vs ~47ms for Llama-160MB — roughly 2×, consistent with larger I/O size. HDF5-Indep shows similar ratio (191ms vs 80ms).
+> 2. **Cross-Node Contention**: 2N+ TTFT stabilizes at ~407-413ms for LMCache-Disk and ~514-637ms for HDF5-Indep, reflecting Lustre I/O lock contention. Both show the same saturation pattern as Llama benchmarks.
+> 3. **Throughput Scaling**: LMCache-Disk scales from 10.81 → 19.38 req/s (1N→8N) in Weak mode, near-linear as load grows proportionally.
+> *(Results for Cascade, LMCache-Redis, PDC, LLM-GPU pending — TBD after ongoing jobs complete.)*
 
 ---
 
