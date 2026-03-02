@@ -887,7 +887,7 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 | :--- | :---: | :---: | :---: | :---: |
 | **Cascade V6 🔥** | TBD | TBD | TBD | TBD |
 | **LMCACHE-DISK** | 92.43 / 10.81 | 407.19 / 4.91 | 413.33 / 9.68 | 412.82 / 19.38 |
-| **LMCACHE-REDIS** | TBD | TBD | TBD | TBD |
+| **LMCACHE-REDIS** | 398.46 / 2.51 | 395.21 / 5.07 | 393.16 / 10.19 | 388.62 / 20.60 |
 | **PDC** | 89.76 / 11.13 | 412.61 / 4.85 | 411.75 / 9.71 | 414.66 / 19.29 |
 | **LLM-GPU** | TBD | TBD | TBD | TBD |
 | **HDF5-INDEP** | 191.47 / 5.22 | 513.71 / 3.89 | 570.40 / 7.15 | 636.75 / 13.09 |
@@ -897,7 +897,7 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 | :--- | :---: | :---: | :---: | :---: |
 | **Cascade V6 🔥** | TBD | TBD | TBD | TBD |
 | **LMCACHE-DISK** | 87.69 / 11.40 | 406.41 / 4.92 | 412.67 / 9.69 | 404.53 / 19.78 |
-| **LMCACHE-REDIS** | TBD | TBD | TBD | TBD |
+| **LMCACHE-REDIS** | 369.30 / 2.71 | 388.95 / 5.14 | 393.39 / 10.17 | 388.51 / 20.60 |
 | **PDC** | 91.20 / 10.96 | 314.00 / 6.37 | 403.17 / 9.92 | 409.19 / 19.55 |
 | **LLM-GPU** | TBD | TBD | TBD | TBD |
 | **HDF5-INDEP** | 189.03 / 5.29 | 506.99 / 3.94 | 592.23 / 6.84 | 707.35 / 11.88 |
