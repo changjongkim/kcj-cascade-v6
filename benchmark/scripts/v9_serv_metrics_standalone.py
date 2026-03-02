@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import socket
 import sys
+import json
 
 # Add repo root to path for adapters
 REPO_ROOT = Path(__file__).parent.parent.parent
@@ -130,15 +131,23 @@ def run_benchmark():
     
     # 1. Configuration
     config = {}
+    
+    # For Redis: each rank connects to its OWN node's redis-server (written locally)
+    # The read phase will reconnect to target_rank's host.
+    my_host = socket.gethostname()
+    
+    # Collect all hostnames first (needed for redis read phase)
+    all_hosts = get_all_hosts(rid)
+    
     if name.lower() == "cascade":
         config = {"gpu_capacity_gb": 30.0, "shm_capacity_gb": 140.0, "use_gpu": True}
     elif "redis" in name.lower():
-        # Use env vars if provided (from slurm script), else fallback to localhost
-        r_host = os.environ.get("REDIS_HOST", "127.0.0.1")
         r_port = int(os.environ.get("REDIS_PORT", 16379))
-        config = {"host": r_host, "port": r_port}
+        # FIX: Each rank writes to its OWN node's Redis (not a shared host)
+        # This is necessary because we run redis-server on every node via srun --ntasks-per-node=1
+        config = {"host": my_host, "port": r_port}
         # Give some time for redis-server to start
-        time.sleep(5)
+        time.sleep(10)
     elif name.lower() == "lmcache":
         config = {"storage_path": f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/lmcache_store_{rid}"}
     elif name.lower() == "llm-gpu" or name.lower() == "vllm-gpu":
@@ -155,13 +164,10 @@ def run_benchmark():
         try:
             from mpi4py import MPI
             if not MPI.Is_initialized():
-                # We need to be careful with initialization on Perlmutter
-                # But for collective I/O we MUST have it.
                 pass 
         except ImportError:
             pass
 
-    all_hosts = get_all_hosts(rid)
     adapter = get_adapter(name, config)
     if not adapter.initialize():
         print_rank0(f"❌ [{name}] Failed to initialize adapter")
@@ -216,14 +222,19 @@ def run_benchmark():
         for rk in my_read_reqs:
             t_req = time.time()
             res = None
-            for attempt in range(20): # up to 40s
+            max_attempts = 3 if name.lower() == "cascade" else 30
+            for attempt in range(max_attempts): 
                 res = adapter.get(rk)
                 if res: break
-                if "redis" not in name.lower():
+                if "redis" not in name.lower() and name.lower() != "cascade":
                     # Force sync on specific missing key if possible
                     store_type = name.lower().split('-')[0]
                     force_lustre_sync(REPO_ROOT / "benchmark" / f"{store_type}_store" / f"{rk}.kv")
-                time.sleep(2)
+                # FIX: DO NOT call sync_metadata() inside the per-block read loop.
+                # sync_metadata() issues MPI_Allgather across ALL nodes → O(N²) overhead.
+                # At 16N/32N/64N this caused TTFT to spike to 300-558ms.
+                # The single sync_metadata() call after write phase is sufficient.
+                time.sleep(0.5)
             
             if res:
                 read_latencies.append((time.time() - t_req) * 1000)
@@ -235,10 +246,18 @@ def run_benchmark():
             local_duration = time.time() - f0
             local_throughput = len(read_latencies) / local_duration
             
-            # Aggregate stats across ranks using a temporary file (simplest multi-node reduction without relying on mpi4py)
+            # Aggregate stats across ranks using a temporary file
             stats_dir = REPO_ROOT / "benchmark" / "tmp" / f"stats_{rid}"
+            if rank == 0:
+                if stats_dir.exists():
+                    import shutil
+                    shutil.rmtree(stats_dir)
+            
+            file_barrier(f"{name}_stats_clean", rid)
             stats_dir.mkdir(parents=True, exist_ok=True)
-            with open(stats_dir / f"rank_{rank}.json", 'w') as f:
+            
+            stats_file = stats_dir / f"rank_{rank}.json"
+            with open(stats_file, 'w') as f:
                 json.dump({"ttft": local_avg_ttft, "thru": local_throughput, "total": len(read_latencies)}, f)
             
             file_barrier(f"{name}_stats_ready", rid)

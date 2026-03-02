@@ -1,0 +1,59 @@
+#!/bin/bash
+#SBATCH -A m1248_g
+#SBATCH -C gpu
+#SBATCH -q regular
+#SBATCH -t 01:30:00
+#SBATCH -N 64
+#SBATCH --ntasks-per-node=1
+#SBATCH --gpus-per-node=4
+#SBATCH -J v12_redis_weak_16_64n
+#SBATCH -o benchmark/logs/v12_redis_weak_16_64n_%j.out
+#SBATCH -e benchmark/logs/v12_redis_weak_16_64n_%j.err
+
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
+source setup_env.sh
+
+# Slingshot fixes
+export FI_CXI_RX_MATCH_MODE=software
+export MPICH_OFI_STARTUP_CONNECT=1
+export FI_CXI_DEFAULT_CQ_SIZE=65536
+export FI_CXI_OFLOW_BUF_SIZE=4194304
+export FI_CXI_CQ_FILL_PERCENT=10
+export FI_CXI_RETRY_COUNT=50
+export FI_CXI_RETRY_WAIT=100
+
+# ─── Start Redis on ALL 64 nodes (one per node) ───
+echo "Starting Redis on all 64 nodes (one per node)..."
+srun --overlap -N 64 -n 64 --ntasks-per-node=1 \
+    redis-server --port 16379 --bind 0.0.0.0 \
+    --protected-mode no --save "" \
+    --maxmemory 200gb --maxmemory-policy allkeys-lru &
+REDIS_PID=$!
+sleep 30
+echo "Redis started (background PID=$REDIS_PID)"
+
+SYSTEM="lmcache-redis"
+JOB_UID=${SLURM_JOB_ID}
+
+echo "=== WEAK SCALING: 8 req/node (16N, 32N, 64N) ==="
+
+for N in 16 32 64; do
+    echo ""
+    echo "--- Weak Scaling N=${N} nodes (REQS=$((8 * N))) ---"
+    REQS=$((8 * N))
+    RUN_ID="${JOB_UID}_WEAK_N${N}"
+
+    srun --overlap -N $N -n $N --ntasks-per-node=1 \
+        python3 benchmark/scripts/v9_serv_metrics_standalone.py \
+        --system $SYSTEM \
+        --num-requests $REQS \
+        --run-id $RUN_ID
+
+    sleep 15
+done
+
+# Cleanup
+echo "Stopping Redis on all nodes..."
+srun --overlap -N 64 -n 64 --ntasks-per-node=1 pkill -u $USER redis-server || true
+wait $REDIS_PID 2>/dev/null || true
+echo "✅ Done: v12 Redis Weak Scaling 16-64N"
