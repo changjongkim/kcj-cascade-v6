@@ -561,6 +561,7 @@ This evaluation focuses on the **predictability** of the storage layer. We measu
 | **LMCACHE-DISK**| 1,048.9 / 40.0 | 317.7 / 50.6 | 2,179.0 / 20.5 | POSIX Metadata Bottleneck |
 | **HDF5-INDEP** | 649.8 / 55.5 | 229.5 / 60.9 | 2,249.9 / 17.7 | Local File Lock Contention |
 | **REDIS** | 216.3 / 83.9 | 123.7 / 115.1 | 226.5 / 58.4 | Network Stack Overhead |
+| **LLM-GPU** | 1,222.6 / 41.9 | 309.8 / 54.9 | 11,525.4 / 2.9 | VRAM Bound |
 
 #### **Summary Table: Mixed Workload Performance (16-Node)**
 | System | Workload A (95/5) | Workload B (50/50) | Workload C (Scan) | Status |
@@ -574,7 +575,7 @@ This evaluation focuses on the **predictability** of the storage layer. We measu
 
 
 > **🔥 Evaluation Insights:**
-> 1.  **The Scan Breakthrough**: Cascade achieves an unprecedented **53K Ops/sec** in sequential scan mode, outperforming traditional file systems (HDF5/LMCache) by over **24x**.
+> 1.  **The Scan Breakthrough**: Cascade achieves an unprecedented **53K Ops/sec** in sequential scan mode, outperforming GPU-local storage (LLM-GPU) by over **4.6x** and traditional file systems by over **24x**.
 > 2.  **Robustness under Contention**: In high-write scenarios (Workload B), Cascade maintains stable performance (376 Ops/sec) while others suffer from lock contention.
 > 3.  **Latency Predictability**: Cascade's P50 latency remains at **0.01ms** level, whereas competitive systems jump to multi-millisecond ranges.
 
