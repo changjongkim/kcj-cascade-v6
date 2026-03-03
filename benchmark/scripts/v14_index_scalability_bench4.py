@@ -74,8 +74,9 @@ def run_index_scalability_benchmark():
     
     block_size_bytes = args.block_size * 1024 * 1024
     
-    # Pre-generate dummy data 
-    dummy_data = b"x" * block_size_bytes
+    # Pre-generate a base buffer as a numpy array for efficient modification
+    import numpy as np
+    base_data = np.random.randint(0, 256, block_size_bytes, dtype=np.uint8)
     dummy_key_prefix = b"k" * 128
     
     results = {}
@@ -84,11 +85,14 @@ def run_index_scalability_benchmark():
     for target_total in scale_steps:
         print_rank0(f"\n▶ Scaling to {target_total} blocks ({args.block_size}MB each)")
         
-        print_rank0(f"  - Starting Ingestion...")
+        print_rank0(f"  - Starting Ingestion (Unique Content per Block)...")
         for i in range(current_total, target_total):
             if i % world == rank:
                 key = f"idx_scale_blk_{i}"
-                adapter.put(key, dummy_key_prefix, dummy_data)
+                # Modify content based on index to bypass deduplication
+                current_block = base_data.copy()
+                current_block[:8] = np.frombuffer(i.to_bytes(8, 'little'), dtype=np.uint8)
+                adapter.put(key, dummy_key_prefix, current_block.tobytes())
         
         adapter.flush()
         current_total = target_total
@@ -106,6 +110,11 @@ def run_index_scalability_benchmark():
             key = f"idx_scale_blk_{idx}"
             t0 = time.perf_counter()
             res = adapter.get(key)
+            if res:
+                # Force a memory copy to ensure we measure actual data access overhead
+                # (Simulates an inference engine moving data to its own tensors)
+                _ = bytes(res[0])
+                _ = bytes(res[1])
             t1 = time.perf_counter()
             latencies.append((t1 - t0) * 1000) # ms
         phase_end = time.perf_counter()

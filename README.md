@@ -626,28 +626,28 @@ We measure the impact of index size on latency and the system's ability to handl
 | **Cascade** | 1K | 16 GB | **0.00** | 2.42 | 2.20 | 6.49 GB/s |
 | | 10K | 160 GB | **0.01** | 1.74 | 1.40 | 6.49 GB/s |
 | **(HPC-Optimized)**| 50K | 800 GB | **0.00** | **1.34** | **1.10** | **124.96 GB/s*** |
-| **LMCache** | 1K | 16 GB | 23.67 | 30.18 | 29.00 | 5.90 GB/s |
-| (Disk-Mode) | 10K | 160 GB | 22.66 | 34.18 | 31.20 | 6.09 GB/s |
-| | 50K | 800 GB | 21.99 | 30.19 | 25.33 | 6.99 GB/s |
-| **PDC** | 1K | 16 GB | 22.59 | 27.15 | 25.51 | 5.96 GB/s |
-| | 10K | 160 GB | 21.30 | 27.02 | 26.15 | 6.60 GB/s |
-| | 50K | 800 GB | 21.32 | 27.45 | 24.05 | 6.89 GB/s |
+| **LMCache** | 1K | 16 GB | 23.67 | 30.25 | 28.68 | 5.86 GB/s |
+| (Disk-Mode) | 10K | 160 GB | 22.58 | 33.13 | 28.80 | 6.06 GB/s |
+| | 50K | 800 GB | 22.27 | 30.66 | 25.57 | 6.38 GB/s |
+| **PDC** | 1K | 16 GB | 22.39 | 27.15 | 25.70 | 6.26 GB/s |
+| | 10K | 160 GB | 21.33 | 27.64 | 24.89 | 6.56 GB/s |
+| | 50K | 800 GB | 22.38 | 27.74 | 24.74 | 6.66 GB/s |
 | **LLM-GPU** | 1K | 16 GB | 26.76 | 33.28 | 30.05 | 5.29 GB/s |
 | | 10K | 160 GB | 25.17 | 29.93 | 27.77 | 6.06 GB/s |
 | | 50K | 800 GB | 23.58 | 31.97 | 29.77 | 3.30 GB/s |
-| **HDF5-Indep**| 1K | 16 GB | 2.80 | 1440 | 1180 | 1.63 GB/s |
-| | 10K | 160 GB | 3.18 | 27508 | 21903 | 0.37 GB/s |
-| | 50K | 800 GB | 3.52 | 82479 | 76140 | 0.36 GB/s |
-| **RedisDist** | 1K | 16 GB | *Pending* | - | - | - |
-| (8 Shards) | 10K | 160 GB | *Pending* | - | - | - |
-| | 50K | 800 GB | *Pending* | - | - | - |
+| **HDF5-Indep**| 1K | 16 GB | 2.83 | 2567 | 2058 | 0.84 GB/s |
+| | 10K | 160 GB | 3.18 | 26713 | 22041 | 0.08 GB/s |
+| | 50K | 800 GB | 3.25 | 106843 | 86356 | 0.02 GB/s |
+| **RedisDist** | 1K | 16 GB | 24.04 | 43.64 | 40.38 | 4.78 GB/s |
+| (8 Shards) | 10K | 160 GB | 22.75 | 39.71 | 32.48 | 5.53 GB/s |
+| | 50K | 800 GB | 19.64 | 29.42 | 27.31 | 8.04 GB/s |
 
 > \* **Note**: Cascade's 124 GB/s at 50K represents the extreme efficiency of SHM-based retrieval where indexing latency is negligible (<0.01ms), calculated as the sum of node-local throughputs.
 
 #### **💡 Key Findings**
 1. **$O(1)$ Scalability**: Cascade maintains sub-0.01ms P50 latency even as the index scale grows by 50x (1K → 50K). Retrieval speed is **~2500x faster** than disk-based LMCache/PDC.
-2. **Indexing Contention in HDF5**: HDF5 shows a catastrophic increase in P99 latency (reaching **82.4 seconds**) as the index grows, proving its B-Tree based object management is unusable for massive KV cache workloads.
-3. **Stability Under Load**: Cascade, LMCache-Disk, and PDC show high stability in aggregated bandwidth across all scales. LLM-GPU shows a performance drop at the maximum 800GB scale, likely due to fragmentation overhead in its management layer.
+2. **Indexing Contention in HDF5**: HDF5 shows a catastrophic increase in P99 latency (reaching **106.8 seconds**) as the index grows, proving its B-Tree based object management is unusable for massive KV cache workloads.
+3. **Stability Under Load**: Cascade, LMCache-Disk, and PDC show high stability in aggregated bandwidth across all scales. **RedisDist** scales well, reaching **8.04 GB/s** at 800GB capacity using its sharded architecture. LLM-GPU shows a performance drop at the maximum scale, likely due to fragmentation overhead.
 
 ---
 
