@@ -623,9 +623,9 @@ We measure the impact of index size on latency and the system's ability to handl
 
 | System | Scale | Total Data | P50 (ms) | P99 (ms) | TTFT Proxy (P95) | Agg. Bandwidth |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Cascade** | 1K | 16 GB | **0.00** | 2.42 | 2.20 | 6.49 GB/s |
-| | 10K | 160 GB | **0.01** | 1.74 | 1.40 | 6.49 GB/s |
-| **(HPC-Optimized)**| 50K | 800 GB | **0.00** | **1.34** | **1.10** | **124.96 GB/s*** |
+| **Cascade** | 1K | 16 GB | *TBD* | *TBD* | *TBD* | *TBD* |
+| | 10K | 160 GB | *TBD* | *TBD* | *TBD* | *TBD* |
+| **(HPC-Optimized)**| 50K | 800 GB | *TBD* | *TBD* | *TBD* | *TBD* |
 | **LMCache** | 1K | 16 GB | 23.67 | 30.25 | 28.68 | 5.86 GB/s |
 | (Disk-Mode) | 10K | 160 GB | 22.58 | 33.13 | 28.80 | 6.06 GB/s |
 | | 50K | 800 GB | 22.27 | 30.66 | 25.57 | 6.38 GB/s |
