@@ -32,10 +32,16 @@ class LMCacheAdapter(StorageAdapter):
     
     def initialize(self) -> bool:
         try:
-            self.base_dir.mkdir(parents=True, exist_ok=True)
+            rank = int(os.environ.get('SLURM_PROCID', 0))
+            if rank == 0:
+                self.base_dir.mkdir(parents=True, exist_ok=True)
+            time.sleep(1) # wait for rank 0 to create dir
             self._initialized = True
             return True
         except Exception as e:
+            if 'File exists' in str(e):
+                self._initialized = True
+                return True
             print(f"[LMCacheAdapter] Init error: {e}")
             return False
             
