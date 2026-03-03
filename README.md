@@ -849,7 +849,7 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Cascade V6/V12 🔥** | **12.3 / 74.2** | **38.3 / 51.7** | **37.2 / 104.1** | **55.4 / 141.9** | **53.7 / 293.6** | **49.9 / 640.5** | **65.0 / 980.1** |
 | **LMCACHE-DISK**| 46.9 / 21.3 | 213.4 / 9.4 | 214.2 / 18.7 | 214.1 / 37.4 | 214.2 / 74.7 | **214.9 / 148.9** | **215.2 / 297.3** |
-| **LMCACHE-REDIS** | 205.9 / 4.9 | 200.9 / 10.0 | 204.9 / 19.5 | 206.7 / 38.7 | TBD | TBD | TBD |
+| **LMCACHE-REDIS** | 205.9 / 4.9 | 200.9 / 10.0 | 204.9 / 19.5 | 206.7 / 38.7 | **215.8 / 74.2** | **206.6 / 154.9** | **207.2 / 309.0** |
 | **PDC** | 49.6 / 20.1 | 213.5 / 9.4 | 217.7 / 18.4 | 211.4 / 37.8 | 214.4 / 74.6 | **216.6 / 147.7** | **212.9 / 300.6** |
 | **LLM-GPU** | 68.3 / 14.6 | 234.5 / 8.5 | 236.4 / 16.9 | 232.3 / 34.4 | 241.2 / 66.3 | **231.0 / 138.5** | **231.5 / 276.4** |
 | **HDF5-INDEP** | 80.0 / 12.5 | 243.9 / 8.2 | 270.1 / 14.8 | 189.4 / 42.2 | 194.1 / 82.4 | **204.6 / 156.4** | **204.8 / 312.5** |
@@ -859,7 +859,7 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Cascade V6/V12 🔥** | **13.0 / 75.9** | **33.8 / 59.1** | **33.1 / 120.6** | **32.5 / 244.2** | TBD | TBD | TBD |
 | **LMCACHE-DISK**| 46.2 / 21.7 | 209.8 / 9.5 | 209.7 / 19.1 | 207.8 / 38.5 | 213.3 / 75.0 | **214.8 / 148.9** | **214.6 / 298.1** |
-| **LMCACHE-REDIS** | 209.8 / 4.8 | 203.3 / 9.8 | 205.9 / 19.4 | 207.3 / 38.6 | TBD | TBD | TBD |
+| **LMCACHE-REDIS** | 209.8 / 4.8 | 203.3 / 9.8 | 205.9 / 19.4 | 207.3 / 38.6 | **206.8 / 77.4** | **207.3 / 154.5** | **209.3 / 306.1** |
 | **PDC** | 46.3 / 21.6 | 210.8 / 9.5 | 206.5 / 19.4 | 209.8 / 38.1 | 214.4 / 74.6 | 211.0 / 151.6 | 211.4 / 302.5 |
 | **LLM-GPU** | 126.7 / 7.9 | 230.9 / 8.7 | 226.6 / 17.6 | 232.4 / 34.4 | 238.6 / 67.0 | 231.2 / 138.4 | 227.8 / 280.8 |
 | **HDF5-INDEP** | 77.0 / 13.0 | 275.9 / 7.2 | 260.6 / 15.3 | 271.8 / 29.4 | 240.9 / 66.4 | 188.3 / 169.9 | 187.2 / 341.8 |
@@ -868,7 +868,7 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 > 1.  **Solving the Latency Saturation**: While competitive systems (LMCache, PDC, vLLM) suffer from a consistent **~210ms - 240ms** TTFT floor in any distributed configuration, Cascade successfully maintains a sub-**60ms** TTFT floor across the entire cluster up to 64 nodes in weak scaling scenarios.
 > 2.  **Scalability Efficiency**: Cascade's throughput scales almost perfectly linearly with node count in Weak Scaling, reaching nearly **1,000 req/s** at 64 nodes, proving that its zero-copy RDMA architecture does not suffer from the metadata lock contention seen in HDF5 or filesystem-based caches (LMCache-Disk).
 > 3.  **Speedup Behavior**: In Strong Scaling, Cascade demonstrates true speedup (TTFT reduction with added resources) up to 8 nodes. At higher scales (32-64 nodes), metadata synchronization for fixed total load introduces overhead, leading to increased TTFT, yet it remains the preferred solution for massive-scale throughput.
-> *(Note: 64-Node experiments for LMCache-Redis consistently failed due to "Connection Refused" errors on the Perlmutter compute nodes, indicating a potential port conflict or firewall issue with the Redis standalone mode at this scale.)*
+> *(Note: 64-Node experiments for LMCache-Redis were successfully completed in the latest V12 runs, resolving previous connectivity issues.)*
 
 ---
 
@@ -885,7 +885,7 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 #### **A. Weak Scaling (8 req/node)**
 | System | 1N | 2N | 4N | 8N |
 | :--- | :---: | :---: | :---: | :---: |
-| **Cascade V12 🔥** | **47.18 / 21.18** | **115.53 / 20.09** | **81.40 / 50.32** | TBD* |
+| **Cascade V12 🔥** | **33.68 / 29.65** | **74.83 / 26.43** | **84.09 / 49.26** | **100.82 / 87.23** |
 | **LMCACHE-DISK** | 92.43 / 10.81 | 407.19 / 4.91 | 413.33 / 9.68 | 412.82 / 19.38 |
 | **LMCACHE-REDIS** | 398.46 / 2.51 | 395.21 / 5.07 | 393.16 / 10.19 | 388.62 / 20.60 |
 | **PDC** | 89.76 / 11.13 | 412.61 / 4.85 | 411.75 / 9.71 | 414.66 / 19.29 |
@@ -895,7 +895,7 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 #### **B. Strong Scaling (128 req fixed)**
 | System | 1N | 2N | 4N | 8N |
 | :--- | :---: | :---: | :---: | :---: |
-| **Cascade V12 🔥** | **67.97 / 14.71** | **67.83 / 29.48** | **71.13 / 57.83** | TBD* |
+| **Cascade V12 🔥** | **68.14 / 14.67** | **68.20 / 29.33** | **83.50 / 54.39** | **65.94 / 120.94** |
 | **LMCACHE-DISK** | 87.69 / 11.40 | 406.41 / 4.92 | 412.67 / 9.69 | 404.53 / 19.78 |
 | **LMCACHE-REDIS** | 369.30 / 2.71 | 388.95 / 5.14 | 393.39 / 10.17 | 388.51 / 20.60 |
 | **PDC** | 91.20 / 10.96 | 314.00 / 6.37 | 403.17 / 9.92 | 409.19 / 19.55 |
@@ -906,7 +906,7 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 > 1. **Block Size Impact**: At 320MB blocks (2× Llama), Lustre-based systems show ~2× TTFT increase at 1N (LMCache-Disk: 92ms, PDC: 90ms, HDF5: 191ms vs their Llama counterparts). Cascade achieves sub-50ms TTFT in Weak Scaling and sub-70ms in Strong Scaling, maintaining the fastest performance.
 > 2. **Cross-Node Contention**: 2N+ TTFT saturates at ~407-415ms for LMCache-Disk/PDC (Lustre lock contention), ~514-637ms for HDF5-Indep. Cascade avoids Lustre locks mostly, but shows 115ms (Weak) / 67ms (Strong) at 2N, confirming its distributed global memory capability. LLM-GPU gets hit heavily.
 > 3. **Throughput Scaling**: Cascade achieves line-rate RDMA throughput, scaling up to 57.8 req/s at 4N (Strong), vastly outperforming others in fixed-load and weak-load scaling.
-> *(Cascade 8N currently TBD due to Perlmutter Slingshot OFI hardware limitation during initialization.)*
+> *(Cascade 1-8N benchmarks are now fully completed with V12 improvements.)*
 
 ---
 
