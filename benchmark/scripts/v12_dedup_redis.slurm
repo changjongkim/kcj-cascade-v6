@@ -26,7 +26,7 @@ mkdir -p benchmark/tmp/hosts_${SLURM_JOB_ID}
 rm -f benchmark/tmp/hosts_${SLURM_JOB_ID}/redis_host
 
 # Direct execution on the first node of the job
-redis-server --port $REDIS_PORT --protected-mode no --save "" &
+redis-server --port $REDIS_PORT --bind 0.0.0.0 --protected-mode no --save "" &
 REDIS_PID=$!
 sleep 15
 echo $(hostname) > benchmark/tmp/hosts_${SLURM_JOB_ID}/redis_host

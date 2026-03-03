@@ -85,14 +85,16 @@ def run_dedup_benchmark():
         # For dedup, we assume rank 0's redis or a specific one? 
         # Actually in our Redis adapter, it's a single server.
         # But we run multiple redis-servers. This is tricky.
-        # Let's assume for DEDUP, we use Rank 0's node as the shared Redis server.
-        # We need to coordinate the host.
-        tmp_h_dir = REPO_ROOT / "benchmark" / "tmp" / f"hosts_{rid}"
+        # For dedup, we use the central Redis server started in the SLURM script.
+        # It writes its hostname under the base SLURM_JOB_ID.
+        tmp_h_dir = REPO_ROOT / "benchmark" / "tmp" / f"hosts_{job_id}"
         tmp_h_dir.mkdir(parents=True, exist_ok=True)
-        if rank == 0:
-            with open(tmp_h_dir / "redis_host", 'w') as f:
-                f.write(socket.gethostname())
-        file_barrier("redis_host_ready", rid)
+        # Wait for the SLURM script to write the host file
+        wait_count = 0
+        while not (tmp_h_dir / "redis_host").exists() and wait_count < 30:
+            time.sleep(1)
+            wait_count += 1
+        
         with open(tmp_h_dir / "redis_host", 'r') as f:
             shared_redis_host = f.read().strip()
         config = {"host": shared_redis_host, "port": r_port}

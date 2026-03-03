@@ -914,14 +914,14 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 This evaluation measures the storage layer's ability to handle massive-scale prefix sharing (e.g., thousands of users sharing the same 10GB system prompt).
 
 #### **A. Prefix Sharing Performance (64 Blocks / 10GB Shared Prefix)**
-| System | 1N (TTFT / BW) | 2N (TTFT / BW) | 4N | 8N (TTFT / BW) |
+| System | 1N (TTFT / BW) | 2N (TTFT / BW) | 4N (TTFT / BW) | 8N (TTFT / BW) |
 | :--- | :---: | :---: | :---: | :---: |
-| **Cascade V12 🔥** | **11.3 / 14.1** | **21.4 / 20.8** | **30.2 / 24.4** | TBD |
+| **Cascade V12 🔥** | **11.3 / 14.1** | **21.4 / 20.8** | **30.2 / 24.4** | **TBD (Rerunning)** |
 | **LMCACHE-DISK** | 45.8 / 3.5 | 126.4 / 4.2 | 164.9 / 5.7 | **187.2 / 8.8** |
 | **PDC** | 46.1 / 3.5 | 127.8 / 4.2 | **164.6 / 5.8** | **185.0 / 9.0** |
 | **LLM-GPU** | 75.3 / 2.1 | 147.5 / 3.0 | 185.3 / 4.4 | **204.0 / 7.2** |
 | **HDF5-INDEP** | 100.4 / 1.6 | 262.0 / 1.2 | 267.2 / 2.4 | **271.2 / 4.7** |
-| **LMCACHE-REDIS** | 214.1 / 0.7 | (Fail) | (Fail) | **355.6 / 3.6** |
+| **LMCACHE-REDIS** | 214.1 / 0.7 | **TBD (Fixing)** | **TBD (Fixing)** | **355.6 / 3.6** |
 
 > **🔥 Evaluation Insights:**
 > 1. **Aggregated Bandwidth (BW)**: Calculated as `(Aggregate Throughput * 0.16 GB)`. Cascade (2N) already achieves **20.8 GB/s** total bandwidth, which is **2.3x faster** than LMCache even with 8 nodes (8.8 GB/s).
