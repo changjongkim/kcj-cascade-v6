@@ -928,6 +928,24 @@ This evaluation measures the storage layer's ability to handle massive-scale pre
 > 2. **Lustre Lock Contention**: Lustre-based systems (LMCache-Disk, PDC, HDF5, LLM-GPU) show severe TTFT degradation and throughput saturation as node count increases. This is due to the sequential nature of filesystem locks.
 > 3. **Cascade RDMA Dedup**: Cascade leverages Global Deduplication with RDMA, serving prefix data at near-memory speeds. This allows TTFT to remain sub-35ms even when serving 10GB prompts across the entire cluster.
 
+---
+
+### 🧪 23. Hierarchical Tiering Latency Profiling (Hot/Warm/Cold Recovery)
+
+This microbenchmark evaluates the single-block (160MB Llama equivalent) latency and throughput across different storage tiers at an **8-Node scale**.
+*   **HOT (GPU HBM / OS Page Cache)**: Data is immediately read after it is written.
+*   **WARM (DRAM / RDMA)**: GPU memory is cleared, testing DRAM or remote RDMA recovery. (In disk-based systems, this is similar to HOT if page cache holds).
+*   **COLD (Disk / Lustre)**: All page caches and GPU memories are evicted. Total recovery from Lustre filesystem.
+
+#### **Recovery Profiling at 8 Nodes (N=8)**
+| System | HOT Latency (ms) / BW (GB/s) | WARM Latency / BW | COLD Latency / BW |
+| :--- | :---: | :---: | :---: |
+| **Cascade V12 🔥** | **13.76 / 11.36** | **12.80 / 12.20** | **12.81 / 12.20** |
+| **PDC** | 48.13 / 3.25 | 56.57 / 2.76 | 48.16 / 3.24 |
+| **LMCACHE-DISK** | 49.31 / 3.17 | 57.30 / 2.73 | 49.86 / 3.13 |
+| **LLM-GPU** | 76.39 / 2.05 | 77.91 / 2.01 | 63.37 / 2.47 |
+| **HDF5-INDEP** | TBD | TBD | TBD |
+| **LMCACHE-REDIS** | TBD | TBD | TBD |
 
 ---
 
