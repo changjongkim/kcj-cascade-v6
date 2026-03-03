@@ -656,14 +656,18 @@ We measure the impact of index size on latency and the system's ability to handl
 
 #### **🔍 Architectural Breakdown: Why 1,700+ GB/s?**
 
+**⚖️ Clarification: Memory vs. Storage Comparison**
+Are we unfairly comparing Cascade's Memory to the others' Storage? 
+Yes and No. In this 800GB scale benchmark, systems like LMCache (Disk-mode), PDC, and HDF5 were configured to use Lustre scratching disks, meaning they were bound by filesystem IO speeds. However, we also tested a **100% In-Memory baseline: RedisDist (8 Shards)**. Redis served the exact same 800GB dataset purely from RAM, just like Cascade. Yet, Redis only achieved **8.04 GB/s**. This proves that the monolithic 1,700+ GB/s bandwidth is not simply because Cascade "starts from memory", but because of fundamentally removing the software bounds.
+
 **🐢 Traditional Systems (Redis, LMCache, PDC)**
-Even when the data is located on the same node (localhost), these systems operate on a **Client-Server architecture**.
+Even when the data is located on the same node (localhost) and strictly in RAM (like Redis), these systems operate on a **Client-Server architecture**.
 1. Python sends a data request to the **Network Socket** (TCP/IP or Unix Socket).
 2. The Operating System (Linux Kernel) processes this request, causing a **Context Switch**.
 3. The storage server (e.g., Redis process) finds the data and copies it into the OS buffer.
 4. The OS then copies the data back into the Python application buffer.
 
-Due to CPU intervention and multiple memory copies along this path, the node-local speed is strictly **Software-Bound**, rarely exceeding **2~5 GB/s** regardless of hardware capabilities. Fetching data from a remote node adds further TCP network overhead, degrading performance even more.
+Due to CPU intervention and multiple memory copies along this path, the node-local speed is strictly **Software-Bound**, rarely exceeding **2~5 GB/s** (or ~8GB/s aggregate across 8 nodes) regardless of hardware capabilities. Fetching data from a remote node adds further TCP network overhead, degrading performance even more.
 
 **🚀 Cascade**
 Cascade completely bypasses the Client-Server model.
