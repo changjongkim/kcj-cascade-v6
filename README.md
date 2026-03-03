@@ -918,7 +918,7 @@ This evaluation measures the storage layer's ability to handle massive-scale pre
 | :--- | :---: | :---: | :---: | :---: |
 | **Cascade V12 🔥** | **11.3 / 14.1** | **21.4 / 20.8** | **30.2 / 24.4** | TBD |
 | **LMCACHE-DISK** | 45.8 / 3.5 | 126.4 / 4.2 | 164.9 / 5.7 | **187.2 / 8.8** |
-| **PDC** | 46.1 / 3.5 | 127.8 / 4.2 | TBD | TBD |
+| **PDC** | 46.1 / 3.5 | 127.8 / 4.2 | **164.6 / 5.8** | **185.0 / 9.0** |
 | **LLM-GPU** | TBD | TBD | TBD | TBD |
 | **HDF5-INDEP** | TBD | TBD | TBD | TBD |
 | **LMCACHE-REDIS** | 214.1 / 0.7 | (Fail) | (Fail) | **355.6 / 3.6** |
