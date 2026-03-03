@@ -932,7 +932,7 @@ This evaluation measures the storage layer's ability to handle massive-scale pre
 
 ### 🧪 23. Hierarchical Tiering Latency Profiling (Hot/Warm/Cold Recovery)
 
-This microbenchmark evaluates the single-block (160MB Llama) latency and throughput across different storage tiers at an **8-Node scale**. (16-Node benchmarking is currently queued).
+This microbenchmark evaluates the single-block (160MB Llama) latency and throughput across different storage tiers at an **8-Node and 16-Node scale**.
 *   **HOT (GPU HBM / OS Page Cache)**: Data is immediately read after it is written.
 *   **WARM (DRAM / RDMA)**: GPU memory is cleared, testing DRAM or remote RDMA recovery. (In disk-based systems, this is similar to HOT if page cache holds).
 *   **COLD (Disk / Lustre)**: All page caches and GPU memories are evicted. Total recovery from Lustre filesystem.
@@ -946,6 +946,16 @@ This microbenchmark evaluates the single-block (160MB Llama) latency and through
 | **LLM-GPU** | 76.39 / 2.05 | 77.91 / 2.01 | 63.37 / 2.47 |
 | **HDF5-INDEP** | 190.67 / 0.82 | 86.73 / 1.80 | 78.14 / 2.00 |
 | **LMCACHE-REDIS** | 239.28 / 0.65 | 406.93 / 0.38 | 213.51 / 0.73 |
+
+#### **Recovery Profiling at 16 Nodes (N=16)**
+| System | HOT Latency (ms) / BW (GB/s) | WARM Latency / BW | COLD Latency / BW |
+| :--- | :---: | :---: | :---: |
+| **Cascade V12 🔥** | **18.43 / 8.48** | **17.54 / 8.91** | **17.54 / 8.91** |
+| **PDC** | TBD | TBD | TBD |
+| **LMCACHE-DISK** | 47.98 / 3.26 | 55.82 / 2.80 | 47.65 / 3.28 |
+| **LLM-GPU** | TBD | TBD | TBD |
+| **HDF5-INDEP** | TBD | TBD | TBD |
+| **LMCACHE-REDIS** | 599.79 / 0.26 | 704.09 / 0.22 | 193.60 / 0.81 |
 
 ---
 
