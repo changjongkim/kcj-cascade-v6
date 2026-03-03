@@ -102,6 +102,10 @@ class HDF5Adapter(StorageAdapter):
         if not self._initialized:
             return False
         
+        if self.h5file is None:
+            if not self.initialize():
+                return False
+        
         try:
             key_arr = np.frombuffer(key_data, dtype=np.float16)
             val_arr = np.frombuffer(value_data, dtype=np.float16)
@@ -138,6 +142,10 @@ class HDF5Adapter(StorageAdapter):
     def get(self, block_id: str) -> Optional[tuple]:
         if not self._initialized:
             return None
+            
+        if self.h5file is None:
+            if not self.initialize():
+                return None
         
         try:
             dataset_name = f"{block_id}"
@@ -186,6 +194,10 @@ class HDF5Adapter(StorageAdapter):
     def contains(self, block_id: str) -> bool:
         if not self._initialized:
             return False
+        
+        if self.h5file is None:
+            if not self.initialize():
+                return False
         return block_id in self.h5file['keys']
     
     def delete(self, block_id: str) -> bool:

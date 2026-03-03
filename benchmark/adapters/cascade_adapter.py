@@ -160,17 +160,30 @@ class CascadeAdapter(StorageAdapter):
         if not self._initialized:
             return {}
         stats = self.store.get_stats()
+        
+        # Handle difference between LocalStats and DistributedStats attribute names
+        # For DistributedStore, we prioritize cluster-wide stats
+        gpu_used = getattr(stats, "cluster_gpu_used", getattr(stats, "gpu_used", getattr(stats, "local_gpu_used", 0)))
+        shm_used = getattr(stats, "cluster_dram_used", getattr(stats, "shm_used", getattr(stats, "local_dram_used", 0)))
+        
+        # Hits are usually local, but we take what we can
+        gpu_hits = getattr(stats, "local_gpu_hits", getattr(stats, "gpu_hits", 0))
+        shm_hits = getattr(stats, "local_dram_hits", getattr(stats, "shm_hits", 0))
+
         return {
-            "gpu_used": stats.gpu_used,
-            "shm_used": stats.shm_used,
-            "gpu_hits": stats.gpu_hits,
-            "shm_hits": stats.shm_hits,
+            "gpu_used": gpu_used,
+            "shm_used": shm_used,
+            "gpu_hits": gpu_hits,
+            "shm_hits": shm_hits,
             "lustre_hits": stats.lustre_hits,
             "misses": stats.misses,
             "dedup_hits": stats.dedup_hits
         }
-    
+
     def close(self) -> None:
         if self.store:
-            self.store.flush()
+            try:
+                self.store.flush()
+            except:
+                pass
         self._initialized = False
