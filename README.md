@@ -522,7 +522,8 @@ This evaluation focuses on the **predictability** of the storage layer. We measu
 | | 4N | 162.92 | 172.79 | 389.78 | 471.06 | 1,095.30 |
 | | 8N | 190.52 | 176.08 | 371.35 | 466.25 | 994.90 |
 | **LMCACHE-REDIS** | 1N | 210.41 | 210.00 | 221.85 | 227.02 | 260.39 |
-| | 2-8N | TBD | TBD | TBD | TBD | TBD |
+| | 2N | 196.98 | 194.06 | 221.72 | 236.16 | 248.64 |
+| | 4-8N | TBD | TBD | TBD | TBD | TBD |
 
 > **🔥 Distribution Insights:**
 > 1. **Extreme Tail Stability**: Cascade maintains a P99.9 latency below **90ms** even at 2 nodes. Its RDMA-based retrieval avoids the OS kernel and file system metadata bottlenecks.
