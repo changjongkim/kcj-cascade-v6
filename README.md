@@ -950,12 +950,12 @@ This microbenchmark evaluates the single-block (160MB Llama) latency and through
 #### **Recovery Profiling at 16 Nodes (N=16)**
 | System | HOT Latency (ms) / BW (GB/s) | WARM Latency / BW | COLD Latency / BW |
 | :--- | :---: | :---: | :---: |
-| **Cascade V12 🔥** | **18.43 / 8.48** | **17.54 / 8.91** | **17.54 / 8.91** |
-| **PDC** | TBD | TBD | TBD |
-| **LMCACHE-DISK** | 47.98 / 3.26 | 55.82 / 2.80 | 47.65 / 3.28 |
-| **LLM-GPU** | TBD | TBD | TBD |
-| **HDF5-INDEP** | TBD | TBD | TBD |
-| **LMCACHE-REDIS** | 599.79 / 0.26 | 704.09 / 0.22 | 193.60 / 0.81 |
+| **Cascade V12 🔥** | **13.78 / 11.34** | **12.77 / 12.23** | **12.86 / 12.15** |
+| **PDC** | 47.66 / 3.28 | 56.22 / 2.78 | 155.87 / 1.00 |
+| **LMCACHE-DISK** | 46.90 / 3.33 | 55.33 / 2.82 | 55.11 / 2.84 |
+| **LLM-GPU** | 77.01 / 2.03 | 77.02 / 2.03 | 77.26 / 2.02 |
+| **HDF5-INDEP** | 190.34 / 0.82 | 85.85 / 1.82 | 187.67 / 0.83 |
+| **LMCACHE-REDIS** | 898.37 / 0.17 | 740.42 / 0.21 | 209.49 / 0.75 |
 
 ---
 
