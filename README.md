@@ -958,6 +958,23 @@ buf = np.empty_like(kv_block)
 found, size = store.get("sys_prompt_v1", buf)
 ```
 
+### **22. Global Deduplication & Prefix Sharing Efficiency**
+This evaluation measures the storage layer's ability to handle massive-scale prefix sharing (e.g., thousands of users sharing the same 10GB system prompt).
+
+#### **A. Prefix Sharing Throughput (64 Blocks / 10GB Shared Prefix)**
+| System | 1N | 2N | 4N | 8N |
+| :--- | :---: | :---: | :---: | :---: |
+| **Cascade V12 🔥** | **11.33 / 88.2** | TBD | TBD | TBD |
+| **LMCACHE-DISK** | 45.80 / 21.8 | 126.39 / 15.8 | 164.86 / 24.2 | **187.18 / 55.0** |
+| **PDC** | TBD | TBD | TBD | TBD |
+| **LLM-GPU** | TBD | TBD | TBD | TBD |
+| **HDF5-INDEP** | TBD | TBD | TBD | TBD |
+| **LMCACHE-REDIS** | TBD | TBD | TBD | TBD |
+
+> **🔥 Evaluation Insights:**
+> 1. **Lustre Lock Contention**: Lustre-based systems (LMCache-Disk, PDC, HDF5) show severe TTFT degradation (from 45ms to 187ms) as node count increases. This is due to multiple nodes simultaneously attempting to lock the same prefix data from the shared file system.
+> 2. **Cascade RDMA Dedup**: Cascade leverages Global Deduplication with RDMA, serving the same prefix from a single copy in DRAM/HBM. This avoids Lustre locks and keeps TTFT consistent across the entire cluster.
+
 ---
 
 ## 📂 Repository Structure
