@@ -46,23 +46,40 @@ class CascadeAdapter(StorageAdapter):
         try:
             # Updated import - use cascade package
             from cascade import CascadeStore, CascadeConfig, create_login_node_store
+            import os
             
-            if self.use_gpu:
-                cfg = CascadeConfig(
-                    gpu_capacity_gb=self.gpu_capacity_gb,
-                    shm_capacity_gb=self.shm_capacity_gb,
-                    lustre_path=self.lustre_path,
-                    dedup_enabled=True,
-                    prefix_aware=True,
-                )
+            world_size = int(os.environ.get('SLURM_NTASKS', 1))
+            
+            if world_size > 1:
+                # Use DistributedStore for multi-node
+                import cascade_cpp
+                cfg = cascade_cpp.DistributedConfig()
+                cfg.gpu_capacity_per_device = int(self.gpu_capacity_gb * 1024**3)
+                cfg.dram_capacity = int(self.shm_capacity_gb * 1024**3)
+                cfg.num_gpus_per_node = 4
+                cfg.dedup_enabled = True
+                cfg.locality_aware = True
+                cfg.kv_compression = True
+                cfg.lustre_path = self.lustre_path
+                self.store = cascade_cpp.DistributedStore(cfg)
+                print(f"[CascadeAdapter] Initialized DistributedStore (world={world_size})")
+            elif self.use_gpu:
+                cfg = CascadeConfig()
+                cfg.gpu_capacity_bytes = int(self.gpu_capacity_gb * 1024**3)
+                cfg.shm_capacity_bytes = int(self.shm_capacity_gb * 1024**3)
+                cfg.lustre_path = self.lustre_path
+                cfg.dedup_enabled = True
+                cfg.use_gpu = True
                 self.store = CascadeStore(cfg)
+                print(f"[CascadeAdapter] Initialized Local CascadeStore (GPU=True)")
             else:
                 # Use login node store for testing without GPU
                 self.store = create_login_node_store()
+                print(f"[CascadeAdapter] Initialized Login Node Store (GPU=False)")
             
             self._initialized = True
-            print(f"[CascadeAdapter] Initialized (GPU={self.use_gpu})")
             return True
+
             
         except ImportError as e:
             print(f"[CascadeAdapter] Import error: {e}")
@@ -74,31 +91,50 @@ class CascadeAdapter(StorageAdapter):
             import traceback
             traceback.print_exc()
             return False
+            
+    def sync_metadata(self):
+        if self._initialized and hasattr(self.store, "sync_metadata"):
+            self.store.sync_metadata()
+            
+    def barrier(self):
+        if self._initialized and hasattr(self.store, "barrier"):
+            self.store.barrier()
+
     
     def put(self, block_id: str, key_data: bytes, value_data: bytes) -> bool:
         if not self._initialized:
             return False
         
-        # Combine key and value for storage
-        data = key_data + value_data
+        import numpy as np
+        # Combine key and value for storage and convert to numpy for C++ binding
+        data = np.frombuffer(key_data + value_data, dtype=np.uint8)
         return self.store.put(block_id, data, is_prefix=False)
+
     
     def put_prefix(self, block_id: str, key_data: bytes, value_data: bytes) -> bool:
         """Store a prefix block (for dedup testing)."""
         if not self._initialized:
             return False
         
-        data = key_data + value_data
+        import numpy as np
+        data = np.frombuffer(key_data + value_data, dtype=np.uint8)
         return self.store.put(block_id, data, is_prefix=True)
     
     def get(self, block_id: str) -> Optional[tuple]:
         if not self._initialized:
             return None
         
-        data = self.store.get(block_id)
-        if data is None:
+        import numpy as np
+        # Optimization: Reuse buffer to avoid 256MB allocation overhead on every call
+        if not hasattr(self, "_get_buf"):
+            self._get_buf = np.empty(256 * 1024 * 1024, dtype=np.uint8)
+            
+        found, size = self.store.get(block_id, self._get_buf)
+        
+        if not found:
             return None
         
+        data = self._get_buf[:size]
         # Split back into key and value
         mid = len(data) // 2
         return (data[:mid], data[mid:])

@@ -20,8 +20,10 @@ module load craype-accel-nvidia80
 module load cmake
 
 # 4. Critical Linker & Execution Paths
+module unload darshan
 # Force use of newer GCC libs (required by cray-mpich 8.1.30)
 # We use LD_LIBRARY_PATH here but will use LD_PRELOAD at runtime if needed
+export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/opt/cray/pe/gcc/12.2.0/snos/lib64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/opt/cray/pe/lib64:$LD_LIBRARY_PATH
 

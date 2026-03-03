@@ -68,8 +68,12 @@ class CascadeAdapter(BaseStore):
         cfg.num_gpus_per_node = 4
         cfg.dedup_enabled = True
         cfg.kv_compression = True
-        self.lustre_dir = Path(f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/real_cascade_{mode}_r{rank}")
-        self.lustre_dir.mkdir(parents=True, exist_ok=True)
+        # Cascade internally uses AggregatedLustreStore which shards data by rank/node.
+        # We give it a common base directory, and it handles contention avoidance internally.
+        self.lustre_dir = Path(f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/real_cascade_{mode}_aggregated")
+        if rank == 0: self.lustre_dir.mkdir(parents=True, exist_ok=True)
+        from mpi4py import MPI
+        MPI.COMM_WORLD.Barrier()
         cfg.lustre_path = str(self.lustre_dir)
         self.store = cascade_cpp.DistributedStore(cfg)
     def put(self, key, data): return self.store.put(key, data)
@@ -77,27 +81,42 @@ class CascadeAdapter(BaseStore):
     def barrier(self): self.store.barrier()
     def cleanup(self):
         import shutil
-        if self.lustre_dir.exists(): shutil.rmtree(self.lustre_dir)
+        from mpi4py import MPI
+        MPI.COMM_WORLD.Barrier()
+        if rank == 0 and self.lustre_dir.exists(): shutil.rmtree(self.lustre_dir)
 
 class HDF5Adapter(BaseStore):
     def __init__(self, mode):
         import h5py
-        self.path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/real_hdf5_{mode}_r{rank}.h5"
-        self.file = h5py.File(self.path, 'w')
+        self.path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/real_hdf5_{mode}.h5"
+        # Naive Shared File approach - No MPIO driver to show contention
+        # Only rank 0 creates the file, others open it
+        if rank == 0:
+            self.file = h5py.File(self.path, 'w')
+        from mpi4py import MPI
+        MPI.COMM_WORLD.Barrier()
+        if rank != 0:
+            self.file = h5py.File(self.path, 'a')
     def put(self, key, data):
         if key not in self.file: self.file.create_dataset(key, data=data)
     def get(self, key, out):
         dset = self.file[key]
         dset.read_direct(out)
-    def barrier(self): pass
+    def barrier(self):
+        from mpi4py import MPI
+        MPI.COMM_WORLD.Barrier()
     def cleanup(self):
         self.file.close()
-        if os.path.exists(self.path): os.remove(self.path)
+        from mpi4py import MPI
+        MPI.COMM_WORLD.Barrier()
+        if rank == 0 and os.path.exists(self.path): os.remove(self.path)
 
 class vLLMGPUAdapter(BaseStore):
     def __init__(self, mode):
-        self.dir = Path(f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/real_vllm_{mode}_r{rank}")
-        self.dir.mkdir(parents=True, exist_ok=True)
+        self.dir = Path(f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/real_vllm_{mode}_shared")
+        if rank == 0: self.dir.mkdir(parents=True, exist_ok=True)
+        from mpi4py import MPI
+        MPI.COMM_WORLD.Barrier()
     def put(self, key, data):
         with open(self.dir / f"{key}.pt", 'wb') as f: f.write(data)
     def get(self, key, out):
@@ -109,27 +128,37 @@ class vLLMGPUAdapter(BaseStore):
 
 class PDCAdapter(BaseStore):
     def __init__(self, mode):
-        self.dir = Path(f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/real_pdc_{mode}_r{rank}")
-        self.dir.mkdir(parents=True, exist_ok=True)
+        self.dir = Path(f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/real_pdc_{mode}_shared")
+        if rank == 0: self.dir.mkdir(parents=True, exist_ok=True)
+        from mpi4py import MPI
+        MPI.COMM_WORLD.Barrier()
     def put(self, key, data):
         with open(self.dir / f"{key}.bin", 'wb') as f: f.write(data)
     def get(self, key, out):
         with open(self.dir / f"{key}.bin", 'rb') as f: out[:] = np.frombuffer(f.read(), dtype=np.uint8)
-    def barrier(self): pass
+    def barrier(self):
+        from mpi4py import MPI
+        MPI.COMM_WORLD.Barrier()
     def cleanup(self):
         import shutil
-        if self.dir.exists(): shutil.rmtree(self.dir)
+        if rank == 0 and self.dir.exists(): shutil.rmtree(self.dir)
 
 class LMCacheAdapter(BaseStore):
     def __init__(self, mode):
-        self.dir = Path(f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/real_lmcache_{mode}_r{rank}")
-        self.dir.mkdir(parents=True, exist_ok=True)
+        self.dir = Path(f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/real_lmcache_{mode}_shared")
+        if rank == 0: self.dir.mkdir(parents=True, exist_ok=True)
+        from mpi4py import MPI
+        MPI.COMM_WORLD.Barrier()
     def put(self, key, data): data.tofile(self.dir / f"{key}.bin")
     def get(self, key, out): out[:] = np.fromfile(self.dir / f"{key}.bin", dtype=np.uint8)
-    def barrier(self): pass
+    def barrier(self):
+        from mpi4py import MPI
+        MPI.COMM_WORLD.Barrier()
     def cleanup(self):
         import shutil
-        if self.dir.exists(): shutil.rmtree(self.dir)
+        if rank == 0 and self.dir.exists(): shutil.rmtree(self.dir)
+
+# Removed RedisAdapter for real workloads
 
 # ============================================================
 # Main Logic

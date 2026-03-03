@@ -33,7 +33,7 @@ echo "###################################################################"
 
 srun --overlap -n 2 --ntasks-per-node=1 python3 benchmark/scripts/v6_serving_metrics_llama.py \
     --systems Cascade,HDF5,vLLM-GPU,PDC,LMCache,LMCache-Redis \
-    --num-requests 16 \
+    --num-requests 128 \
     --gen-tokens 64
 
 # Cleanup Redis

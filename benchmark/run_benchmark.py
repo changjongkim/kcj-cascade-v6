@@ -19,28 +19,36 @@ from dataclasses import asdict
 from concurrent.futures import ThreadPoolExecutor
 
 from .config import BENCHMARK_CONFIG, LLAMA_CONFIG
-from .adapters.base import StorageAdapter, BenchmarkStats
-from .adapters.cascade_adapter import CascadeAdapter
-from .adapters.hdf5_adapter import HDF5Adapter
-from .adapters.lmcache_adapter import LMCacheAdapter
-from .adapters.redis_adapter import RedisAdapter
-from .adapters.pdc_adapter import PDCAdapter
+from .adapters import (
+    StorageAdapter, BenchmarkStats, CascadeAdapter, 
+    HDF5IndependentIOAdapter, HDF5CollectiveIOAdapter,
+    LMCacheAdapter, RedisAdapter, PDCAdapter, vLLMGPUAdapter
+)
 
 
 def get_adapter(name: str, config: Dict = None) -> StorageAdapter:
     """Factory for storage adapters."""
     adapters = {
         "cascade": CascadeAdapter,
-        "hdf5": HDF5Adapter,
+        "hdf5": HDF5IndependentIOAdapter,
+        "hdf5-independent": HDF5IndependentIOAdapter,
+        "hdf5-indep": HDF5IndependentIOAdapter,
+        "hdf5-collective": HDF5CollectiveIOAdapter,
+        "hdf5-coll": HDF5CollectiveIOAdapter,
+
         "lmcache": LMCacheAdapter,
+        "lmcache-redis": RedisAdapter,
         "redis": RedisAdapter,
         "pdc": PDCAdapter,
+        "llm-gpu": vLLMGPUAdapter,
+        "vllm-gpu": vLLMGPUAdapter,
     }
     
-    if name.lower() not in adapters:
-        raise ValueError(f"Unknown system: {name}")
+    name_lower = name.lower()
+    if name_lower not in adapters:
+        raise ValueError(f"Unknown system: {name}. Available: {list(adapters.keys())}")
     
-    return adapters[name.lower()](config or {})
+    return adapters[name_lower](config or {})
 
 
 def load_test_data(data_path: Path, num_blocks: int = 1000) -> List[Dict]:
@@ -282,7 +290,10 @@ def main():
     args = parser.parse_args()
     
     # Setup
-    systems = args.systems.split(",") if args.systems != "all" else ["cascade", "hdf5", "lmcache", "redis", "pdc"]
+    systems = args.systems.split(",") if args.systems != "all" else [
+        "cascade", "hdf5-independent", "hdf5-collective", "llm-gpu", "lmcache", "lmcache-redis", "pdc"
+    ]
+
     data_path = Path(args.data_path)
     output_path = Path(args.output)
     output_path.mkdir(parents=True, exist_ok=True)

@@ -31,6 +31,7 @@ echo "###################################################################"
 
 for N in 1 2 4 8; do
     echo ">>>> Running Real Weak Scaling: N=$N nodes <<<<"
-    srun -N $N -n $N --gpus-per-node=4 \
+    srun --overlap -N $N -n $N --gpus-per-node=4 \
         $PYTHON_BIN $SCRIPT --mode weak --systems $SYSTEMS
+    sleep 5
 done

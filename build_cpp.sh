@@ -6,6 +6,11 @@ set -e
 # Source the environment
 source setup_env.sh
 
+# Bypass conda's broken pkg-config
+mkdir -p /tmp/sgkim_pkg
+ln -sf /usr/bin/pkg-config /tmp/sgkim_pkg/pkg-config
+export PATH=/tmp/sgkim_pkg:$PATH
+
 BUILD_DIR="cascade_Code/cpp/build_cascade_cpp"
 mkdir -p $BUILD_DIR
 cd $BUILD_DIR
@@ -20,6 +25,7 @@ cmake .. \
     -DCMAKE_CXX_COMPILER=CC \
     -DCMAKE_CUDA_ARCHITECTURES=80 \
     -DCMAKE_CUDA_FLAGS="-allow-unsupported-compiler" \
+    -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config \
     -DPERLMUTTER=ON
 
 echo "Building..."

@@ -56,6 +56,7 @@ DistributedDRAMBackend::DistributedDRAMBackend(size_t capacity, MPI_Comm comm)
 
   // Create MPI window for one-sided communication
   MPI_Win_create(dram_base_, capacity_, 1, MPI_INFO_NULL, comm_, &window_);
+  MPI_Win_lock_all(0, window_);
 
   if (rank_ == 0) {
     printf("[DRAM Backend] Initialized %.2f GB per node, %d nodes total\n",
@@ -73,6 +74,7 @@ DistributedDRAMBackend::DistributedDRAMBackend(size_t capacity)
 DistributedDRAMBackend::~DistributedDRAMBackend() {
 #ifdef USE_MPI
   MPI_Barrier(comm_);
+  MPI_Win_unlock_all(window_);
   MPI_Win_free(&window_);
 #endif
   if (dram_base_) {
@@ -208,9 +210,8 @@ bool DistributedDRAMBackend::get_local(const BlockId &id, uint8_t *out,
 bool DistributedDRAMBackend::get_remote(int target_rank, size_t offset,
                                         uint8_t *out, size_t size) {
 #ifdef USE_MPI
-  MPI_Win_lock(MPI_LOCK_SHARED, target_rank, 0, window_);
   MPI_Get(out, size, MPI_BYTE, target_rank, offset, size, MPI_BYTE, window_);
-  MPI_Win_unlock(target_rank, window_);
+  MPI_Win_flush(target_rank, window_);
   return true;
 #else
   return false;
@@ -347,6 +348,7 @@ DistributedGPUBackend::~DistributedGPUBackend() {
 #ifdef USE_MPI
   MPI_Barrier(comm_);
   if (window_ != MPI_WIN_NULL) {
+    MPI_Win_unlock_all(window_);
     MPI_Win_free(&window_);
   }
 #endif
@@ -387,6 +389,7 @@ void DistributedGPUBackend::setup_nvlink() {
 void DistributedGPUBackend::init_window() {
 #ifdef USE_MPI
   MPI_Win_create(pinned_[0], staging_size_, 1, MPI_INFO_NULL, comm_, &window_);
+  MPI_Win_lock_all(0, window_);
 #endif
 }
 
@@ -463,10 +466,9 @@ bool DistributedGPUBackend::get_local(const BlockId &id, uint8_t *out,
 bool DistributedGPUBackend::get_remote(int target_rank, size_t offset,
                                        size_t size, uint8_t *out) {
 #ifdef USE_MPI
-  MPI_Win_lock(MPI_LOCK_SHARED, target_rank, 0, window_);
   MPI_Get(pinned_[1], size, MPI_BYTE, target_rank, offset, size, MPI_BYTE,
           window_);
-  MPI_Win_unlock(target_rank, window_);
+  MPI_Win_flush(target_rank, window_);
 
   CUDA_CHECK(cudaMemcpy(out, pinned_[1], size, cudaMemcpyDefault));
   return true;

@@ -12,6 +12,11 @@
 
 cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
 source setup_env.sh
+export FI_CXI_RX_MATCH_MODE=software
+export MPICH_OFI_STARTUP_CONNECT=1
+export FI_CXI_DEFAULT_CQ_SIZE=32768
+export FI_CXI_OFLOW_BUF_SIZE=2097152
+export FI_CXI_DEFAULT_VNI=0
 
 SYSTEM="hdf5-indep"
 BLOCK_MB=160
