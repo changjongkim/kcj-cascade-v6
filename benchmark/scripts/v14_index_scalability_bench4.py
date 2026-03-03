@@ -104,6 +104,7 @@ def run_index_scalability_benchmark():
         latencies = []
         test_indices = np.random.randint(0, current_total, reqs_per_rank)
         
+        hit_count = 0
         # Actual Get Phase
         phase_start = time.perf_counter()
         for idx in test_indices:
@@ -111,6 +112,7 @@ def run_index_scalability_benchmark():
             t0 = time.perf_counter()
             res = adapter.get(key)
             if res:
+                hit_count += 1
                 # Force a memory copy to ensure we measure actual data access overhead
                 # (Simulates an inference engine moving data to its own tensors)
                 _ = bytes(res[0])
@@ -127,7 +129,8 @@ def run_index_scalability_benchmark():
                 "lats": latencies,
                 "start": phase_start,
                 "end": phase_end,
-                "count": len(test_indices)
+                "count": len(test_indices),
+                "hits": hit_count
             }, f)
             
         time.sleep(5) # wait for all ranks to write files
@@ -136,12 +139,14 @@ def run_index_scalability_benchmark():
             all_lats = []
             total_mb_all = 0
             agg_bw_sum = 0
+            total_hits = 0
             
             for r in range(world):
                 try:
                     with open(res_dir / f"rank_{r}.json", "r") as f:
                         data = json.load(f)
                         all_lats.extend(data['lats'])
+                        total_hits += data.get('hits', 0)
                         
                         rank_time = data['end'] - data['start']
                         rank_mb = data['count'] * args.block_size
@@ -158,7 +163,9 @@ def run_index_scalability_benchmark():
                 p95 = np.percentile(all_lats, 95)
                 p99 = np.percentile(all_lats, 99)
                 
+                hit_rate = (total_hits / len(all_lats)) * 100 if all_lats else 0
                 print_rank0(f"  - Results: P50={p50:.2f}ms, P99={p99:.2f}ms, TTFT Proxy={p95:.2f}ms")
+                print_rank0(f"  - Hit Rate: {hit_rate:.1f}% ({total_hits}/{len(all_lats)})")
                 print_rank0(f"  - Aggregated Bandwidth (Sum of Rank BWs): {agg_bw_sum:.2f} MB/s (Total {total_mb_all} MB)")
                 
                 results[target_total] = {
