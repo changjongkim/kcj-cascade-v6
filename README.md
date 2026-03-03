@@ -888,9 +888,9 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 | **Cascade V12 🔥** | **33.68 / 29.65** | **74.83 / 26.43** | **84.09 / 49.26** | **100.82 / 87.23** | **82.69 / 202.19** | **80.91 / 407.32** | **86.55 / 771.76** |
 | **LMCACHE-DISK** | 92.43 / 10.81 | 407.19 / 4.91 | 413.33 / 9.68 | 412.82 / 19.38 | TBD | TBD | TBD |
 | **LMCACHE-REDIS** | 398.46 / 2.51 | 395.21 / 5.07 | 393.16 / 10.19 | 388.62 / 20.60 | TBD | TBD | TBD |
-| **PDC** | 89.76 / 11.13 | 412.61 / 4.85 | 411.75 / 9.71 | 414.66 / 19.29 | TBD | TBD | TBD |
-| **LLM-GPU** | 132.27 / 7.56 | 445.96 / 4.48 | 450.58 / 8.88 | 451.80 / 17.71 | TBD | TBD | TBD |
-| **HDF5-INDEP** | 191.47 / 5.22 | 513.71 / 3.89 | 570.40 / 7.15 | 636.75 / 13.09 | TBD | TBD | TBD |
+| **PDC** | 89.76 / 11.13 | 412.61 / 4.85 | 411.75 / 9.71 | 414.66 / 19.29 | 412.81 / 38.76 | 412.27 / 77.62 | 412.18 / 155.29 |
+| **LLM-GPU** | 132.27 / 7.56 | 445.96 / 4.48 | 450.58 / 8.88 | 451.80 / 17.71 | 449.76 / 35.58 | 449.35 / 71.21 | 448.36 / 142.75 |
+| **HDF5-INDEP** | 191.47 / 5.22 | 513.71 / 3.89 | 570.40 / 7.15 | 636.75 / 13.09 | 957.56 / 18.88 | 1523.00 / 26.98 | 3097.17 / 30.42 |
 
 #### **B. Strong Scaling (128 req fixed)**
 | System | 1N | 2N | 4N | 8N | 16N | 32N | 64N |
@@ -898,9 +898,9 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 | **Cascade V12 🔥** | **68.14 / 14.67** | **68.20 / 29.33** | **83.50 / 54.39** | **65.94 / 120.94** | **86.35 / 191.59** | **102.26 / 319.54** | **116.46 / 557.54** |
 | **LMCACHE-DISK** | 87.69 / 11.40 | 406.41 / 4.92 | 412.67 / 9.69 | 404.53 / 19.78 | TBD | TBD | TBD |
 | **LMCACHE-REDIS** | 369.30 / 2.71 | 388.95 / 5.14 | 393.39 / 10.17 | 388.51 / 20.60 | TBD | TBD | TBD |
-| **PDC** | 91.20 / 10.96 | 314.00 / 6.37 | 403.17 / 9.92 | 409.19 / 19.55 | TBD | TBD | TBD |
-| **LLM-GPU** | 305.94 / 3.27 | 475.77 / 4.21 | 446.47 / 8.96 | 449.41 / 17.80 | TBD | TBD | TBD |
-| **HDF5-INDEP** | 189.03 / 5.29 | 506.99 / 3.94 | 592.23 / 6.84 | 707.35 / 11.88 | TBD | TBD | TBD |
+| **PDC** | 91.20 / 10.96 | 314.00 / 6.37 | 403.17 / 9.92 | 409.19 / 19.55 | 409.58 / 39.06 | 407.67 / 78.49 | 411.24 / 155.61 |
+| **LLM-GPU** | 305.94 / 3.27 | 475.77 / 4.21 | 446.47 / 8.96 | 449.41 / 17.80 | 453.54 / 35.28 | 450.97 / 70.95 | 452.62 / 141.35 |
+| **HDF5-INDEP** | 189.03 / 5.29 | 506.99 / 3.94 | 592.23 / 6.84 | 707.35 / 11.88 | 1041.89 / 17.52 | 1524.88 / 28.07 | 2816.45 / 38.44 |
 
 > **Analysis (Preliminary — HDF5-Indep, LMCache-Disk, PDC, Cascade, LLM-GPU)**
 > 1. **Block Size Impact**: At 320MB blocks (2× Llama), Lustre-based systems show ~2× TTFT increase at 1N (LMCache-Disk: 92ms, PDC: 90ms, HDF5: 191ms vs their Llama counterparts). Cascade achieves sub-50ms TTFT in Weak Scaling and sub-70ms in Strong Scaling, maintaining the fastest performance.
@@ -932,7 +932,7 @@ This evaluation measures the storage layer's ability to handle massive-scale pre
 
 ### 🧪 23. Hierarchical Tiering Latency Profiling (Hot/Warm/Cold Recovery)
 
-This microbenchmark evaluates the single-block (160MB Llama equivalent) latency and throughput across different storage tiers at an **8-Node scale**. (16-Node benchmarking is currently queued).
+This microbenchmark evaluates the single-block (160MB Llama) latency and throughput across different storage tiers at an **8-Node scale**. (16-Node benchmarking is currently queued).
 *   **HOT (GPU HBM / OS Page Cache)**: Data is immediately read after it is written.
 *   **WARM (DRAM / RDMA)**: GPU memory is cleared, testing DRAM or remote RDMA recovery. (In disk-based systems, this is similar to HOT if page cache holds).
 *   **COLD (Disk / Lustre)**: All page caches and GPU memories are evicted. Total recovery from Lustre filesystem.
