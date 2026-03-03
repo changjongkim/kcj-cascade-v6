@@ -932,7 +932,7 @@ This evaluation measures the storage layer's ability to handle massive-scale pre
 
 ### 🧪 23. Hierarchical Tiering Latency Profiling (Hot/Warm/Cold Recovery)
 
-This microbenchmark evaluates the single-block (160MB Llama equivalent) latency and throughput across different storage tiers at an **8-Node scale**.
+This microbenchmark evaluates the single-block (160MB Llama equivalent) latency and throughput across different storage tiers at an **8-Node scale**. (16-Node benchmarking is currently queued).
 *   **HOT (GPU HBM / OS Page Cache)**: Data is immediately read after it is written.
 *   **WARM (DRAM / RDMA)**: GPU memory is cleared, testing DRAM or remote RDMA recovery. (In disk-based systems, this is similar to HOT if page cache holds).
 *   **COLD (Disk / Lustre)**: All page caches and GPU memories are evicted. Total recovery from Lustre filesystem.
