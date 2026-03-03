@@ -581,6 +581,29 @@ This evaluation focuses on the **predictability** of the storage layer. We measu
 
 ---
 
+### **28. Metadata & Index Lookup Scalability**
+*   **Experimental Objective**: Verify that index lookup latency remains constant ($O(1)$) even as the number of stored blocks reaches production-level scales, ensuring long-term system stability.
+*   **Metric**: `P99 Latency (ms)` / `Est. Memory Overhead per Entry (Bytes)`.
+*   **Configurations**: 8 Nodes (32 GPUs), Llama-2-7B Block Simulation, Scaling from 1K to 500K Blocks.
+
+#### **Summary Table: Index Lookup Performance (P99 ms / Mem. Overhead)**
+| System | 1K Blocks | 10K Blocks | 100K Blocks | 500K Blocks | Index Strategy |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| **Cascade 🔥** | **0.05 / 0B** | **0.02 / 0B** | **0.04 / 838B** | **0.04 / 893B** | **Sharded Hash Index ($O(1)$)** |
+| **LMCACHE-DISK**| 4.30 / 0B | 7.54 / 0B | 4.52 / 0B | 8.18 / 0B | POSIX Directory Structure |
+| **LLM-GPU** | 3.67 / 18KB | 2.92 / 1.8KB| 2.39 / 264B | 2.10 / 1.6KB | PyTorch Vector Search / List |
+| **PDC** | 2.41 / 0B | 1.83 / 0B | 1.86 / 168B | 2.04 / 33B | Metadata Server (RPC) |
+| **REDIS** | 0.43 / 0B | 0.25 / 0B | 0.25 / 0B | 0.29 / 0B | In-Memory Hash Table |
+| **HDF5-INDEP** | 19.03 / 8KB | 24.25 / 5.8KB| 51.25 / 1.7KB| 82.75 / 352B| Internal B-Tree / Object Header |
+
+> **🔥 Evaluation Insights:**
+> 1.  **True $O(1)$ Scalability**: Cascade's P99 latency remains flat at **~0.04ms** regardless of whether the system holds 1,000 or 500,000 blocks. This validates the efficiency of the sharded hash index mechanism.
+> 2.  **File System Degradation**: Traditional file formats like HDF5 show significant performance degradation (19ms $\rightarrow$ 82ms) as the number of internal objects increases, caused by B-tree traversal overheads.
+> 3.  **Memory Efficiency**: Cascade maintains an efficient memory profile (~893 bytes per entry at 500K blocks), allowing for massive scalability within node SHM/DRAM limits.
+
+---
+
+
 
 
 
