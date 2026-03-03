@@ -913,18 +913,19 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 ### **22. Global Deduplication & Prefix Sharing Efficiency**
 This evaluation measures the storage layer's ability to handle massive-scale prefix sharing (e.g., thousands of users sharing the same 10GB system prompt).
 
-#### **A. Prefix Sharing Throughput (64 Blocks / 10GB Shared Prefix)**
-| System | 1N | 2N | 4N | 8N |
+#### **A. Prefix Sharing Performance (64 Blocks / 10GB Shared Prefix)**
+| System | 1N (TTFT / BW) | 2N (TTFT / BW) | 4N | 8N (TTFT / BW) |
 | :--- | :---: | :---: | :---: | :---: |
-| **Cascade V12 🔥** | **11.33 / 88.2** | TBD | TBD | TBD |
-| **LMCACHE-DISK** | 45.80 / 21.8 | 126.39 / 15.8 | 164.86 / 24.2 | **187.18 / 55.0** |
-| **PDC** | TBD | TBD | TBD | TBD |
+| **Cascade V12 🔥** | **11.3 / 14.1** | **21.4 / 20.8** | TBD | TBD |
+| **LMCACHE-DISK** | 45.8 / 3.5 | 126.4 / 4.2 | 164.9 / 5.7 | **187.2 / 8.8** |
+| **PDC** | 46.1 / 3.5 | TBD | TBD | TBD |
 | **LLM-GPU** | TBD | TBD | TBD | TBD |
 | **HDF5-INDEP** | TBD | TBD | TBD | TBD |
-| **LMCACHE-REDIS** | TBD | TBD | TBD | TBD |
+| **LMCACHE-REDIS** | 214.1 / 0.7 | (Fail) | (Fail) | **355.6 / 3.6** |
 
 > **🔥 Evaluation Insights:**
-> 1. **Lustre Lock Contention**: Lustre-based systems (LMCache-Disk, PDC, HDF5) show severe TTFT degradation (from 45ms to 187ms) as node count increases. This is due to multiple nodes simultaneously attempting to lock the same prefix data from the shared file system.
+> 1. **Aggregated Bandwidth (BW)**: Calculated as `(Aggregate Throughput * 0.16 GB)`. Cascade (2N) already achieves **20.8 GB/s** total bandwidth, which is **2.3x faster** than LMCache even with 8 nodes (8.8 GB/s).
+> 2. **Lustre Lock Contention**: Lustre-based systems (LMCache-Disk, PDC, HDF5) show severe TTFT degradation as node count increases. This is due to multiple nodes simultaneously attempting to lock the same prefix data from the shared file system.
 > 2. **Cascade RDMA Dedup**: Cascade leverages Global Deduplication with RDMA, serving the same prefix from a single copy in DRAM/HBM. This avoids Lustre locks and keeps TTFT consistent across the entire cluster.
 
 
