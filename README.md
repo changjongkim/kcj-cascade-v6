@@ -604,7 +604,7 @@ This evaluation focuses on the **predictability** of the storage layer. We measu
 
 ---
 
-### **29. Index Scalability & Aggregated Bandwidth (v14 v2) - Large Scale Realistic**
+### **29. Index Scalability & Aggregated Bandwidth (v14 v2) - Large Scale Realistic** (데이터 매우 이상)
 
 This benchmark evaluates the indexing and retrieval performance of all systems under realistic large-scale conditions. 
 We use a **16MB block size** (representative of modern KV cache units) and scale up to **50,000 blocks (800GB)** across 8 nodes.
