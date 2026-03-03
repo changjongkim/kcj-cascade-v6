@@ -2,7 +2,7 @@
 #SBATCH -A m1248_g
 #SBATCH -C gpu
 #SBATCH -q regular
-#SBATCH -t 01:30:00
+#SBATCH -t 00:30:00
 #SBATCH -N 64
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
