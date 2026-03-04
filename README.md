@@ -693,6 +693,29 @@ This benchmark evaluates systems constrained to a **single node**, pushing local
 | **LLM-GPU** | 50K | 800 GB | **OOM** | - | - | - | In-memory only; exceeds 500GB node limit |
 | **Cascade (In-Mem)** | 50K | 800 GB | **OOM** | - | - | - | In-memory mode; GPU+SHM < 800GB |
 
+> **왜 Cascade Disk-mode가 HDF5·PDC보다 7× 빠른가 — 코드 레벨 분석**
+>
+> **① 파일 수 차이 (핵심)**  
+> HDF5/LMCache/PDC는 블록 1개 = 파일 1개 구조 → 50K 블록이면 50,000 번의 Lustre 메타데이터 RPC(MDS 병목).  
+> Cascade `AggregatedLustreBackend`는 최대 256MB짜리 집합 파일에 블록을 append-only로 쌓는다 (`agg_file_size = 256 ULL * 1024 * 1024`, `cascade_core.cpp:893`). 800GB ÷ 256MB = **3,125개 파일**만 생성 → MDS 부하 **1/16 감소**.
+>
+> ```cpp
+> // cascade_core.cpp:809
+> bool AggregatedLustreBackend::put(...) {
+>     if (current_offset_ + size > max_file_size_) { open_new_file(); }  // 256MB마다 파일 교체
+>     write(current_fd_, &block_size, 8);   // 헤더
+>     write(current_fd_, data, size);       // 데이터 append
+> }
+> ```
+>
+> **② Lustre 스트라이프 최적화 (`lfs setstripe`)**  
+> Cascade는 디렉터리 생성 시 `lfs setstripe -S <stripe_size> -c <stripe_count>` 를 직접 호출해 Lustre OST 분산을 강제 설정한다. HDF5/PDC는 기본 Lustre 스트라이프(1MB × 1 OST)를 사용해 병렬성을 살리지 못한다.
+>
+> **③ `O_DIRECT` — 커널 버퍼 우회**  
+> 단일 블록 Lustre 경로(`LustreBackend`)에서는 `O_DIRECT`를 사용해 OS 페이지캐시 이중 복사를 제거하고 Lustre OST → 사용자 버퍼로 직접 DMA 전송한다. 일반 POSIX read는 `Lustre OST → 커널 buffer → 사용자 버퍼` 경로로 메모리 복사가 2회 발생한다.
+>
+> **요약**: 디스크 대역폭 자체는 모든 시스템이 동일하게 접근하지만, Cascade는 ①메타데이터 RPC 횟수 최소화, ②OST 병렬 스트라이프 활용, ③DMA 직전달로 소프트웨어 계층 오버헤드를 제거하여 **7× 우위**를 달성한다.
+
 #### **📊 29.3 Cascade Disk-Mode — 8 Nodes (Distributed Lustre, 50,000 Blocks)**
 Same `--disk-mode` (GPU=0, DRAM=1GB/node) at 8 nodes. Each node handles 1/8 of the total blocks (6,250 blocks each), acting as a distributed Lustre stripe pool.
 

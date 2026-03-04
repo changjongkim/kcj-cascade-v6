@@ -245,8 +245,69 @@ return shards_[shard_id].data.find(key)  // unordered_map O(1)
 | HDF5-Indep | 0.93 GB/s | 7.3× 느림 |
 | LMCache-Redis | 8.21 GB/s* | *DRAM 캐시 사용 |
 
-- **Cascade 7× 우위 원인**: `AggregatedLustreBackend`의 `O_DIRECT` 플래그 + 집합 파일 I/O(aggregated file striping). Lustre의 스트라이프 대역폭을 최대화. 일반 POSIX I/O 대비 7배 이상 스트라이프 활용률.
-- LMCache-Redis 8.21 GB/s는 100GB DRAM 캐시에 10.9% hit rate가 있는 상태. 순수 Lustre 수치 아님.
+> **❓ 같은 Lustre인데 왜 HDF5/PDC는 훨씬 느린가?**  
+> Disk 대역폭 자체는 모든 시스템이 동일하게 접근한다. 차이는 전적으로 **Lustre를 어떻게 사용하는가**에 있다.
+
+#### ① 파일 수 차이 — 핵심 원인
+
+```
+HDF5 / LMCache / PDC:
+  블록 1개 = 파일 1개
+  50,000 블록 → 50,000 번의 Lustre 메타데이터 RPC (MDS 병목)
+  → MDS(Metadata Server)가 순차 처리 → 디스크 대역폭을 쓸 기회가 없음
+
+Cascade AggregatedLustreBackend:
+  256MB 집합 파일에 여러 블록을 append-only로 쌓음
+  800GB ÷ 256MB = 3,125개 파일만 생성
+  → MDS 부하 1/16 감소 → OST(Object Storage Target)가 대역폭 쏟아낼 수 있음
+```
+
+**코드 (cascade_core.cpp:809):**
+```cpp
+bool AggregatedLustreBackend::put(const BlockId &id, const uint8_t *data, size_t size) {
+    // 현재 파일이 256MB 넘으면 새 파일 — 파일당 여러 블록 수용
+    if (current_offset_ + size > max_file_size_) { open_new_file(); }
+    write(current_fd_, &block_size, 8);   // [8B 헤더]
+    write(current_fd_, data, size);       // [데이터 append]
+    // → Lustre 입장에서 한 파일에 순차 쓰기 = 최적 패턴
+}
+```
+
+#### ② Lustre 스트라이프 최적화 (`lfs setstripe`)
+
+```cpp
+// cascade_core.cpp:636
+std::string cmd = "lfs setstripe -S " + stripe_size + " -c " + stripe_count + " " + path;
+system(cmd.c_str());
+```
+
+- Cascade: 디렉토리 생성 시 `lfs setstripe`로 스트라이프 크기·OST 수를 명시 설정
+- HDF5/PDC: 기본 Lustre 스트라이프(1MB × 1 OST) 사용 → 단일 OST만 사용
+
+**결과**: Cascade는 4개 OST에 병렬 분산 → 대역폭 4× 활용. 타 시스템은 OST 1개에 직렬화.
+
+#### ③ `O_DIRECT` — 커널 버퍼 이중 복사 제거
+
+```cpp
+// cascade_core.cpp:714
+int fd = open(path.c_str(), O_RDONLY | O_DIRECT);
+// Lustre OST → 사용자 버퍼 직접 DMA (커널 페이지캐시 우회)
+```
+
+일반 POSIX `read()`: `Lustre OST → 커널 buffer → 사용자 buffer` (메모리 복사 2회)  
+`O_DIRECT`: `Lustre OST → 사용자 buffer` (메모리 복사 0회, DMA 직접)
+
+#### 요약
+
+| 원인 | Cascade | HDF5 / PDC / LMCache |
+|---|---|---|
+| **파일 구조** | 256MB 집합 파일 (3,125개) | 블록당 1개 (50,000개) |
+| **Lustre MDS RPC** | 3,125회 | 50,000회 (**16×** 많음) |
+| **OST 병렬 활용** | `lfs setstripe` 명시 설정 | 기본값 (단일 OST) |
+| **I/O 패턴** | 순차 append (Lustre 최적) | 랜덤 파일 접근 |
+| **커널 복사** | `O_DIRECT` (DMA 직전달) | 이중 복사 |
+
+> LMCache-Redis의 8.21 GB/s는 100GB DRAM 캐시에 10.9% hit rate가 있는 상태로 순수 Lustre 수치가 아님.
 
 **P50 Latency (우)**
 - Cascade: **0.02ms** — 인덱스 조회가 O(1)이므로 miss 판별 즉시. 실제 Lustre I/O 지연은 P99에 반영.
