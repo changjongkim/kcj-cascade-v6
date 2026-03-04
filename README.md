@@ -682,14 +682,16 @@ We measure the impact of index size on latency and the system's ability to handl
 #### **📊 29.2 Single-Node Index Scalability (50,000 Blocks)**
 This benchmark evaluates systems constrained to a **single node**, pushing local storage architectures to their capacity limits (800GB).
 
-| System | Scale | Total Data | P50 (ms) | P99 (ms) | TTFT Proxy (P95) | Agg. Bandwidth |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **LMCache** | 50K | 800 GB | 18.30 | 21.00 | 20.38 | 0.94 GB/s |
-| **Cascade 🔥** | 50K | 800 GB | OOM / FAIL | - | - | - |
-| **PDC** | 50K | 800 GB | 17.92 | 21.36 | 20.47 | 0.95 GB/s |
-| **LLM-GPU** | 50K | 800 GB | OOM / FAIL | - | - | - |
-| **HDF5-Indep**| 50K | 800 GB | 17.12 | 21.78 | 21.26 | 0.93 GB/s |
-| **LMCache-Redis** | 50K | 800 GB | 0.06 | 19.21 | 16.72 | 8.21 GB/s |
+| System | Scale | Total Data | P50 (ms) | P99 (ms) | TTFT Proxy (P95) | Agg. Bandwidth | Note |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Cascade (Disk-COLD) ❄️** | 50K | 800 GB | 0.02 | 12.76 | 11.08 | **6.76 GB/s** | Lustre overflow, cache-cleared |
+| **Cascade (Disk-HOT) 🔥** | 50K | 800 GB | 0.02 | 12.14 | 10.32 | **7.03 GB/s** | Lustre overflow, OS-cached |
+| **LMCache** | 50K | 800 GB | 18.30 | 21.00 | 20.38 | 0.94 GB/s | Disk-backed |
+| **PDC** | 50K | 800 GB | 17.92 | 21.36 | 20.47 | 0.95 GB/s | Disk-backed |
+| **HDF5-Indep**| 50K | 800 GB | 17.12 | 21.78 | 21.26 | 0.93 GB/s | Disk-backed |
+| **LMCache-Redis** | 50K | 800 GB | 0.06 | 19.21 | 16.72 | 8.21 GB/s | 100GB cap → 10.9% hit rate |
+| **LLM-GPU** | 50K | 800 GB | **OOM** | - | - | - | In-memory only; exceeds 500GB node limit |
+| **Cascade (In-Mem)** | 50K | 800 GB | **OOM** | - | - | - | In-memory mode; GPU+SHM < 800GB |
 
 #### **🔍 Architectural Breakdown: Why 1,700+ GB/s?**
 
