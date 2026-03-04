@@ -689,7 +689,7 @@ This benchmark evaluates systems constrained to a **single node**, pushing local
 | **PDC** | 50K | 800 GB | TBD | TBD | TBD | TBD |
 | **LLM-GPU** | 50K | 800 GB | TBD | TBD | TBD | TBD |
 | **HDF5-Indep**| 50K | 800 GB | TBD | TBD | TBD | TBD |
-| **LMCache-Redis** | 50K | 800 GB | TBD | TBD | TBD | TBD |
+| **LMCache-Redis** | 50K | 800 GB | 0.06 | 19.21 | 16.72 | 8.21 GB/s |
 
 #### **🔍 Architectural Breakdown: Why 1,700+ GB/s?**
 
