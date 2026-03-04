@@ -452,64 +452,174 @@ def fig_sec29_2():
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Sec 30: Time Breakdown
+# Sec 30a: Phase A & B — Latency per node (Avg, P50, P99)
 # ──────────────────────────────────────────────────────────────────────────────
-def fig_sec30():
-    fig, axes = plt.subplots(1,3, figsize=(34,12))
+def fig_sec30a():
+    nodes4  = [1, 2, 4, 8]
+    xi4 = list(range(4))
+    xl4 = [f"{n}N" for n in nodes4]
+    loc_avg = [27740, 19254, 25088, 19254]
+    loc_p50 = [27258, 18834, 24028, 18847]
+    loc_p99 = [38566, 28668, 36785, 29243]
+    xi_b = [1, 2, 3]
+    rmt_avg = [57715, 134602, 57955]
+    rmt_p50 = [55810, 131881, 55550]
+    rmt_p99 = [65474, 152115, 67629]
 
-    # 30a: Per-tier BW — evenly spaced
-    ax = axes[0]
-    nodes4 = [1,2,4,8]
-    xi4 = list(range(4)); xl4 = [f"{n}N" for n in nodes4]
-    local_bw  = [11.27,16.23,12.46,16.23]
-    remote_bw = [None, 5.41, 2.32, 5.39]
-    rxi = [xi4[i] for i,v in enumerate(remote_bw) if v is not None]
+    fig, axes = plt.subplots(1, 3, figsize=(34, 13))
+    for ax, loc_v, rmt_v, metric in zip(
+        axes,
+        [loc_avg, loc_p50, loc_p99],
+        [rmt_avg, rmt_p50, rmt_p99],
+        ["Avg (us)", "P50 (us)", "P99 (us)"],
+    ):
+        ax.plot(xi4,  loc_v, "o-",  color=COLORS["Cascade"], lw=LW_CAS, ms=MS_CAS, label="Phase A: Local GPU")
+        ax.plot(xi_b, rmt_v, "s--", color="#E67E22",          lw=LW_CAS, ms=MS_CAS, label="Phase B: Remote RDMA")
+        ax.set_xticks(xi4); ax.set_xticklabels(xl4)
+        ax.set_xlabel("Nodes"); ax.set_ylabel(metric)
+        ax.set_title(f"Phase A vs B -- {metric}")
+
+    handles = [
+        mpatches.Patch(color=COLORS["Cascade"], label="Phase A: Local GPU Read"),
+        mpatches.Patch(color="#E67E22",          label="Phase B: Remote RDMA Read"),
+    ]
+    fig.legend(handles=handles, loc="lower center", ncol=2,
+               bbox_to_anchor=(0.5, 0), fontsize=FS_SM)
+    fig.tight_layout(rect=[0, 0.07, 1, 1])
+    savefig(fig, "fig_sec30a_phase_ab_latency.png")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Sec 30b: Phase A & B — Bandwidth + hardware limits
+# ──────────────────────────────────────────────────────────────────────────────
+def fig_sec30b():
+    nodes4 = [1, 2, 4, 8]; xi4 = list(range(4))
+    local_bw  = [11.27, 16.23, 12.46, 16.23]
+    remote_bw = [None,   5.41,  2.32,  5.39]
+    rxi = [xi4[i] for i, v in enumerate(remote_bw) if v is not None]
     ry  = [v for v in remote_bw if v is not None]
-    ax.plot(xi4, local_bw, "o-", color=COLORS["Cascade"], lw=LW_CAS, ms=MS_CAS, label="Local GPU")
-    ax.plot(rxi, ry, "s--", color="#E67E22", lw=LW_BASE+0.5, ms=MS_BASE+2, label="Remote RDMA")
-    ax.axhline(0.93, color="#7F8C8D", linestyle=":", lw=2, label="Lustre baseline (0.93 GB/s)")
-    ax.set_xticks(xi4); ax.set_xticklabels(xl4)
+
+    fig, ax = plt.subplots(figsize=(20, 13))
+    ax.plot(xi4, local_bw, "o-",  color=COLORS["Cascade"], lw=LW_CAS, ms=MS_CAS, label="Phase A: Local GPU")
+    ax.plot(rxi, ry,       "s--", color="#E67E22",          lw=LW_CAS, ms=MS_CAS, label="Phase B: Remote RDMA")
+    ax.axhline(16.0, color=COLORS["Cascade"], lw=2, linestyle=":",  alpha=0.5, label="A100 PCIe limit (16 GB/s)")
+    ax.axhline(12.5, color="#E67E22",          lw=2, linestyle=":",  alpha=0.5, label="Slingshot limit (12.5 GB/s)")
+    ax.axhline(0.93, color="#7F8C8D",          lw=2, linestyle="--", alpha=0.5, label="Lustre baseline (0.93 GB/s)")
+    for xi, v in zip(xi4, local_bw):
+        ax.text(xi, v+0.3, f"{v:.2f}", ha="center", fontsize=FS_ANN, color=COLORS["Cascade"], fontweight="bold")
+    for xi, v in zip(rxi, ry):
+        ax.text(xi, v+0.3, f"{v:.2f}", ha="center", fontsize=FS_ANN, color="#E67E22", fontweight="bold")
+    ax.set_xticks(xi4); ax.set_xticklabels([f"{n}N" for n in nodes4])
     ax.set_xlabel("Nodes"); ax.set_ylabel("Bandwidth (GB/s)")
-    ax.set_title("Per-tier Bandwidth")
-    ax.legend(loc="lower center", bbox_to_anchor=(0.5,-0.22), ncol=1, fontsize=FS_SM)
+    ax.set_title("Phase A vs B Bandwidth -- with hardware limits")
+    ax.legend(loc="lower center", bbox_to_anchor=(0.5, -0.18), ncol=3, fontsize=FS_SM)
+    fig.tight_layout(rect=[0, 0.10, 1, 1])
+    savefig(fig, "fig_sec30b_phase_ab_bandwidth.png")
 
-    # 30b: Phase composition bar
-    ax = axes[1]
-    phases = ["Index\nLookup","Data\nTransfer","Python\nDeser"]
-    pcts   = [0.004, 99.992, 0.004]
-    bcolors= ["#3498DB", COLORS["Cascade"], "#27AE60"]
-    bars = ax.bar(phases, pcts, color=bcolors, alpha=0.88, width=0.5)
-    for bar,p,lbl in zip(bars, pcts, ["~1 μs","~19,000 μs","~0.5 μs"]):
-        ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.5, f"{p:.3f}%",
-                ha="center", fontsize=FS_ANN, fontweight="bold")
-        ax.text(bar.get_x()+bar.get_width()/2, max(bar.get_height()/2,5),
-                lbl, ha="center", va="center", fontsize=FS_ANN, color="white", fontweight="bold")
-    ax.set_ylabel("% of E2E Time"); ax.set_ylim(0,115)
-    ax.set_title("Time Composition (Local Read)")
 
-    # 30c: Realistic E2E stacked bar — evenly spaced 1N,2N,4N,8N
-    ax = axes[2]
-    nodes_e = [1,2,4,8]; xi_e = list(range(4))
+# ──────────────────────────────────────────────────────────────────────────────
+# Sec 30c: Phase C & D — Overhead (log scale)
+# ──────────────────────────────────────────────────────────────────────────────
+def fig_sec30c():
+    nodes4 = [1, 2, 4, 8]; xi4 = list(range(4)); xl4 = [f"{n}N" for n in nodes4]
+    c_avg = [1.08, 0.67, 0.77, 0.91]
+    c_p50 = [0.35, 0.36, 0.37, 0.45]
+    c_p99 = [13.55, 7.19, 9.51, 11.61]
+    d_avg = [0.48, 0.41, 0.40, 0.47]
+    d_p50 = [0.36, 0.36, 0.36, 0.36]
+    d_p99 = [2.97, 1.37, 1.23, 2.98]
+
+    fig, axes = plt.subplots(1, 3, figsize=(34, 13))
+    for ax, c_v, d_v, metric in zip(
+        axes,
+        [c_avg, c_p50, c_p99],
+        [d_avg, d_p50, d_p99],
+        ["Avg (us)", "P50 (us)", "P99 (us)"],
+    ):
+        w = 0.35; x = np.arange(len(nodes4))
+        ax.bar(x - w/2, c_v, width=w, color="#3498DB", alpha=0.88, label="Phase C: Index Lookup")
+        ax.bar(x + w/2, d_v, width=w, color="#27AE60", alpha=0.88, label="Phase D: Python Deser")
+        ax.set_yscale("log")
+        ax.set_xticks(x); ax.set_xticklabels(xl4)
+        ax.set_xlabel("Nodes"); ax.set_ylabel(f"{metric} (log scale)")
+        ax.set_title(f"Phase C & D Overhead -- {metric}")
+
+    handles = [
+        mpatches.Patch(color="#3498DB", label="Phase C: Index Lookup"),
+        mpatches.Patch(color="#27AE60", label="Phase D: Python Deser"),
+    ]
+    fig.legend(handles=handles, loc="lower center", ncol=2,
+               bbox_to_anchor=(0.5, 0), fontsize=FS_SM)
+    fig.tight_layout(rect=[0, 0.07, 1, 1])
+    savefig(fig, "fig_sec30c_phase_cd_overhead.png")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Sec 30d: Time Composition %
+# ──────────────────────────────────────────────────────────────────────────────
+def fig_sec30d():
+    fig, ax = plt.subplots(figsize=(18, 13))
+    phases  = ["Index Lookup\n(Phase C)", "Data Transfer\n(Phase A/B)", "Python Deser\n(Phase D)"]
+    pcts    = [0.004, 99.992, 0.004]
+    bcolors = ["#3498DB", COLORS["Cascade"], "#27AE60"]
+    bars = ax.bar(phases, pcts, color=bcolors, alpha=0.88, width=0.5,
+                  edgecolor="white", linewidth=2)
+    for bar, p, lbl in zip(bars, pcts, ["~1 us", "~19,000 us", "~0.5 us"]):
+        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.8,
+                f"{p:.3f}%", ha="center", fontsize=FS_ANN, fontweight="bold")
+        if bar.get_height() > 5:
+            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() / 2,
+                    lbl, ha="center", va="center", fontsize=FS_ANN,
+                    color="white", fontweight="bold")
+    ax.set_ylabel("% of Total E2E Latency (Local Read)")
+    ax.set_ylim(0, 115)
+    ax.set_title("E2E Time Composition -- get() Call (any node count)")
+    fig.tight_layout()
+    savefig(fig, "fig_sec30d_time_composition.png")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Sec 30e: Realistic E2E Model + Locality Promotion Validation
+# ──────────────────────────────────────────────────────────────────────────────
+def fig_sec30e():
+    nodes = [1, 2, 4, 8]; xi = list(range(4))
+    T_loc, T_rem = 19.3, 58.0
     p_local  = [1.0, 0.5, 0.25, 0.125]
     p_remote = [0.0, 0.5, 0.75, 0.875]
-    T_loc, T_rem = 19.3, 58.0
-    local_ms  = [p*T_loc  for p in p_local]
-    remote_ms = [p*T_rem  for p in p_remote]
-    ax.bar(xi_e, local_ms,  label="Local GPU",  color=COLORS["Cascade"], alpha=0.88)
-    ax.bar(xi_e, remote_ms, bottom=local_ms,    label="Remote RDMA",     color="#E67E22", alpha=0.88)
-    total = [l+r for l,r in zip(local_ms,remote_ms)]
-    for i,(t,rp) in enumerate(zip(total, p_remote)):
-        ax.text(i, t+1.5, f"{t:.0f}ms", ha="center", fontsize=FS_ANN, fontweight="bold")
-        if rp > 0:
-            ax.text(i, local_ms[i]+remote_ms[i]/2, f"RDMA\n{rp*100:.0f}%",
-                    ha="center", va="center", fontsize=FS_ANN-2, color="white")
-    ax.set_xticks(xi_e); ax.set_xticklabels([f"{n}N" for n in nodes_e])
-    ax.set_xlabel("Nodes"); ax.set_ylabel("E2E Latency (ms)")
-    ax.set_title("Realistic E2E Model\n(no Locality Promotion)")
-    ax.legend(loc="lower center", bbox_to_anchor=(0.5,-0.22), ncol=1, fontsize=FS_SM)
+    local_ms  = [p * T_loc for p in p_local]
+    remote_ms = [p * T_rem for p in p_remote]
+    total_wo  = [l + r for l, r in zip(local_ms, remote_ms)]
+    actual = [68.14, 68.20, 83.50, 65.94]   # v12 Section 21B strong scaling TTFT
 
-    fig.tight_layout(pad=3.0)
-    savefig(fig, "fig_sec30_time_breakdown.png")
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(32, 13))
+
+    ax1.bar(xi, local_ms,  label=f"Local GPU (T={T_loc}ms)",  color=COLORS["Cascade"], alpha=0.88)
+    ax1.bar(xi, remote_ms, bottom=local_ms, label=f"Remote RDMA (T={T_rem}ms)", color="#E67E22", alpha=0.88)
+    for i, (t, rp) in enumerate(zip(total_wo, p_remote)):
+        ax1.text(i, t + 1.5, f"{t:.0f}ms", ha="center", fontsize=FS_ANN, fontweight="bold")
+        if rp > 0:
+            ax1.text(i, local_ms[i] + remote_ms[i] / 2,
+                     f"RDMA\n{rp*100:.0f}%", ha="center", va="center",
+                     fontsize=FS_ANN - 4, color="white", fontweight="bold")
+    ax1.set_xticks(xi); ax1.set_xticklabels([f"{n}N" for n in nodes])
+    ax1.set_xlabel("Nodes"); ax1.set_ylabel("Expected E2E Latency (ms)")
+    ax1.set_title("Without Locality Promotion\nP(remote) = (N-1)/N")
+    ax1.legend(loc="lower center", bbox_to_anchor=(0.5, -0.18), ncol=1, fontsize=FS_SM)
+
+    ax2.plot(xi, total_wo, "o--", color="#E67E22",         lw=LW_CAS, ms=MS_CAS,
+             label="Predicted (no promotion)")
+    ax2.plot(xi, actual,   "o-",  color=COLORS["Cascade"], lw=LW_CAS, ms=MS_CAS,
+             label="Actual TTFT (v12, with promotion)")
+    for i, (pred, act) in enumerate(zip(total_wo, actual)):
+        ax2.text(i+0.05, pred+1.5, f"{pred:.0f}ms", fontsize=FS_ANN-4, color="#E67E22")
+        ax2.text(i+0.05, act-4,    f"{act:.0f}ms",  fontsize=FS_ANN-4, color=COLORS["Cascade"])
+    ax2.set_xticks(xi); ax2.set_xticklabels([f"{n}N" for n in nodes])
+    ax2.set_xlabel("Nodes"); ax2.set_ylabel("TTFT (ms)")
+    ax2.set_title("Locality Promotion Validation\n(Predicted vs Actual v12 TTFT)")
+    ax2.legend(loc="lower center", bbox_to_anchor=(0.5, -0.18), ncol=1, fontsize=FS_SM)
+
+    fig.tight_layout(rect=[0, 0.08, 1, 1])
+    savefig(fig, "fig_sec30e_e2e_model_promotion.png")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -525,5 +635,12 @@ if __name__ == "__main__":
     fig_sec28()
     fig_sec29_1()
     fig_sec29_2()
-    fig_sec30()
+    fig_sec30a()   # Phase A & B latency (Avg, P50, P99)
+    fig_sec30b()   # Phase A & B bandwidth + HW limits
+    fig_sec30c()   # Phase C & D overhead (log scale)
+    fig_sec30d()   # Time composition %
+    fig_sec30e()   # Realistic E2E model + Promotion validation
     print(f"\n✅ All figures saved to {FIG_DIR}/")
+
+
+

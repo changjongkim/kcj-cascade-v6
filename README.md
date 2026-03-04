@@ -739,7 +739,11 @@ Same `--disk-mode` (GPU=0, DRAM=1GB/node) at 8 nodes. Each node handles 1/8 of t
 > Hardware: Perlmutter A100 (4 GPU/node), HPE Slingshot-11 100Gbps.  
 > Config: `kv_compression=ON`, `locality_aware=ON`, `dedup=ON`, `dram_capacity=128GB/node`.
 
-#### **30.1 Phase A — Local GPU Read (자기 노드 블록만 읽기)**
+#### **30.1 Phase A & B — Per-Node Latency (Avg, P50, P99)**
+
+![Phase A vs B Latency](benchmark/figures/fig_sec30a_phase_ab_latency.png)
+
+**Phase A — Local GPU Read (자기 노드 블록만 읽기)**
 
 | Nodes | Avg (μs) | P50 (μs) | P99 (μs) | **BW (GB/s)** |
 | :---: | ---: | ---: | ---: | ---: |
@@ -753,7 +757,11 @@ Same `--disk-mode` (GPU=0, DRAM=1GB/node) at 8 nodes. Each node handles 1/8 of t
 > - 1N uses the `CascadeStore` code path (single-node, NVLink disabled), slightly slower.
 > - 4N variability is due to SLURM node placement (`nid[001824, 002800s]` — different racks), not a code issue.
 
-#### **30.2 Phase B — Remote RDMA Read (반드시 다른 노드 블록 읽기: rank → rank+1)**
+#### **30.2 Phase A & B — Bandwidth (with hardware limits)**
+
+![Phase A vs B Bandwidth](benchmark/figures/fig_sec30b_phase_ab_bandwidth.png)
+
+**Phase B — Remote RDMA Read (반드시 다른 노드 블록 읽기: rank → rank+1)**
 
 | Nodes | Avg (μs) | P50 (μs) | P99 (μs) | **BW (GB/s)** | Local 대비 |
 | :---: | ---: | ---: | ---: | ---: | :---: |
@@ -777,7 +785,11 @@ Same `--disk-mode` (GPU=0, DRAM=1GB/node) at 8 nodes. Each node handles 1/8 of t
 > ```
 > Note: `dram_base_` is already **`cudaHostAlloc` (pinned)** with `MPI_Win_lock_all` persistent lock — RDMA is fully zero-copy; the 3× overhead is the unavoidable 2-hop physical path.
 
-#### **30.3 Phase C — Index Lookup (contains() 단독)**
+#### **30.3 Phase C & D — Software Overhead (log scale)**
+
+![Phase C & D Overhead](benchmark/figures/fig_sec30c_phase_cd_overhead.png)
+
+**Phase C — Index Lookup (contains() 단독)**
 
 | Nodes | Avg (μs) | P50 (μs) | P99 (μs) |
 | :---: | ---: | ---: | ---: |
@@ -802,6 +814,8 @@ Same `--disk-mode` (GPU=0, DRAM=1GB/node) at 8 nodes. Each node handles 1/8 of t
 
 #### **30.5 Time Breakdown by Phase (Local Read Path)**
 
+![Time Composition](benchmark/figures/fig_sec30d_time_composition.png)
+
 | Phase | Time | % of E2E |
 | :--- | ---: | ---: |
 | **C. Index Lookup** | ~1 μs | **~0.004%** |
@@ -810,7 +824,9 @@ Same `--disk-mode` (GPU=0, DRAM=1GB/node) at 8 nodes. Each node handles 1/8 of t
 
 > **Key finding**: 100% of Cascade's get() latency is the physical data transfer. Index lookup and Python deserialization contribute essentially zero overhead. This confirms that Cascade's software stack imposes no measurable overhead above hardware limits.
 
-#### **30.6 Realistic E2E Latency Model (스케일별 평균 지연)**
+#### **30.6 Realistic E2E Latency Model + Locality Promotion Validation**
+
+![E2E Model & Promotion](benchmark/figures/fig_sec30e_e2e_model_promotion.png)
 
 In real LLM serving with N nodes, a request has `P(local) = 1/N` probability of hitting local GPU, and `P(remote) = (N-1)/N` for cross-node RDMA. Using measured tier costs (Local=19.3ms, Remote=58ms):
 
