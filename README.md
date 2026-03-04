@@ -626,7 +626,7 @@ This evaluation focuses on the **predictability** of the storage layer. We measu
 
 ---
 
-### **29. Index Scalability & Aggregated Bandwidth (v14 v2) - Large Scale Realistic**
+### **29.1 Multi-Node Index Scalability & Aggregated Bandwidth (8 Nodes)**
 
 This benchmark evaluates the indexing and retrieval performance of all systems under realistic large-scale conditions. 
 We use a **16MB block size** (representative of modern KV cache units) and scale up to **50,000 blocks (800GB)** across 8 nodes.
@@ -678,6 +678,18 @@ We measure the impact of index size on latency and the system's ability to handl
 2. **Infrastructure-Bound vs. Software-Bound**: Baselines (Redis, LMCache, PDC) are **Software-Bound** (limited to ~8 GB/s by network stack/copy overhead), whereas Cascade is **Infrastructure-Bound** (limited only by the physical DRAM/HBM bus speed).
 3. **Catastrophic Failure of File Formats**: HDF5 demonstrates a total breakdown at scale, reaching **106.8 seconds** P99 latency. This proves that traditional hierarchical file formats are mathematically unsuitable for the massive, concurrent object-indexing required for LLM serving.
 4. **RedisDist Success**: The newly implemented decentralized Redis adapter successfully shards 800GB of data, achieving **8.04 GB/s** and proving to be the most viable baseline for large-scale distributed setups.
+
+#### **📊 29.2 Single-Node Index Scalability (50,000 Blocks)**
+This benchmark evaluates systems constrained to a **single node**, pushing local storage architectures to their capacity limits (800GB).
+
+| System | Scale | Total Data | P50 (ms) | P99 (ms) | TTFT Proxy (P95) | Agg. Bandwidth |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **LMCache** | 50K | 800 GB | 18.30 | 21.00 | 20.38 | 0.94 GB/s |
+| **Cascade 🔥** | 50K | 800 GB | TBD | TBD | TBD | TBD |
+| **PDC** | 50K | 800 GB | TBD | TBD | TBD | TBD |
+| **LLM-GPU** | 50K | 800 GB | TBD | TBD | TBD | TBD |
+| **HDF5-Indep**| 50K | 800 GB | TBD | TBD | TBD | TBD |
+| **LMCache-Redis** | 50K | 800 GB | TBD | TBD | TBD | TBD |
 
 #### **🔍 Architectural Breakdown: Why 1,700+ GB/s?**
 
