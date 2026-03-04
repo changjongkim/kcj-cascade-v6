@@ -614,7 +614,7 @@ This evaluation focuses on the **predictability** of the storage layer. We measu
 
 ---
 
-### **29. Index Scalability & Aggregated Bandwidth (v14 v2) - Large Scale Realistic** (데이터 매우 이상-Cascade Cold start로 진행되어서 다시 비교 필요.)
+### **29. Index Scalability & Aggregated Bandwidth (v14 v2) - Large Scale Realistic**
 
 This benchmark evaluates the indexing and retrieval performance of all systems under realistic large-scale conditions. 
 We use a **16MB block size** (representative of modern KV cache units) and scale up to **50,000 blocks (800GB)** across 8 nodes.
@@ -633,9 +633,12 @@ We measure the impact of index size on latency and the system's ability to handl
 
 | System | Scale | Total Data | P50 (ms) | P99 (ms) | TTFT Proxy (P95) | Agg. Bandwidth |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Cascade** | 1K | 16 GB | **0.00** | **3.50** | **1.52** | **1,899.91 GB/s** |
+| **Cascade (HOT) 🔥** | 1K | 16 GB | **0.00** | **3.50** | **1.52** | **1,899.91 GB/s** |
 | | 10K | 160 GB | **0.00** | **4.22** | **2.65** | **2,297.68 GB/s** |
-| **(HPC-Optimized)**| 50K | 800 GB | **0.01** | **3.22** | **2.78** | **1,798.70 GB/s** |
+| | 50K | 800 GB | **0.01** | **3.22** | **2.78** | **1,798.70 GB/s** |
+| **Cascade (COLD) ❄️** | 1K | 16 GB | **0.00** | **3.61** | **2.03** | **2,408.04 GB/s** |
+| | 10K | 160 GB | **0.01** | **4.09** | **2.74** | **444.30 GB/s** |
+| **(HPC-Optimized)**| 50K | 800 GB | **0.01** | **3.34** | **2.85** | **403.71 GB/s** |
 | **LMCache** | 1K | 16 GB | 23.67 | 30.25 | 28.68 | 5.86 GB/s |
 | (Disk-Mode) | 10K | 160 GB | 22.58 | 33.13 | 28.80 | 6.06 GB/s |
 | | 50K | 800 GB | 22.27 | 30.66 | 25.57 | 6.38 GB/s |
