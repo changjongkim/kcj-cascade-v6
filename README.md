@@ -685,10 +685,10 @@ This benchmark evaluates systems constrained to a **single node**, pushing local
 | System | Scale | Total Data | P50 (ms) | P99 (ms) | TTFT Proxy (P95) | Agg. Bandwidth |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **LMCache** | 50K | 800 GB | 18.30 | 21.00 | 20.38 | 0.94 GB/s |
-| **Cascade 🔥** | 50K | 800 GB | TBD | TBD | TBD | TBD |
+| **Cascade 🔥** | 50K | 800 GB | OOM / FAIL | - | - | - |
 | **PDC** | 50K | 800 GB | 17.92 | 21.36 | 20.47 | 0.95 GB/s |
-| **LLM-GPU** | 50K | 800 GB | TBD | TBD | TBD | TBD |
-| **HDF5-Indep**| 50K | 800 GB | TBD | TBD | TBD | TBD |
+| **LLM-GPU** | 50K | 800 GB | OOM / FAIL | - | - | - |
+| **HDF5-Indep**| 50K | 800 GB | 17.12 | 21.78 | 21.26 | 0.93 GB/s |
 | **LMCache-Redis** | 50K | 800 GB | 0.06 | 19.21 | 16.72 | 8.21 GB/s |
 
 #### **🔍 Architectural Breakdown: Why 1,700+ GB/s?**
