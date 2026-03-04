@@ -471,6 +471,16 @@ This microbenchmark evaluates the single-block (160MB Llama) latency and through
 | **HDF5-INDEP** | 190.34 / 0.82 | 85.85 / 1.82 | 187.67 / 0.83 |
 | **LMCACHE-REDIS** | 898.37 / 0.17 | 740.42 / 0.21 | 209.49 / 0.75 |
 
+#### **Recovery Profiling at 32 Nodes (N=32)**
+| System | HOT Latency (ms) / BW (GB/s) | WARM Latency / BW | COLD Latency / BW |
+| :--- | :---: | :---: | :---: |
+| **Cascade V12 🔥** | **10.47 / 14.93** | **9.48 / 16.48** | **9.58 / 16.31** |
+| **LMCACHE-DISK** | 46.88 / 3.33 | 54.67 / 2.86 | 134.84 / 1.16 |
+| **PDC** | 47.73 / 3.27 | 55.91 / 2.79 | 157.32 / 0.99 |
+| **LLM-GPU** | 77.16 / 2.03 | 77.01 / 2.03 | 62.80 / 2.49 |
+| **HDF5-INDEP** | 101.89 / 1.53 | 109.88 / 1.42 | 225.13 / 0.69 |
+| **LMCACHE-REDIS** | PENDING | PENDING | PENDING |
+
 ---
 
 ### **24. Memory Oversubscription & Semantic Eviction Stability**
