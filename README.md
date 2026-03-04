@@ -566,12 +566,12 @@ This evaluation focuses on the **predictability** of the storage layer. We measu
 #### **Summary Table: Mixed Workload Performance (16-Node)**
 | System | Workload A (95/5) | Workload B (50/50) | Workload C (Scan) | Status |
 | :--- | :---: | :---: | :---: | :--- |
-| **Cascade 🔥** | **TBD** | **TBD** | **TBD** | PENDING |
-| **PDC** | TBD | TBD | TBD | PENDING |
-| **LMCACHE-DISK**| TBD | TBD | TBD | PENDING |
-| **HDF5-INDEP** | TBD | TBD | TBD | PENDING |
-| **REDIS** | TBD | TBD | TBD | PENDING |
-| **LLM-GPU** | TBD | TBD | TBD | PENDING |
+| **Cascade 🔥** | **6,162.8 / 50.3** | **703.0 / 104.4** | **185,042.3 / 1.3** | **Completed** |
+| **PDC** | 1,326.2 / 47.5 | 590.5 / 51.8 | 35,827.4 / 6.0 | Completed |
+| **LMCACHE-DISK**| 1,416.6 / 39.9 | 588.4 / 46.8 | 4,524.4 / 19.3 | Completed |
+| **HDF5-INDEP** | 463.3 / 73.9 | 305.0 / 90.9 | 733.4 / 51.7 | Completed |
+| **REDIS** | 200.6 / 136.0 | 132.1 / 208.0 | 215.6 / 118.7 | Completed |
+| **LLM-GPU** | 1,223.9 / 47.2 | 627.5 / 55.0 | 25,631.1 / 2.9 | Completed |
 
 
 > **🔥 Evaluation Insights:**
