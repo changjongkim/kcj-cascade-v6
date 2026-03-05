@@ -22,6 +22,13 @@ def print_rank0(*args):
     if rank == 0: 
         print(*args, flush=True)
 
+def clear_page_cache(path):
+    try:
+        import subprocess
+        subprocess.run(["vmtouch", "-e", str(path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
 def run_index_scalability_benchmark():
     parser = argparse.ArgumentParser()
     parser.add_argument("--system", required=True)
@@ -115,83 +122,93 @@ def run_index_scalability_benchmark():
         current_total = target_total
         time.sleep(5) # Sync wait
         
-        print_rank0(f"  - Measuring Get Latency/BW with {args.test_reqs} concurrent equivalent requests...")
-        
-        reqs_per_rank = args.test_reqs // world
-        latencies = []
-        test_indices = np.random.randint(0, current_total, reqs_per_rank)
-        
-        hit_count = 0
-        # Actual Get Phase
-        phase_start = time.perf_counter()
-        for idx in test_indices:
-            key = f"idx_scale_blk_{idx}"
-            t0 = time.perf_counter()
-            res = adapter.get(key)
-            if res:
-                hit_count += 1
-                # Force a memory copy to ensure we measure actual data access overhead
-                # (Simulates an inference engine moving data to its own tensors)
-                _ = bytes(res[0])
-                _ = bytes(res[1])
-            t1 = time.perf_counter()
-            latencies.append((t1 - t0) * 1000) # ms
-        phase_end = time.perf_counter()
+        for phase in ["COLD", "HOT"]:
+            if phase == "COLD":
+                print_rank0(f"  - [{phase}] Dropping caches...")
+                if hasattr(adapter, 'store') and hasattr(adapter.store, 'clear_tier'):
+                    try:
+                        adapter.store.clear_tier(0) # Clear GPU
+                        adapter.store.clear_tier(1) # Clear DRAM
+                    except Exception: pass
+                if "lustre_path" in config:
+                    clear_page_cache(config["lustre_path"])
+                time.sleep(2)
             
-        # Write temporary results for aggregation
-        res_dir = REPO_ROOT / "benchmark" / "tmp" / f"scale_v3_{job_id}_{target_total}"
-        res_dir.mkdir(parents=True, exist_ok=True)
-        with open(res_dir / f"rank_{rank}.json", "w") as f:
-            json.dump({
-                "lats": latencies,
-                "start": phase_start,
-                "end": phase_end,
-                "count": len(test_indices),
-                "hits": hit_count
-            }, f)
+            print_rank0(f"  - [{phase}] Measuring Get Latency/BW with {args.test_reqs} concurrent equivalent requests...")
             
-        time.sleep(5) # wait for all ranks to write files
-        
-        if rank == 0:
-            all_lats = []
-            total_mb_all = 0
-            agg_bw_sum = 0
-            total_hits = 0
+            reqs_per_rank = args.test_reqs // world
+            latencies = []
+            test_indices = np.random.randint(0, current_total, reqs_per_rank)
             
-            for r in range(world):
-                try:
-                    with open(res_dir / f"rank_{r}.json", "r") as f:
-                        data = json.load(f)
-                        all_lats.extend(data['lats'])
-                        total_hits += data.get('hits', 0)
+            hit_count = 0
+            phase_start = time.perf_counter()
+            for idx in test_indices:
+                key = f"idx_scale_blk_{idx}"
+                t0 = time.perf_counter()
+                res = adapter.get(key)
+                if res:
+                    hit_count += 1
+                    _ = bytes(res[0])
+                    _ = bytes(res[1])
+                t1 = time.perf_counter()
+                latencies.append((t1 - t0) * 1000) # ms
+            phase_end = time.perf_counter()
+                
+            res_dir = REPO_ROOT / "benchmark" / "tmp" / f"scale_c2h_v3_{job_id}_{target_total}_{phase}"
+            res_dir.mkdir(parents=True, exist_ok=True)
+            with open(res_dir / f"rank_{rank}.json", "w") as f:
+                json.dump({
+                    "lats": latencies,
+                    "start": phase_start,
+                    "end": phase_end,
+                    "count": len(test_indices),
+                    "hits": hit_count
+                }, f)
+                
+            time.sleep(5) # wait for all ranks to write files
+            
+            if rank == 0:
+                all_lats = []
+                total_mb_all = 0
+                agg_bw_sum = 0
+                total_hits = 0
+                
+                for r in range(world):
+                    try:
+                        with open(res_dir / f"rank_{r}.json", "r") as f:
+                            data = json.load(f)
+                            all_lats.extend(data['lats'])
+                            total_hits += data.get('hits', 0)
+                            
+                            rank_time = data['end'] - data['start']
+                            rank_mb = data['count'] * args.block_size
+                            if rank_time > 0:
+                                agg_bw_sum += (rank_mb / rank_time)
+                            
+                            total_mb_all += rank_mb
+                    except Exception: pass
                         
-                        rank_time = data['end'] - data['start']
-                        rank_mb = data['count'] * args.block_size
-                        if rank_time > 0:
-                            agg_bw_sum += (rank_mb / rank_time)
-                        
-                        total_mb_all += rank_mb
-                except Exception:
-                    pass
+                if all_lats:
+                    avg_lat = np.mean(all_lats)
+                    p50 = np.percentile(all_lats, 50)
+                    p95 = np.percentile(all_lats, 95)
+                    p99 = np.percentile(all_lats, 99)
                     
-            if all_lats:
-                avg_lat = np.mean(all_lats)
-                p50 = np.percentile(all_lats, 50)
-                p95 = np.percentile(all_lats, 95)
-                p99 = np.percentile(all_lats, 99)
-                
-                hit_rate = (total_hits / len(all_lats)) * 100 if all_lats else 0
-                print_rank0(f"  - Results: P50={p50:.2f}ms, P99={p99:.2f}ms, TTFT Proxy={p95:.2f}ms")
-                print_rank0(f"  - Hit Rate: {hit_rate:.1f}% ({total_hits}/{len(all_lats)})")
-                print_rank0(f"  - Aggregated Bandwidth (Sum of Rank BWs): {agg_bw_sum:.2f} MB/s (Total {total_mb_all} MB)")
-                
-                results[target_total] = {
-                    "avg_ms": avg_lat,
-                    "p50_ms": p50,
-                    "p95_ms": p95,
-                    "p99_ms": p99,
-                    "agg_bw_mbs": agg_bw_sum
-                }
+                    hit_rate = (total_hits / len(all_lats)) * 100 if all_lats else 0
+                    print_rank0(f"  - [{phase}] Results: P50={p50:.2f}ms, P99={p99:.2f}ms, TTFT Proxy={p95:.2f}ms")
+                    print_rank0(f"  - [{phase}] Hit Rate: {hit_rate:.1f}% ({total_hits}/{len(all_lats)})")
+                    print_rank0(f"  - [{phase}] Aggregated Bandwidth: {agg_bw_sum:.2f} MB/s (Total {total_mb_all} MB)")
+                    
+                    if target_total not in results:
+                        results[target_total] = {}
+                    
+                    results[target_total][phase] = {
+                        "avg_ms": avg_lat,
+                        "p50_ms": p50,
+                        "p95_ms": p95,
+                        "p99_ms": p99,
+                        "agg_bw_mbs": agg_bw_sum
+                    }
 
     if rank == 0:
         output_path = REPO_ROOT / "benchmark" / "results" / f"scale_realistic_agg_{system_name}_{job_id}.json"

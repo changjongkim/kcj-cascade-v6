@@ -123,7 +123,10 @@ def run_dedup_benchmark():
             print(f"[{name}] Rank 0 writing shared prefix...", flush=True)
             for rk in prefix_keys:
                 k_data, v_data = loader.load(rk)
-                adapter.put(rk, k_data, v_data)
+                if hasattr(adapter, "put_prefix"):
+                    adapter.put_prefix(rk, k_data, v_data)
+                else:
+                    adapter.put(rk, k_data, v_data)
         
         adapter.flush()
         

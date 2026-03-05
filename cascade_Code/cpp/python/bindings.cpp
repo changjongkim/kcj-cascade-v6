@@ -99,6 +99,7 @@ PYBIND11_MODULE(cascade_cpp, m) {
         .def_readwrite("sync_metadata", &cascade::distributed::DistributedConfig::sync_metadata)
         // V6 novelty features
         .def_readwrite("semantic_eviction", &cascade::distributed::DistributedConfig::semantic_eviction)
+        .def_readwrite("prefix_replication", &cascade::distributed::DistributedConfig::prefix_replication)
         .def_readwrite("dedup_enabled", &cascade::distributed::DistributedConfig::dedup_enabled)
         .def_readwrite("locality_aware", &cascade::distributed::DistributedConfig::locality_aware)
         .def_readwrite("promotion_threshold", &cascade::distributed::DistributedConfig::promotion_threshold)

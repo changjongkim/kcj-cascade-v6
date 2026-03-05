@@ -1020,6 +1020,199 @@ void DistributedStore::sync_prefix_registry() {
     printf("[Prefix Sync] Global prefix registry: %zu blocks\n",
            prefix_registry_.size());
   }
+  
+  // Novelty 1 extension: Replicate prefix data to all nodes
+  if (cfg_.prefix_replication && world_size_ > 1) {
+    broadcast_prefix_data();
+  }
+#endif
+}
+
+// ============================================================================
+// Novelty 1 Extension: Prefix Data Replication (MPI_Bcast)
+// ============================================================================
+
+void DistributedStore::broadcast_prefix_data() {
+#ifdef USE_MPI
+  // Collect prefix IDs that we own locally (have data for)
+  std::vector<BlockId> my_owned_prefixes;
+  {
+    std::shared_lock lock(prefix_mutex_);
+    for (const auto& pid : prefix_registry_) {
+      bool have_local = false;
+      if (gpu_) {
+        auto loc = gpu_->global_index_.get(pid);
+        if (loc && loc->is_local(rank_)) have_local = true;
+      }
+      if (!have_local && dram_ && dram_->contains(pid)) {
+        have_local = true;
+      }
+      if (have_local) {
+        my_owned_prefixes.push_back(pid);
+      }
+    }
+  }
+
+  // === BATCHED BROADCAST: pack all blocks into one buffer per owner ===
+  // Format: [block_count(u32)] then for each block:
+  //         [id_len(u32)][id_bytes][data_size(u64)][data_bytes]
+  for (int r = 0; r < world_size_; r++) {
+    // 1. Owner packs all prefix data into a single buffer
+    std::vector<char> send_buf;
+    uint32_t my_count = 0;
+
+    if (r == rank_) {
+      my_count = my_owned_prefixes.size();
+      // Reserve header
+      send_buf.insert(send_buf.end(), (char*)&my_count,
+                      (char*)&my_count + sizeof(my_count));
+
+      for (const auto& pid : my_owned_prefixes) {
+        // ID length + ID
+        uint32_t id_len = pid.size();
+        send_buf.insert(send_buf.end(), (char*)&id_len,
+                        (char*)&id_len + sizeof(id_len));
+        send_buf.insert(send_buf.end(), pid.begin(), pid.end());
+
+        // Data size + data
+        size_t data_size = 0;
+        auto loc = gpu_ ? gpu_->global_index_.get(pid) : std::nullopt;
+        if (loc) data_size = loc->size;
+
+        send_buf.insert(send_buf.end(), (char*)&data_size,
+                        (char*)&data_size + sizeof(data_size));
+
+        if (data_size > 0) {
+          size_t buf_offset = send_buf.size();
+          send_buf.resize(buf_offset + data_size);
+          size_t out_size = 0;
+          if (gpu_) {
+            gpu_->get_local(pid, (uint8_t*)&send_buf[buf_offset], &out_size);
+          }
+        }
+      }
+    }
+
+    // 2. Broadcast buffer size (use int64 to avoid overflow for >2GB buffers)
+    int64_t buf_size = send_buf.size();
+    MPI_Bcast(&buf_size, sizeof(int64_t), MPI_BYTE, r, comm_);
+
+    if (buf_size == 0) continue;  // This rank owns no prefixes
+
+    // 3. Non-owner: allocate receive buffer
+    if (r != rank_) {
+      send_buf.resize(buf_size);
+    }
+
+    // 4. Broadcast in chunks (MPI count is int, max ~2GB per call)
+    const size_t CHUNK = 1ULL * 1024 * 1024 * 1024;  // 1 GB
+    for (size_t offset = 0; offset < (size_t)buf_size; offset += CHUNK) {
+      size_t remaining = (size_t)buf_size - offset;
+      int chunk_size = (int)std::min(remaining, CHUNK);
+      MPI_Bcast(send_buf.data() + offset, chunk_size, MPI_CHAR, r, comm_);
+    }
+
+    // 5. Non-owner ranks: unpack and store locally
+    if (r != rank_) {
+      const char* ptr = send_buf.data();
+      const char* end = send_buf.data() + buf_size;
+
+      if (ptr + sizeof(uint32_t) > end) continue;
+      uint32_t count;
+      memcpy(&count, ptr, sizeof(count));
+      ptr += sizeof(count);
+
+      for (uint32_t i = 0; i < count; i++) {
+        if (ptr + sizeof(uint32_t) > end) break;
+        uint32_t id_len;
+        memcpy(&id_len, ptr, sizeof(id_len));
+        ptr += sizeof(id_len);
+
+        if (ptr + id_len > end) break;
+        BlockId prefix_id(ptr, ptr + id_len);
+        ptr += id_len;
+
+        if (ptr + sizeof(size_t) > end) break;
+        size_t data_size;
+        memcpy(&data_size, ptr, sizeof(data_size));
+        ptr += sizeof(data_size);
+
+        if (data_size == 0 || ptr + data_size > end) {
+          ptr += data_size;
+          continue;
+        }
+
+        const uint8_t* block_data = (const uint8_t*)ptr;
+        ptr += data_size;
+
+        // Skip if already have locally
+        bool already_local = false;
+        if (gpu_) {
+          auto loc = gpu_->global_index_.get(prefix_id);
+          if (loc && loc->is_local(rank_)) already_local = true;
+        }
+        if (!already_local && dram_ && dram_->contains(prefix_id)) {
+          already_local = true;
+        }
+        if (already_local) continue;
+
+        // Store in local GPU
+        bool gpu_ok = false;
+        if (gpu_) {
+          int tgt_gpu = gpu_->get_target_gpu(prefix_id);
+          gpu_ok = gpu_->put_local(prefix_id, block_data, data_size, tgt_gpu, true);
+          if (!gpu_ok && evict_gpu_to_dram(data_size)) {
+            gpu_ok = gpu_->put_local(prefix_id, block_data, data_size, tgt_gpu, true);
+          }
+        }
+
+        // DRAM shadow
+        bool dram_ok = false;
+        if (dram_) {
+          const uint8_t* dram_data = block_data;
+          size_t dram_size = data_size;
+          std::vector<uint8_t> comp_buf;
+
+          if (cfg_.kv_compression && data_size >= 64) {
+            CompressionMeta meta;
+            comp_buf = KVCompressor::compress(block_data, data_size, meta);
+            dram_data = comp_buf.data();
+            dram_size = comp_buf.size();
+          }
+
+          dram_ok = dram_->put_local(prefix_id, dram_data, dram_size, true);
+          if (!dram_ok && evict_dram_to_lustre(dram_size)) {
+            dram_ok = dram_->put_local(prefix_id, dram_data, dram_size, true);
+          }
+
+          if (gpu_ok && dram_ok && gpu_) {
+            auto existing = gpu_->global_index_.get(prefix_id);
+            if (existing) {
+              BlockLocation loc = *existing;
+              loc.dram_offset = dram_->get_offset(prefix_id);
+              loc.dram_size = dram_size;
+              loc.has_dram_shadow = true;
+              gpu_->global_index_.put(prefix_id, loc);
+            }
+          }
+        }
+
+        // Track prefix + dedup
+        {
+          std::unique_lock lock(prefix_mutex_);
+          prefix_registry_.insert(prefix_id);
+        }
+        if (cfg_.dedup_enabled) {
+          global_dedup_.put(prefix_id, true);
+        }
+      }
+    }
+  }
+
+  if (rank_ == 0) {
+    printf("[Prefix Replication] Batched broadcast %zu owned prefixes to %d nodes\n",
+           my_owned_prefixes.size(), world_size_);
+  }
 #endif
 }
 

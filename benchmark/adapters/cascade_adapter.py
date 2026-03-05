@@ -60,6 +60,7 @@ class CascadeAdapter(StorageAdapter):
                 cfg.dedup_enabled = True
                 cfg.locality_aware = True
                 cfg.kv_compression = True
+                cfg.prefix_replication = True
                 cfg.lustre_path = self.lustre_path
                 self.store = cascade_cpp.DistributedStore(cfg)
                 print(f"[CascadeAdapter] Initialized DistributedStore (world={world_size})")

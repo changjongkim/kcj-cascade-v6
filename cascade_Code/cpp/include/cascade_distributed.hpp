@@ -193,6 +193,7 @@ struct DistributedConfig {
     
     // Novelty 1: Cross-node semantic eviction
     bool semantic_eviction = true;
+    bool prefix_replication = true;  // Broadcast prefix blocks to all nodes for local reads
     
     // Novelty 2: Distributed deduplication
     bool dedup_enabled = true;
@@ -459,6 +460,9 @@ private:
     bool lustre_contains(const BlockId& id) const;
     bool is_prefix(const BlockId& id) const;
     void mark_dirty(const BlockId& id, const BlockLocation& loc);
+    
+    // Novelty 1 extension: Prefix Replication
+    void broadcast_prefix_data();
 };
 
 }  // namespace distributed

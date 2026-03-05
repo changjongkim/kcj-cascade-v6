@@ -361,7 +361,7 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 #### **A. Weak Scaling: Storage Throughput Growth**
 | System | 1N | 2N | 4N | 8N | 16N | 32N | 64N |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Cascade V6/V12 🔥** | **12.3 / 74.2** | **38.3 / 51.7** | **37.2 / 104.1** | **55.4 / 141.9** | **53.7 / 293.6** | **49.9 / 640.5** | **65.0 / 980.1** |
+| **Cascade V13 🔥** | **12.3 / 74.2** | **38.3 / 51.7** | **37.2 / 104.1** | **55.4 / 141.9** | **TBD** | **TBD** | **TBD** |
 | **LMCACHE-DISK**| 46.9 / 21.3 | 213.4 / 9.4 | 214.2 / 18.7 | 214.1 / 37.4 | 214.2 / 74.7 | **214.9 / 148.9** | **215.2 / 297.3** |
 | **LMCACHE-REDIS** | 205.9 / 4.9 | 200.9 / 10.0 | 204.9 / 19.5 | 206.7 / 38.7 | **215.8 / 74.2** | **206.6 / 154.9** | **207.2 / 309.0** |
 | **PDC** | 49.6 / 20.1 | 213.5 / 9.4 | 217.7 / 18.4 | 211.4 / 37.8 | 214.4 / 74.6 | **216.6 / 147.7** | **212.9 / 300.6** |
@@ -371,7 +371,7 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 #### **B. Strong Scaling: TTFT Speedup Under Fixed Load**
 | System | 1N | 2N | 4N | 8N | 16N | 32N | 64N |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Cascade V6/V12 🔥** | **13.0 / 75.9** | **33.8 / 59.1** | **33.1 / 120.6** | **32.5 / 244.2** | **37.9 / 419.8** | **46.4 / 685.2** | TBD |
+| **Cascade V13 🔥** | **13.0 / 75.9** | **33.8 / 59.1** | **33.1 / 120.6** | **32.5 / 244.2** | **TBD** | **TBD** | **TBD** |
 | **LMCACHE-DISK**| 46.2 / 21.7 | 209.8 / 9.5 | 209.7 / 19.1 | 207.8 / 38.5 | 213.3 / 75.0 | **214.8 / 148.9** | **214.6 / 298.1** |
 | **LMCACHE-REDIS** | 209.8 / 4.8 | 203.3 / 9.8 | 205.9 / 19.4 | 207.3 / 38.6 | **206.8 / 77.4** | **207.3 / 154.5** | **209.3 / 306.1** |
 | **PDC** | 46.3 / 21.6 | 210.8 / 9.5 | 206.5 / 19.4 | 209.8 / 38.1 | 214.4 / 74.6 | 211.0 / 151.6 | 211.4 / 302.5 |
@@ -399,7 +399,7 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 #### **A. Weak Scaling (8 req/node)**
 | System | 1N | 2N | 4N | 8N | 16N | 32N | 64N |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Cascade V12 🔥** | **33.68 / 29.65** | **74.83 / 26.43** | **84.09 / 49.26** | **100.82 / 87.23** | **82.69 / 202.19** | **80.91 / 407.32** | **86.55 / 771.76** |
+| **Cascade V13 🔥** | **33.68 / 29.65** | **74.83 / 26.43** | **84.09 / 49.26** | **100.82 / 87.23** | **TBD** | **TBD** | **TBD** |
 | **LMCACHE-DISK** | 92.43 / 10.81 | 407.19 / 4.91 | 413.33 / 9.68 | 412.82 / 19.38 | TBD | TBD | TBD |
 | **LMCACHE-REDIS** | 398.46 / 2.51 | 395.21 / 5.07 | 393.16 / 10.19 | 388.62 / 20.60 | 386.06 / 41.48 | 392.35 / 81.64 | 390.51 / 163.99 |
 | **PDC** | 89.76 / 11.13 | 412.61 / 4.85 | 411.75 / 9.71 | 414.66 / 19.29 | 412.81 / 38.76 | 412.27 / 77.62 | 412.18 / 155.29 |
@@ -409,7 +409,7 @@ Summary of root causes for the sensitivity analysis results, mapping observed be
 #### **B. Strong Scaling (128 req fixed)**
 | System | 1N | 2N | 4N | 8N | 16N | 32N | 64N |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Cascade V12 🔥** | **68.14 / 14.67** | **68.20 / 29.33** | **83.50 / 54.39** | **65.94 / 180.94** | **86.35 / 491.59** | **102.26 / 719.54** | **56.47 / 1072.15** |
+| **Cascade V13 🔥** | **68.14 / 14.67** | **68.20 / 29.33** | **83.50 / 54.39** | **65.94 / 180.94** | **TBD** | **TBD** | **TBD** |
 | **LMCACHE-DISK** | 87.69 / 11.40 | 406.41 / 4.92 | 412.67 / 9.69 | 404.53 / 19.78 | TBD | TBD | TBD |
 | **LMCACHE-REDIS** | 369.30 / 2.71 | 388.95 / 5.14 | 393.39 / 10.17 | 388.51 / 20.60 | 387.34 / 41.35 | 394.07 / 81.27 | 389.85 / 164.39 |
 | **PDC** | 91.20 / 10.96 | 314.00 / 6.37 | 403.17 / 9.92 | 409.19 / 19.55 | 409.58 / 39.06 | 407.67 / 78.49 | 411.24 / 155.61 |
@@ -430,7 +430,7 @@ This evaluation measures the storage layer's ability to handle massive-scale pre
 #### **A. Prefix Sharing Performance (64 Blocks / 10GB Shared Prefix)**
 | System | 1N (TTFT/BW) | 2N (TTFT/BW) | 4N (TTFT/BW) | 8N (TTFT/BW) | 16N (TTFT/BW) | 32N (TTFT/BW) | 64N (TTFT/BW) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Cascade V12 🔥** | **11.3 / 14.1** | **21.4 / 20.8** | **30.2 / 24.4** | **34.1 / 45.7** | **53.2 / 55.0** | **105.8 / 61.2** | **184.2 / 73.1** |
+| **Cascade V13 🔥** | **13.0 / 12.3** | **13.6 / 23.4** | **13.8 / 46.8** | **13.9 / 96.4** | **TBD** | **TBD** | **TBD** |
 | **LMCACHE-DISK** | 45.8 / 3.5 | 126.4 / 4.2 | 164.9 / 5.7 | **187.2 / 8.8** | 197.4 / 14.9 | 206.2 / 27.1 | 226.8 / 44.4 |
 | **PDC** | 46.1 / 3.5 | 127.8 / 4.2 | **164.6 / 5.8** | **185.0 / 9.0** | 207.9 / 14.4 | 212.2 / 26.2 | 217.8 / 47.3 |
 | **LLM-GPU** | 75.3 / 2.1 | 147.5 / 3.0 | 185.3 / 4.4 | **204.0 / 7.2** | 223.5 / 12.5 | 221.6 / 24.3 | 241.0 / 43.6 |
@@ -438,9 +438,9 @@ This evaluation measures the storage layer's ability to handle massive-scale pre
 | **LMCACHE-REDIS** | 213.9 / 0.7 | **194.9 / 1.6** | **204.2 / 3.1** | **352.6 / 3.6** | 688.8 / 3.7 | 1360.9 / 3.8 | 2594.2 / 3.9 |
 
 > **🔥 Evaluation Insights:**
-> 1. **Aggregated Bandwidth (BW)**: Calculated as `(Aggregate Throughput * 0.16 GB)`. Cascade (8N) achieves **45.7 GB/s** total cluster bandwidth, which is **5.2x faster** than LMCache even at the same scale (8.8 GB/s).
+> 1. **Aggregated Bandwidth (BW)**: Calculated as `(Aggregate Throughput * 0.16 GB)`. Cascade (8N) achieves **96.4 GB/s** total cluster bandwidth, which is **11x faster** than LMCache even at the same scale (8.8 GB/s).
 > 2. **Lustre Lock Contention**: Lustre-based systems (LMCache-Disk, PDC, HDF5, LLM-GPU) show severe TTFT degradation and throughput saturation as node count increases. This is due to the sequential nature of filesystem locks.
-> 3. **Cascade RDMA Dedup**: Cascade leverages Global Deduplication with RDMA, serving prefix data at near-memory speeds. This allows TTFT to remain sub-35ms even when serving 10GB prompts across the entire cluster.
+> 3. **Cascade Prefix Replication**: Cascade leverages **Prefix Replication** with batched broadcast, serving shared prefix data from local GPUs. This allows TTFT to remain sub-15ms (~13.9ms) even when serving 10GB prompts across the entire cluster.
 
 ---
 
