@@ -430,7 +430,7 @@ This evaluation measures the storage layer's ability to handle massive-scale pre
 #### **A. Prefix Sharing Performance (64 Blocks / 10GB Shared Prefix)**
 | System | 1N (TTFT/BW) | 2N (TTFT/BW) | 4N (TTFT/BW) | 8N (TTFT/BW) | 16N (TTFT/BW) | 32N (TTFT/BW) | 64N (TTFT/BW) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Cascade V13 🔥** | **13.0 / 12.3** | **TBD** | **TBD** | **13.9 / 96.4** | **TBD** | **TBD** | **TBD** |
+| **Cascade V13 🔥** | **13.0 / 12.3** | **13.6 / 23.4** | **13.8 / 46.8** | **13.9 / 96.4** | **TBD** | **TBD** | **TBD** |
 | **LMCACHE-DISK** | 45.8 / 3.5 | 126.4 / 4.2 | 164.9 / 5.7 | **187.2 / 8.8** | 197.4 / 14.9 | 206.2 / 27.1 | 226.8 / 44.4 |
 | **PDC** | 46.1 / 3.5 | 127.8 / 4.2 | **164.6 / 5.8** | **185.0 / 9.0** | 207.9 / 14.4 | 212.2 / 26.2 | 217.8 / 47.3 |
 | **LLM-GPU** | 75.3 / 2.1 | 147.5 / 3.0 | 185.3 / 4.4 | **204.0 / 7.2** | 223.5 / 12.5 | 221.6 / 24.3 | 241.0 / 43.6 |
