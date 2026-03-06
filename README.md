@@ -495,12 +495,12 @@ We measure the impact of index size on latency and the system's ability to handl
 
 | System | Scale | Total Data | P50 (ms) | P99 (ms) | TTFT Proxy (P95) | Agg. Bandwidth |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Cascade (HOT) 🔥** | 1K | 16 GB | **0.00** | **3.50** | **1.52** | **1,899.91 GB/s** |
-| | 10K | 160 GB | **0.00** | **4.22** | **2.65** | **2,297.68 GB/s** |
-| | 50K | 800 GB | **0.01** | **3.22** | **2.78** | **1,798.70 GB/s** |
-| **Cascade (COLD) ❄️** | 1K | 16 GB | **0.00** | **3.61** | **2.03** | **2,408.04 GB/s** |
-| | 10K | 160 GB | **0.01** | **4.09** | **2.74** | **444.30 GB/s** |
-| **(HPC-Optimized)**| 50K | 800 GB | **0.01** | **3.34** | **2.85** | **403.71 GB/s** |
+| **Cascade (HOT) 🔥** | 1K | 16 GB | **0.01** | **4.33** | **3.14** | **29.68 GB/s** |
+| | 10K | 160 GB | **0.01** | **3.58** | **3.12** | **41.61 GB/s** |
+| | 50K | 800 GB | **0.01** | **5.16** | **2.99** | **43.67 GB/s** |
+| **Cascade (COLD) ❄️** | 1K | 16 GB | **0.00** | **4.23** | **3.99** | **35.28 GB/s** |
+| **(Disk-Mode)** | 10K | 160 GB | **0.00** | **24.87** | **21.32** | **6.57 GB/s** |
+| | 50K | 800 GB | **0.00** | **21.60** | **20.82** | **5.43 GB/s** |
 | **LMCache** | 1K | 16 GB | 23.67 | 30.25 | 28.68 | 5.86 GB/s |
 | (Disk-Mode) | 10K | 160 GB | 22.58 | 33.13 | 28.80 | 6.06 GB/s |
 | | 50K | 800 GB | 22.27 | 30.66 | 25.57 | 6.38 GB/s |
@@ -517,15 +517,15 @@ We measure the impact of index size on latency and the system's ability to handl
 | (8 Shards) | 10K | 160 GB | 22.75 | 39.71 | 32.48 | 5.53 GB/s |
 | | 50K | 800 GB | 19.64 | 29.42 | 27.31 | 8.04 GB/s |
 
-> \* **Note on Cascade Performance (1,700+ GB/s High Fidelity)**: 
-> In this large-scale (800GB) benchmark, Cascade demonstrates an aggregate bandwidth exceeding **1,700 GB/s**, which is physically consistent with the **aggregate memory-bus throughput** of 8 modern GPU nodes. This performance is achieved through three key architectural pillars:
-> 1. **Zero-Copy Memory Mapping**: Unlike Redis or PDC, which copy data into application buffers, Cascade provides direct pointers to existing Shared Memory (SHM) segments. This eliminates the CPU/Memory-bus bottleneck during data retrieval.
-> 2. **Hardware-Level Kernel Bypass**: Cascade bypasses the OS network stack and filesystem metadata management, measuring only the raw hardware lookup and memory access latency (~0.01ms).
-> 3. **Perfect Metadata Scalability**: Even with 50,000 unique blocks stored, Cascade's sharded hash index remains $O(1)$, ensuring that the "retrieval" time is independent of the dataset size.
+> \* **Note on Cascade's Hot VS Cold Mode Advantage**: 
+> With accurate bandwidth measurements based strictly on fetched unique payloads, we see a massive divergence between Cascade's HOT (GPU/DRAM) mode and its COLD (Lustre-Disk) mode at 800GB scale.
+> 1. **HOT Tier Domination**: Even as the scale factor grows 50x (from 1K to 50K unique blocks), Cascade HOT maintains exceptional TTFT proxies (~3ms) and an increasing aggregate throughput reaching **43.67 GB/s** across the 8 nodes. 
+> 2. **Disk Mode Saturation**: While Cascade COLD handles 16GB well (serving from distributed OS page caches at 35 GB/s), larger capacities (160GB, 800GB) cause heavy cache misses, forcing traffic to the underlying Lustre PFS. This degrades throughput to ~5.4 GB/s and pushes the P95 Latency up to 20.8ms, proving that physical disk access presents a hard ceiling.
+> 3. **The Tiering Value**: This precisely demonstrates the value of Cascade's Distributed Hierarchical Architecture: bypassing disk access entirely to serve LLM KV requests directly from neighboring node memory drastically accelerates inference compared to baseline Disk-only frameworks like LMCache/PDC.
 
 #### **💡 Key Findings**
-1. **$O(1)$ Scalability**: Cascade maintains a rock-solid **sub-0.01ms latency** even as the index scale grows 50x (1K → 50K unique blocks). This validates that the management overhead does not grow with the cache size.
-2. **Infrastructure-Bound vs. Software-Bound**: Baselines (Redis, LMCache, PDC) are **Software-Bound** (limited to ~8 GB/s by network stack/copy overhead), whereas Cascade is **Infrastructure-Bound** (limited only by the physical DRAM/HBM bus speed).
+1. **$O(1)$ Scalability in HOT memory**: Cascade maintains a rock-solid **~3ms TTFT proxy** even as the index scale grows 50x (1K → 50K unique blocks) in HOT mode. This validates that the distributed hash index overhead does not negatively impact retrieval latency as the dataset grows.
+2. **Infrastructure-Bound vs. Software-Bound**: Baselines (Redis, LMCache, PDC) are heavily penalized by their heavy software networking/I/O stacks (~6-8 GB/s plateau). Cascade HOT fully unleashes the true hardware capabilities over RDMA, delivering **6-7x higher real bandwidth**.
 3. **Catastrophic Failure of File Formats**: HDF5 demonstrates a total breakdown at scale, reaching **106.8 seconds** P99 latency. This proves that traditional hierarchical file formats are mathematically unsuitable for the massive, concurrent object-indexing required for LLM serving.
 4. **RedisDist Success**: The newly implemented decentralized Redis adapter successfully shards 800GB of data, achieving **8.04 GB/s** and proving to be the most viable baseline for large-scale distributed setups.
 

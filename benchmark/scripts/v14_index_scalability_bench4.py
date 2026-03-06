@@ -166,11 +166,13 @@ def run_index_scalability_benchmark():
                         total_hits += data.get('hits', 0)
                         
                         rank_time = data['end'] - data['start']
-                        rank_mb = data['count'] * args.block_size
-                        if rank_time > 0:
-                            agg_bw_sum += (rank_mb / rank_time)
+                        rank_hits = data.get('hits', 0)
                         
-                        total_mb_all += rank_mb
+                        rank_mb_read = rank_hits * args.block_size
+                        if rank_time > 0:
+                            agg_bw_sum += (rank_mb_read / rank_time)
+                        
+                        total_mb_all += rank_mb_read
                 except Exception:
                     pass
                     
