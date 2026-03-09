@@ -348,6 +348,18 @@ This test evaluates how the system handles a "Cluster Memory Full" scenario. We 
 | **HDF5-INDEP** | 168.87 ms | 191.97 ms | 201.01 ms | 199.30 ms | TBD | TBD | TBD |
 | **LMCACHE-REDIS** | **LOST** | **LOST** | **LOST** | **LOST** | **LOST** | **LOST** | **LOST** |
 
+#### **Throughput Performance under Oversubscription (Cascade V13)**
+| Scale | Node BW (GB/s) | Aggregated BW (GB/s) | Status |
+| :---: | :---: | :---: | :---: |
+| **1N** | 1.63 | 1.63 | Stable |
+| **2N** | 12.49 | 24.98 | Stable |
+| **4N** | 11.11 | 44.44 | Stable |
+| **8N** | 12.10 | 96.82 | Stable |
+| **16N** | 12.41 | 198.56 | Stable |
+| **32N** | 9.02 | 288.64 | Stable |
+| **64N** | TBD | TBD | TBD |
+
+
 > **🔥 Stability Insights:**
 > 1. **Semantic Protection**: Cascade uses **Semantic Eviction**, keeping important prefix blocks (system prompts) in Hot/Warm tiers (GPU/DRAM) even during heavy oversubscription. This results in **~13ms TTFT** (8.4x faster than PDC at 8N).
 > 2. **Naive LRU Failure**: Baseline systems (PDC, HDF5, vLLM) use naive LRU or have no protection, causing prefix blocks to be evicted to Lustre. Retrieving these from disk results in **100-200ms TTFT**, which would cause severe user experience degradation (stuttering).
