@@ -341,11 +341,11 @@ This test evaluates how the system handles a "Cluster Memory Full" scenario. We 
 
 | System | 1N (TTFT) | 2N (TTFT) | 4N (TTFT) | 8N (TTFT) | 16N (TTFT) | 32N (TTFT) | 64N (TTFT) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Cascade V13 🔥** | **98.44 ms** | **12.81 ms** | **14.40 ms** | **13.22 ms** | **12.89 ms** | **17.74 ms** | **TBD** |
-| **LMCACHE-DISK** | 97.12 ms | 104.59 ms | 87.18 ms | 48.77 ms | TBD | TBD | TBD |
-| **PDC** | 126.60 ms | 92.75 ms | 134.37 ms | 121.77 ms | TBD | TBD | TBD |
-| **LLM-GPU** | 142.01 ms | 107.88 ms | 143.41 ms | 127.49 ms | TBD | TBD | TBD |
-| **HDF5-INDEP** | 168.87 ms | 191.97 ms | 201.01 ms | 199.30 ms | TBD | TBD | TBD |
+| **Cascade V13 🔥** | **98.44 ms** | **12.81 ms** | **14.40 ms** | **13.22 ms** | **12.89 ms** | **17.74 ms** | **22.95 ms** |
+| **LMCACHE-DISK** | 97.12 ms | 104.59 ms | 87.18 ms | 48.77 ms | 46.84 ms | 47.35 ms | 46.92 ms |
+| **PDC** | 126.60 ms | 92.75 ms | 134.37 ms | 121.77 ms | 47.71 ms | 52.10 ms | 52.60 ms |
+| **LLM-GPU** | 142.01 ms | 107.88 ms | 143.41 ms | 127.49 ms | FAIL | FAIL | FAIL |
+| **HDF5-INDEP** | 168.87 ms | 191.97 ms | 201.01 ms | 199.30 ms | 161.94 ms | 181.01 ms | 183.20 ms |
 | **LMCACHE-REDIS** | **LOST** | **LOST** | **LOST** | **LOST** | **LOST** | **LOST** | **LOST** |
 
 #### **Throughput Performance under Oversubscription (Cascade V13)**
