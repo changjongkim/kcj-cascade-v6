@@ -764,8 +764,8 @@ This experiment reproduces the historical **~110s/epoch** performance on Cascade
 | Scale | HDF5-Indep (Base) | LLM-GPU | LMCache-Disk | PDC | Cascade V16 (Original) | Cascade V16 (No-Dedup) | Cascade V16 (Streaming) |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **1-Node** | **227.9s** | **286.3s** | **347.2s** | **383.7s** | **549.7s** | **337.5s** | *RUNNING* |
-| **2-Node** | **127.9s** | **150.5s** | *FAILED* | *FAILED* | **946.9s** | **261.9s** | - |
-| **4-Node** | **71.6s** | *FAILED* | *FAILED* | *FAILED* | **785.1s** | **133.4s** | - |
+| **2-Node** | **127.9s** | **150.5s** | **192.1s** | **205.4s** | **946.9s** | **261.9s** | - |
+| **4-Node** | **71.6s** | *RUNNING* | **113.6s** | **123.7s** | **785.1s** | **133.4s** | - |
 | **8-Node** | **43.8s** | *PENDING* | *PENDING* | *PENDING* | *PENDING* | **70.3s** | - |
 
 > **🔥 DeepCAM Reproduce Insights:**
