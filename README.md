@@ -763,13 +763,13 @@ This experiment reproduces the historical **~110s/epoch** performance on Cascade
 
 | Scale | HDF5-Indep (Base) | LLM-GPU | LMCache-Disk | PDC | Cascade V16 (Original) | Cascade V16 (No-Dedup) | Cascade V16 (Streaming) |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **1-Node** | **227.9s** | **286.3s** | **347.2s** | **383.7s** | **549.7s** | **337.5s** | *RUNNING* |
+| **1-Node** | **227.9s** | **286.3s** | **347.2s** | **383.7s** | **549.7s** | **337.5s** | **276.7s** |
 | **2-Node** | **127.9s** | **150.5s** | **192.1s** | **205.4s** | **946.9s** | **261.9s** | - |
 | **4-Node** | **71.6s** | **84.5s** | **113.6s** | **123.7s** | **785.1s** | **133.4s** | - |
 | **8-Node** | **43.8s** | *PENDING* | *PENDING* | *PENDING* | *PENDING* | **70.3s** | - |
 
 > **🔥 DeepCAM Reproduce Insights:**
-> 1. **Read-Through Overhead**: In the 1st epoch, Cascade shows higher overhead at small scale due to synchronous metadata lock-contention and `put()` operations. **Disabling Global Deduplication (No-Dedup) significantly reduces this overhead (337.5s on 1-node), and the gap with Base HDF5 narrows to 1.6x at 8-nodes (70.3s vs 43.8s).**
+> 1. **Read-Through Overhead**: In the 1st epoch, Cascade shows higher overhead at small scale due to synchronous metadata lock-contention and `put()` operations. **Disabling Global Deduplication (No-Dedup) reduces this to 337.5s, and Streaming Mode further optimizes it to 276.7s on 1-node.** This narrows the gap with Base HDF5 to 1.2x at entry scale and 1.6x at 8-nodes (70.3s vs 43.8s).
 > 2. **Resolved Integration Bugs**: Initial `ValueError` issues in PDC and LMCache-Disk at 2+ nodes were traced to a bytes-numpy concatenation bug in the adapter layer. After patching, they show scalable performance (205.4s for PDC 2n, 192.1s for LMCache 2n), though Cascade's **DistributedStore** continues to provide more robust multi-node coordination.
 > 3. **The Scaling Tipping Point**: While raw HDF5/OS-cache is faster at 1-2 nodes, its performance flatlines beyond 8 nodes (as seen in Section 30.1). Cascade's design goal is to provide **Flat Latency** as nodes increase, which becomes the decisive advantage at 16-64 node scales.
 
