@@ -761,6 +761,11 @@ Without Promotion, 8N with 87.5% RDMA would predict **~53ms RDMA-dominant** TTFT
 
 This experiment reproduces the historical **~110s/epoch** performance on Cascade by focusing on the **No-Aggregated-IO** configuration. We evaluate systems on a **512GB** 9,391-file DeepCAM dummy dataset.
 
+**Cascade V16 Configuration Variants:**
+- **Cascade V16 (Original)**: Full-featured mode including **Global Deduplication**, **Distributed Store**, and **Distributed Metadata Management**. This represents the maximum system coordination overhead on the first read-through.
+- **Cascade V16 (No-Dedup)**: Disables **Global Deduplication** to bypass synchronous metadata lock-contention during the 1st epoch/write-back, significantly reducing read-through latency.
+- **Cascade V16 (Streaming)**: Implements an **Optimized Streaming I/O Path** by bypassing redundant aggregation steps and focusing on low-latency block delivery directly to the training loop.
+
 | Scale | HDF5-Indep (Base) | LLM-GPU | LMCache-Disk | PDC | Cascade V16 (Original) | Cascade V16 (No-Dedup) | Cascade V16 (Streaming) |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **1-Node** | **227.9s** | **286.3s** | **347.2s** | **383.7s** | **549.7s** | **337.5s** | **276.7s** |
