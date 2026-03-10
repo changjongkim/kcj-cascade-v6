@@ -336,7 +336,7 @@ This microbenchmark evaluates the single-block (160MB Llama) latency and through
 | :--- | :---: | :---: | :---: |
 | **Cascade V13 🔥** | **13.82 / 11.31** | **12.86 / 12.15** | **12.85 / 12.16** |
 | **HDF5-INDEP** | 151.98 / 1.03 | 160.14 / 0.98 | 275.47 / 0.57 |
-| **PDC** | PENDING | PENDING | PENDING |
+| **PDC** | 48.79 / 3.20 | 57.02 / 2.74 | 157.78 / 0.99 |
 | **LLM-GPU** | PENDING | PENDING | PENDING |
 | **LMCACHE-DISK** | PENDING | PENDING | PENDING |
 | **LMCACHE-REDIS** | PENDING | PENDING | PENDING |
