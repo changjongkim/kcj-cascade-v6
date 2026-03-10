@@ -764,8 +764,8 @@ This experiment reproduces the historical **~110s/epoch** performance on Cascade
 | Scale | HDF5-Indep (Base) | LLM-GPU | LMCache-Disk | PDC | Cascade V16 (Original) | Cascade V16 (No-Dedup) |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **1-Node** | **227.9s** | **286.3s** | **347.2s** | **383.7s** | **549.7s** | **337.5s** |
-| **2-Node** | **127.9s** | **150.5s** | *FAILED* | *FAILED* | **946.9s** | *RUNNING* |
-| **4-Node** | **71.6s** | *FAILED* | *FAILED* | *FAILED* | *OOM* | *PENDING* |
+| **2-Node** | **127.9s** | **150.5s** | *FAILED* | *FAILED* | **946.9s** | **261.9s** |
+| **4-Node** | **71.6s** | *FAILED* | *FAILED* | *FAILED* | *OOM* | **133.4s** |
 
 > **🔥 DeepCAM Reproduce Insights:**
 > 1. **Read-Through Overhead**: In the 1st epoch, Cascade shows higher overhead at small scale due to synchronous metadata lock-contention and `put()` operations. **Disabling Global Deduplication (No-Dedup) significantly reduces this overhead (337.5s on 1-node).**
