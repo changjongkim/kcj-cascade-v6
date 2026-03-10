@@ -765,7 +765,7 @@ This experiment reproduces the historical **~110s/epoch** performance on Cascade
 | :---: | :---: | :---: | :---: | :---: | :---: |
 | **1-Node** | **227.9s** | **286.3s** | **347.2s** | **383.7s** | **549.7s (Cold)** |
 | **2-Node** | **127.9s** | **150.5s** | *FAILED* | *FAILED* | **946.9s (Cold)** |
-| **4-Node** | **71.6s** | *RUNNING* | *FAILED* | *FAILED* | ***OOM*** |
+| **4-Node** | **71.6s** | *FAILED* | *FAILED* | *FAILED* | ***OOM*** |
 
 > **🔥 DeepCAM Reproduce Insights:**
 > 1. **Read-Through Overhead**: In the Cold-start epoch (1st epoch), Cascade and others show overhead compared to raw HDF5. Cascade's higher overhead (550s-946s) at small scale is due to the synchronous `put_prefix()` operations and intra-node metadata lock-contention during the initial memory population.
