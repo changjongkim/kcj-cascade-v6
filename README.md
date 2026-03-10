@@ -338,7 +338,7 @@ This microbenchmark evaluates the single-block (160MB Llama) latency and through
 | **HDF5-INDEP** | 151.98 / 1.03 | 160.14 / 0.98 | 275.47 / 0.57 |
 | **PDC** | 48.79 / 3.20 | 57.02 / 2.74 | 157.78 / 0.99 |
 | **LLM-GPU** | 130.54 / 1.20 | 130.23 / 1.20 | 131.36 / 1.19 |
-| **LMCACHE-DISK** | PENDING | PENDING | PENDING |
+| **LMCACHE-DISK** | 46.80 / 3.34 | 54.85 / 2.85 | 83.23 / 1.88 |
 | **LMCACHE-REDIS** | PENDING | PENDING | PENDING |
 
 > **🔥 Tiering Efficiency Insights (Scaling to 64 Nodes):**
