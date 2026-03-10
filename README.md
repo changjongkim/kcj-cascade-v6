@@ -763,12 +763,12 @@ This experiment reproduces the historical **~110s/epoch** performance on Cascade
 
 | Scale | HDF5-Indep (Base) | LLM-GPU | LMCache-Disk | PDC | **Cascade V16 🔥 (No-Agg)** |
 | :---: | :---: | :---: | :---: | :---: | :---: |
-| **1-Node** | **227.9s** | **286.3s** | **347.2s** | **383.7s** | **549.7s (Cold)** |
+| **1-Node** | **227.9s** | **286.3s** | **347.2s** | **383.7s** | **549.7s (337.5s Opt)** |
 | **2-Node** | **127.9s** | **150.5s** | *FAILED* | *FAILED* | **946.9s (Cold)** |
 | **4-Node** | **71.6s** | *FAILED* | *FAILED* | *FAILED* | ***OOM*** |
 
 > **🔥 DeepCAM Reproduce Insights:**
-> 1. **Read-Through Overhead**: In the Cold-start epoch (1st epoch), Cascade and others show overhead compared to raw HDF5. Cascade's higher overhead (550s-946s) at small scale is due to the synchronous `put_prefix()` operations and intra-node metadata lock-contention during the initial memory population.
+> 1. **Read-Through Overhead**: In the Cold-start epoch (1st epoch), Cascade and others show overhead compared to raw HDF5. Cascade's higher overhead (550s-946s) at small scale is due to the synchronous `put_prefix()` operations and intra-node metadata lock-contention during the initial memory population. **Disabling Global Deduplication (Opt) reduces 1-node time to 337.5s.**
 > 2. **Scaling Bottleneck at 2-Node**: PDC and LMCache-Disk failed at 2+ nodes with `ValueError: zero-dimensional arrays cannot be concatenated`, likely due to their lack of multi-node consistency or rank-aware data sharding in the generic adapter layer. In contrast, Cascade's **DistributedStore** successfully handles multi-node coordination.
 > 3. **The Scaling Tipping Point**: While raw HDF5/OS-cache is faster at 1-2 nodes, its performance flatlines beyond 8 nodes (as seen in Section 30.1). Cascade's design goal is to provide **Flat Latency** as nodes increase, which becomes the decisive advantage at 16-64 node scales.
 
