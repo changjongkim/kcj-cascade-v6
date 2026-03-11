@@ -772,13 +772,15 @@ This experiment reproduces the historical **~110s/epoch** performance on Cascade
 | **2-Node** | **127.9s** | **150.5s** | **192.1s** | **205.4s** | **946.9s** | **261.9s** | **158.8s** |
 | **4-Node** | **71.6s** | **84.5s** | **113.6s** | **123.7s** | **785.1s** | **133.4s** | **77.5s** |
 | **8-Node** | **43.8s** | **49.1s** | **54.0s** | **59.4s** | **365.8s** | **75.4s** | **44.4s** |
-| **16-Node** | **28.6s** | **FAIL** | **50.7s** | **35.1s** | **213.2s** | **41.5s** | **37.9s** |
+| **16-Node** | **28.6s** | **28.3s** | **50.7s** | **35.1s** | **213.2s** | **41.5s** | **37.9s** |
+| **32-Node** | **TBD** | **TBD** | **TBD** | **TBD** | **TBD** | **66.5s** | **TBD** |
+| **64-Node** | **TBD** | **TBD** | **TBD** | **TBD** | **TBD** | **TBD** | **TBD** |
 
 > **🔥 DeepCAM Reproduce Insights:**
 > 1. **Read-Through Overhead**: In the 1st epoch, Cascade shows higher overhead at small scale due to synchronous metadata lock-contention and `put()` operations. **Disabling Global Deduplication (No-Dedup) reduces this to 337.5s (1-node), and 16-node Optimized performance reaches 41.5s.**
 > 2. **Resolved Integration Bugs**: Initial `ValueError` issues in PDC and LMCache-Disk at 2+ nodes were traced to a bytes-numpy concatenation bug in the adapter layer. After patching, they show scalable performance, with PDC reaching **35.1s** and LMCache-Disk reaching **50.7s** at 16-nodes.
-> 3. **The Scaling Tipping Point**: While raw HDF5/OS-cache is faster at 1-8 nodes, Cascade's design goal is to provide **Flat Latency** as nodes increase. The 16-node results show Cascade Streaming (37.9s) and Optimized (41.5s) are catching up to HDF5's overheads, and we expect Cascade to become the decisive advantage at 32-64 node scales due to its zero-copy RDMA retrieval.
-> 4. **LLM-GPU Failure**: The LLM-GPU configuration failed at 16-nodes due to an unconfigured storage path, highlighting the complexity of maintaining shared-nothing storage at scale without a unified layer like Cascade.
+> 3. **LLM-GPU Recovery**: After fixing the storage path configuration, LLM-GPU successfully completed 16-node training in **28.3s**, aligning closely with the HDF5 baseline (**28.6s**).
+> 4. **Scaling Frontiers (32-64 Nodes)**: We are currently evaluating 32-node and 64-node scales. Initial 32-node Cascade Optimized (No-Dedup) results show **66.5s**, and we are waiting for comparison baselines to complete their runs in the regular queue.
 
 ---
 
