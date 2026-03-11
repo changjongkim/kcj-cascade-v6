@@ -774,13 +774,13 @@ This experiment reproduces the historical **~110s/epoch** performance on Cascade
 | **8-Node** | **43.8s** | **49.1s** | **54.0s** | **59.4s** | **365.8s** | **75.4s** | **44.4s** |
 | **16-Node** | **28.6s** | **28.3s** | **50.7s** | **35.1s** | **213.2s** | **41.5s** | **37.9s** |
 | **32-Node** | **33.1s** | **18.3s** | **21.4s** | **TBD** | **TBD** | **66.5s** | **23.1s** |
-| **64-Node** | **TBD** | **TBD** | **TBD** | **TBD** | **TBD** | **TBD** | **TBD** |
+| **64-Node** | **TBD** | **TBD** | **TBD** | **TBD** | **Timeout** | **52.4s** | **TBD** |
 
 > **🔥 DeepCAM Reproduce Insights:**
 > 1. **Read-Through Overhead**: In the 1st epoch, Cascade shows higher overhead at small scale due to synchronous metadata lock-contention and `put()` operations. **Disabling Global Deduplication (No-Dedup) reduces this to 337.5s (1-node), and 16-node Optimized performance reaches 41.5s.**
 > 2. **Resolved Integration Bugs**: Initial `ValueError` issues in PDC and LMCache-Disk at 2+ nodes were traced to a bytes-numpy concatenation bug in the adapter layer. After patching, they show scalable performance, with PDC reaching **35.1s** and LMCache-Disk reaching **50.7s** at 16-nodes.
 > 3. **LLM-GPU Recovery**: After fixing the storage path configuration, LLM-GPU successfully completed 16-node training in **28.3s**, aligning closely with the HDF5 baseline (**28.6s**).
-> 4. **Scaling Frontiers (32-64 Nodes)**: We are currently evaluating 32-node and 64-node scales. Initial 32-node Cascade Optimized (No-Dedup) results show **66.5s**, and we are waiting for comparison baselines to complete their runs in the regular queue.
+> 4. **Scaling Frontiers (32-64 Nodes)**: 64-node Cascade Optimized (No-Dedup) successfully completes the pipeline in **52.4s**. The Original mode with global deduplication encountered a timeout at this massive scale due to synchronous lock contention. We are waiting for baseline systems to complete their 32-64 node runs in the regular queue.
 
 ---
 
