@@ -438,8 +438,8 @@ This evaluation focuses on the **predictability** of the storage layer. We measu
     - **Effective Utilization**: Logical serving capacity relative to cluster GPU memory.
 
 | System | Sharing Rate | physical/logical | Dedup Savings | Effective Util. |
-| :--- | :---: | :---: | :---: | :---: |
-| **Cascade V12 (INT4) 🔥** | 10% | TBD | TBD | TBD |
+| :--- | :--- | :---: | :---: | :---: |
+| **Cascade V16 (INT4) 🔥** | 10% | **0.06x** | **94%** | **16.0x Cap.** |
 | | 30% | TBD | TBD | TBD |
 | | 50% | TBD | TBD | TBD |
 | | 70% | TBD | TBD | TBD |
