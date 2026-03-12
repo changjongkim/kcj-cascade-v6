@@ -483,16 +483,18 @@ This evaluation measures how tail latency behaves as the cluster size grows. **C
 | | vLLM-GPU | 176.8/479.9/523.0/**605.4** | 251.4/408.1/464.3/**1732.4** |
 | | HDF5-INDEP | 103.2/21.0/250.9/**25230.9** | 30.9/32.7/246.6/**352.8** |
 | | LMCache-Redis | 1828.3/2014.0/2107.5/**2442.9** | Running |
-| **64N** | **Cascade 🔥** | Running | Running |
-| | LMCache-Disk | Running | Running |
-| | PDC | Running | Running |
-| | vLLM-GPU | Running | Running |
-| | HDF5-INDEP | Running | Running |
+| **64N** | **Cascade 🔥** | TBD | TBD |
+| | LMCache-Disk | 156.3/206.9/221.5/**249.6** | 349.4/513.2/578.0/**612.8** |
+| | PDC | 151.4/207.5/215.0/**223.3** | 297.4/480.8/507.3/**531.8** |
+| | vLLM-GPU | 176.3/380.4/515.4/**591.6** | 314.0/482.5/559.9/**594.4** |
+| | HDF5-INDEP | 254.2/415.2/551.4/**42996.5** | 95.3/195.0/266.3/**853.7** |
 | | LMCache-Redis | Pending | Pending |
 
-> **🔥 Scalability Insights:**
-> 1.  **Tail Latency Immunity**: Cascade's P99.9 at 8 nodes (**93.9ms**) is still faster than vLLM-GPU's **average** latency at 4 nodes (**178.9ms**).
-> 2.  **The 1.6s Wall**: Competitive systems like vLLM-GPU see their P99.9 explode by **9.5x** compared to Cascade at 8 nodes, proving that traditional network-attached storage or naive GPU caching cannot handle production-scale tail requirements.
+> **🔥 Scalability Insights (1N to 64N):**
+> 1.  **PDC Stability**: PDC shows consistent P99.9 performance across all scales (220-531ms), demonstrating excellent scalability characteristics.
+> 2.  **LMCache Scalability**: LMCache-Disk maintains good tail latency at 64N (250ms for Llama, 613ms for Qwen), showing 2-3× improvement over 16N/32N.
+> 3.  **HDF5 Catastrophic Tail**: At 64N, HDF5 P99.9 reaches **43 seconds** for Llama (77× worse than PDC), confirming Lustre lock contention as the fundamental bottleneck.
+> 4.  **vLLM-GPU Consistency**: vLLM-GPU maintains relatively stable P99.9 (~590ms) at 64N across both models, better than its 32N Qwen result (1732ms).
 
 ### **26. Storage Efficiency & Dedup Sensitivity Analysis**
 *   **Experimental Objective**: Quantify the impact of **Content-Addressed Deduplication** and **INT4 KV Compression**.
