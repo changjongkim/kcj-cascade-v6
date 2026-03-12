@@ -21,9 +21,9 @@ class RedisAdapter(StorageAdapter):
 
     def __init__(self, config: Dict[str, Any] = None):
         super().__init__("Redis", config)
-        self.host = config.get("host", "localhost")
-        self.port = config.get("port", 6379)
-        self.password = config.get("password", None)
+        self.host = config.get("host", os.environ.get("REDIS_HOST", "localhost"))
+        self.port = int(config.get("port", os.environ.get("REDIS_PORT", 6379)))
+        self.password = config.get("password", os.environ.get("REDIS_PASSWORD", None))
         self.client = None
         
         # Stats
