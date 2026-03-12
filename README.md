@@ -800,23 +800,27 @@ This experiment reproduces the historical **~110s/epoch** performance on Cascade
 *\*vLLM-GPU performance at small block sizes (<16MB) reflects OS page cache hits for synthetic data, but collapses at production block sizes (160MB+) due to memory management overhead.*
 
 #### **B. Normalized Performance Stability (GPU Efficiency)**
-| Metric | System | @1MB (Tokens:3) | @320MB (Tokens:1000) | **Variance** |
+| Metric | System | @1MB (Tokens:3) | @320MB (Tokens:1000) | **Stability / Variance** |
 | :--- | :--- | :---: | :---: | :---: |
-| **Agg. Read BW** | **Cascade** | **7.40 GB/s** | **11.78 GB/s** | **Stable (+59%)** |
-| | LMCache-Disk | 0.55 GB/s | 0.85 GB/s | Stable (+54%) |
-| **Norm. BW / Node**| **Cascade** | **0.93 GB/s** | **1.47 GB/s** | **Stable** |
-| | LMCache-Disk | 0.07 GB/s | 0.11 GB/s | Poor |
+| **Agg. Read BW** | **Cascade (Novelty 4)** | **7.40 GB/s** | **11.78 GB/s** | **High Stability (+59%)** |
+| | LMCache-Disk | 0.55 GB/s | 0.85 GB/s | Low Baseline (+54%) |
+| | **vLLM-GPU** | 9.82 GB/s | 0.74 GB/s | **Total Collapse (-92%)** |
+| | HDF5-Indep | 1.84 GB/s | 0.56 GB/s | Severe Degradation (-70%) |
+| | PDC | 0.41 GB/s | 0.90 GB/s | Persistent Bottleneck |
+| **Norm. BW / Node**| **Cascade** | **0.93 GB/s** | **1.47 GB/s** | **Optimal Scaling** |
+| | LMCache-Disk | 0.07 GB/s | 0.11 GB/s | Under-utilized |
+| | vLLM-GPU | 1.23 GB/s | 0.09 GB/s | Resource Contention |
 
 *   **Insight**: Cascade maintains a near-constant **1.47 GB/s per GPU** effective throughput across all block sizes ≥ 4MB. Unlike filesystem-based caches that suffer from IOPS limits at small block sizes, Cascade's RDMA engine achieves hardware-line saturation regardless of granularity.
 
 #### **C. Metadata RPC Burden (Lustre MDS Load Analysis)**
-| Metric | Baseline (HDF5/PDC) | **Cascade (Novelty 5)** | **Reduction** |
+| Metric | **Classical Baselines** (HDF5/PDC/LMCache) | **Cascade (Novelty 5)** | **Reduction** |
 | :--- | :---: | :---: | :---: |
 | **File Create/Open** | 50,000 ops | **3,125 ops** | **16.0x ↓** |
 | **Directory Lookup** | 50,000 ops | **3,125 ops** | **16.0x ↓** |
 | **Total RPC Load** | 100,000+ ops | **6,250 ops** | **93.7% ↓** |
 
-*   **Insight**: Serving 800GB (50K blocks) typically triggers a "Metadata Wall" in Lustre. Cascade reduces MDS pressure by **93.7%** by aggregating blocks into 256MB chunks, ensuring long-term stable I/O even under massive concurrency.
+*   **Insight**: Traditional systems (HDF5, PDC, LMCache) all adhere to the "1 block = 1 file" POSIX paradigm, which triggers a "Metadata Wall" in Lustre at scale. Cascade reduces MDS pressure by **93.7%** by aggregating blocks into 256MB chunks, ensuring long-term stable I/O even under massive concurrency.
 
 #### **D. System Scalability (8-Node Strong Scaling)**
 | Nodes | Agg. BW (GB/s) | Per-Node BW (GB/s) | **Scaling Efficiency** |
