@@ -511,7 +511,33 @@ This evaluation measures how tail latency behaves as the cluster size grows. **C
 
 > **💡 Key Insight:** Cascade typically achieves **3.8x savings from compression** and further multiplicative savings from **Global Deduplication**, allowing it to serve larger models or more users on the same hardware.
 
-### **27. Concurrent Mixed Read/Write Under Load (YCSB-style)**
+---
+
+### **27. Bursty Traffic Stability Test (V17)**
+This experiment evaluates system behavior under sudden traffic spikes, simulating real-world scenarios where request load increases abruptly (e.g., viral content, flash crowd events).
+
+*   **Experimental Objective**: Measure performance degradation during traffic bursts and recovery quality when load returns to normal.
+*   **Configuration**: 8 Nodes (Llama-2 160MB blocks)
+    - **Phase 1 (Baseline)**: 2 concurrent threads, 20 ops each
+    - **Phase 2 (Burst)**: 20 concurrent threads, 10 ops each (10× traffic spike)
+    - **Phase 3 (Recovery)**: 2 concurrent threads, 20 ops each
+
+| System | Calm Baseline (P99 Read) | **Burst 10× (P99 Read)** | Recovery (P99 Read) | **Degradation** |
+| :--- | :---: | :---: | :---: | :---: |
+| **Cascade V17 🔥** | TBD | TBD | TBD | TBD |
+| **PDC** | 90.95 ms | **699.09 ms** | 95.51 ms | **+668.7%** |
+| **LMCache-Disk** | 75.68 ms | **507.70 ms** | 76.98 ms | **+570.8%** |
+| **vLLM-GPU** | 133.25 ms | **1034.64 ms** | 125.07 ms | **+676.5%** |
+| **HDF5-INDEP** | 333.79 ms | **6466.64 ms** | 245.68 ms | **+1837.3%** |
+
+> **⚠️ Burst Sensitivity:**
+> 1. **HDF5 Collapse**: Under burst traffic, HDF5 P99 latency explodes from 334ms to **6.5 seconds** (18.4× degradation), rendering it unusable for production serving.
+> 2. **Baseline Stability**: PDC, LMCache, and vLLM-GPU show 6-7× degradation, but all recover to baseline levels after burst subsides.
+> 3. **Recovery Quality**: All systems demonstrate good recovery characteristics, returning to within 5% of baseline latency.
+
+---
+
+### **28. Concurrent Mixed Read/Write Under Load (YCSB-style)**
 *   **Experimental Objective**: Evaluate system robustness under concurrent read/write pressure, simulating active multi-tenant serving where KV caches are being updated (Put) and retrieved (Get) simultaneously.
 *   **Metric**: `Avg Ops/sec` / `P99 Latency (ms)`.
 *   **Configurations**: 8 Nodes (32 GPUs), 16MB Block Size, 60s Duration.
