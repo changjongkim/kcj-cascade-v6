@@ -389,10 +389,10 @@ This evaluation focuses on the **predictability** of the storage layer. We measu
 
 | System | Scale | Avg (ms) | P50 (ms) | P95 (ms) | **P99 (ms)** | **P99.9 (ms)** |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Cascade V12 🔥** | 1N | 12.78 | 12.75 | 12.87 | **13.00** | **17.44** |
-| | 2N | 30.54 | 28.49 | 71.08 | **83.77** | **88.64** |
-| | 4N | 27.48 | 30.71 | 41.80 | **48.21** | **50.14** |
-| | 8N | 30.22 | 31.42 | 44.03 | **48.22** | **50.95** |
+| **Cascade V16 🔥** | 1N | 9.54 | 9.48 | 9.59 | **9.86** | **16.50** |
+| | 2N | 31.84 | 28.79 | 68.83 | **71.05** | **81.25** |
+| | 4N | 52.52 | 64.36 | 96.64 | **106.53** | **113.80** |
+| | 8N | 50.13 | 64.27 | 78.59 | **86.52** | **93.92** |
 | | 16N | 35.18 | 32.74 | 71.53 | **76.13** | **87.32** |
 | | 32N | 33.23 | 32.09 | 45.70 | **48.81** | **52.79** |
 | **HDF5-INDEP** | 1N | 103.29 | 90.63 | 143.68 | 146.48 | 156.44 |
@@ -401,22 +401,22 @@ This evaluation focuses on the **predictability** of the storage layer. We measu
 | | 8N | 55.00 | 2.92 | 203.07 | **247.86** | **13,973.19** |
 | | 16N | 107.07 | 6.13 | 203.35 | **253.62** | **44,111.95** |
 | | 32N | 108.73 | 13.11 | 25.14 | **248.07** | **43,953.64** |
-| **LMCACHE-DISK** | 1N | 48.26 | 46.33 | 56.05 | 60.34 | 66.07 |
-| | 2N | 92.12 | 53.64 | 209.54 | 214.55 | 217.55 |
-| | 4N | 118.82 | 152.39 | 210.91 | 218.27 | 227.06 |
-| | 8N | 140.73 | 154.19 | 211.44 | 218.69 | 229.37 |
+| **LMCACHE-DISK** | 1N | 85.28 | 81.54 | 98.91 | 100.53 | 108.15 |
+| | 2N | 76.80 | 46.79 | 206.46 | 214.88 | 708.69 |
+| | 4N | 114.39 | 85.12 | 297.10 | 402.41 | 417.37 |
+| | 8N | 145.66 | 152.75 | 297.93 | 400.46 | 433.11 |
 | | 16N | 153.67 | 154.82 | 210.88 | 218.52 | 230.68 |
 | | 32N | 163.63 | 156.59 | 211.23 | 218.59 | 239.22 |
-| **PDC** | 1N | 47.24 | 45.32 | 55.44 | 58.63 | 59.61 |
-| | 2N | 95.41 | 54.25 | 211.10 | 217.69 | 227.12 |
-| | 4N | 116.77 | 151.78 | 211.04 | 217.58 | 241.15 |
-| | 8N | 138.77 | 153.88 | 211.26 | 218.00 | 228.97 |
+| **PDC** | 1N | 105.26 | 104.24 | 115.91 | **116.85** | **120.30** |
+| | 2N | 74.48 | 46.27 | 207.41 | **212.84** | **220.08** |
+| | 4N | 92.52 | 54.24 | 205.91 | **212.39** | **221.55** |
+| | 8N | 114.05 | 150.87 | 206.02 | **213.60** | **224.53** |
 | | 16N | 157.16 | 155.61 | 211.69 | 219.37 | 282.67 |
 | | 32N | 164.30 | 157.14 | 211.43 | 219.08 | 252.02 |
-| **LLM-GPU** | 1N | 69.52 | 57.85 | 86.21 | 86.99 | 93.00 |
-| | 2N | 101.11 | 86.22 | 232.88 | 239.72 | 244.02 |
-| | 4N | 162.92 | 172.79 | 389.78 | 471.06 | 1,095.30 |
-| | 8N | 190.52 | 176.08 | 371.35 | 466.25 | 994.90 |
+| **LLM-GPU** | 1N | 186.86 | 203.70 | 207.86 | **208.81** | **211.16** |
+| | 2N | 145.69 | 134.07 | 221.88 | **227.88** | **1692.81** |
+| | 4N | 178.89 | 175.95 | 250.09 | **295.97** | **306.83** |
+| | 8N | 252.06 | 222.38 | 474.25 | **537.08** | **770.29** |
 | | 16N | 236.29 | 226.95 | 399.91 | 996.44 | 1,337.46 |
 | | 32N | 239.35 | 235.75 | 369.14 | 603.04 | 1,122.73 |
 | **LMCACHE-REDIS** | 1N | 210.41 | 210.00 | 221.85 | 227.02 | 260.39 |
@@ -428,46 +428,53 @@ This evaluation focuses on the **predictability** of the storage layer. We measu
 
 #### **25.1. High-Resolution Tail Latency Comparison (v16, 8-Node)**
 This section provides a deep dive into the 8-node cluster performance using production-scale block sizes for **Llama-2 (160MB)** and **Qwen-2.5 (320MB)**.
-
-| Workload (8-Node) | System | Avg Latency | P95 | P99 | **P99.9 (Tail)** |
+| Workload (8-Node) | System | Avg | P95 | P99 | **P99.9 (Tail)** |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **Llama (160MB)** | **Cascade 🔥** | **57.2 ms** | **79.5 ms** | **86.1 ms** | **93.7 ms** |
-| | HDF5-Indep | 116.0 ms | 206.7 ms | 213.5 ms | 223.1 ms |
-| | LMCache-Disk | 123.8 ms | 210.7 ms | 238.9 ms | 255.7 ms |
-| | PDC | 266.7 ms | 479.5 ms | 489.9 ms | 505.2 ms |
-| **Qwen (320MB)** | **Cascade 🔥** | **56.5 ms** | **81.5 ms** | **91.6 ms** | **97.8 ms** |
-| | LMCache-Disk | 297.2 ms | 527.8 ms | 592.3 ms | 631.4 ms |
-| | PDC | 266.7 ms | 479.5 ms | 489.9 ms | 505.2 ms |
-| | HDF5-Indep | 55.0 ms | 203.1 ms | 247.9 ms | 13,973.2 ms |
+| **Llama (160MB)** | **Cascade 🔥** | **50.1 ms** | **78.6 ms** | **86.5 ms** | **93.9 ms** |
+|  | HDF5-Indep | 40.6 ms | 203.5 ms | 254.5 ms | 5571.9 ms |
+| | LMCache-Disk | 145.7 ms | 297.9 ms | 400.5 ms | 433.1 ms |
+| | PDC | 114.0 ms | 206.0 ms | 213.6 ms | 224.5 ms |
+| | vLLM-GPU | 252.1 ms | 474.2 ms | 537.1 ms | 770.3 ms |
+|  | REDIS | 381.9 ms | 506.5 ms | 635.1 ms | 759.9 ms |
+| **Qwen (320MB)** | **Cascade 🔥** | **88.4 ms** | **150.7 ms** | **166.8 ms** | **174.3 ms** |
+| | LMCache-Disk | 353.0 ms | 541.8 ms | 591.9 ms | 623.4 ms |
+| | PDC | 229.5 ms | 480.1 ms | 488.9 ms | 586.7 ms |
+|  | HDF5-Indep | 27.1 ms | 202.6 ms | 248.5 ms | 349.9 ms |
+| | vLLM-GPU | 307.0 ms | 556.5 ms | 718.3 ms | 1648.0 ms |
+|  | REDIS | 832.9 ms | 1311.9 ms | 1496.6 ms | 1710.6 ms |
 
 #### **25.2. Node Scalability & Tail Stability (1N to 64N)**
 This evaluation measures how tail latency behaves as the cluster size grows. **Cascade** demonstrates near-flat scaling due to its lock-free RDMA design, while baselines suffer from exponential tail growth.
-
-| Nodes | System | Avg (160MB) | **P99.9 (160MB)** | Avg (320MB) | **P99.9 (320MB)** |
-| :--- | :--- | :---: | :---: | :---: | :---: |
-| **1N** | **Cascade 🔥** | **9.5 ms** | **16.5 ms** | **24.2 ms** | **35.7 ms** |
-| | LMCache-Disk | 48.3 ms | 66.1 ms | 86.2 ms | 156.4 ms |
-| | PDC | 105.3 ms | 120.3 ms | 361.4 ms | 383.6 ms |
-| | vLLM-GPU | 69.5 ms | 93.0 ms | 101.1 ms | 244.0 ms |
-| **2N** | **Cascade 🔥** | **31.8 ms** | **81.3 ms** | **43.4 ms** | **91.1 ms** |
-| | PDC | 95.4 ms | 227.1 ms | 142.5 ms | 426.9 ms |
-| | LMCache-Disk | 92.1 ms | 211.5 ms | 152.4 ms | 415.6 ms |
-| | vLLM-GPU | 101.1 ms | 471.1 ms | 162.9 ms | **994.9 ms** |
-| **4N** | **Cascade 🔥** | **52.5 ms** | **113.8 ms** | **53.7 ms** | **98.4 ms** |
-| | vLLM-GPU | 178.9 ms | 306.8 ms | 407.6 ms | 828.8 ms |
-| | LMCache-Disk | 114.4 ms | 417.4 ms | 160.9 ms | 773.8 ms |
-| | PDC | 92.5 ms | 221.6 ms | 179.2 ms | 425.7 ms |
-| **8N** | **Cascade 🔥** | **50.1 ms** | **93.9 ms** | **88.4 ms** | **174.3 ms** |
-| | PDC | 114.1 ms | 224.5 ms | 229.5 ms | 586.7 ms |
-| | LMCache-Disk | 145.7 ms | 433.1 ms | 353.0 ms | 623.4 ms |
-| | vLLM-GPU | 252.1 ms | 770.3 ms | 307.0 ms | **1,648.0 ms** |
-| **16N** | All Systems | TBD | TBD | TBD | TBD |
-| **32N** | All Systems | TBD | TBD | TBD | TBD |
-| **64N** | All Systems | TBD | TBD | TBD | TBD |
+| Nodes | System | Llama (Avg/95/99/99.9) | Qwen (Avg/95/99/99.9) |
+| :--- | :--- | :---: | :---: |
+| **1N** | **Cascade 🔥** | 9.5/9.6/9.9/**16.5** | 24.1/24.4/24.9/**35.7** |
+| | LMCache-Disk | 85.3/98.9/100.5/**108.2** | 314.9/340.2/343.7/**346.3** |
+| | PDC | 105.3/115.9/116.8/**120.3** | 361.4/378.6/382.5/**383.6** |
+| | vLLM-GPU | 186.9/207.9/208.8/**211.2** | 283.2/595.1/737.8/**740.6** |
+| | HDF5-INDEP | 112.0/140.5/144.2/**147.4** | 98.8/130.4/131.6/**132.4** |
+|  | REDIS | 832.9 ms | 1311.9 ms | 1496.6 ms | 1710.6 ms |
+| **2N** | **Cascade 🔥** | 31.8/68.8/71.0/**81.2** | 43.4/64.9/72.4/**91.1** |
+| | LMCache-Disk | 76.8/206.5/214.9/**708.7** | 144.2/401.4/411.4/**427.3** |
+| | PDC | 74.5/207.4/212.8/**220.1** | 142.5/400.1/417.5/**426.9** |
+| | vLLM-GPU | 145.7/221.9/227.9/**1692.8** | 283.1/434.9/461.8/**1195.5** |
+| | HDF5-INDEP | 72.0/231.4/257.0/**1460.9** | 65.5/230.8/249.2/**295.2** |
+|  | REDIS | 832.9 ms | 1311.9 ms | 1496.6 ms | 1710.6 ms |
+| **4N** | **Cascade 🔥** | 52.5/96.6/106.5/**113.8** | 53.7/80.2/93.0/**98.4** |
+| | LMCache-Disk | 114.4/297.1/402.4/**417.4** | 160.9/397.7/410.0/**773.8** |
+| | PDC | 92.5/205.9/212.4/**221.6** | 179.2/400.5/412.4/**425.7** |
+| | vLLM-GPU | 178.9/250.1/296.0/**306.8** | 407.6/544.2/619.3/**828.8** |
+| | HDF5-INDEP | 56.9/229.6/253.1/**3126.2** | 46.9/203.9/250.4/**2437.3** |
+|  | REDIS | 832.9 ms | 1311.9 ms | 1496.6 ms | 1710.6 ms |
+| **8N** | **Cascade 🔥** | 50.1/78.6/86.5/**93.9** | 88.4/150.7/166.8/**174.3** |
+| | LMCache-Disk | 145.7/297.9/400.5/**433.1** | 353.0/541.8/591.9/**623.4** |
+| | PDC | 114.0/206.0/213.6/**224.5** | 229.5/480.1/488.9/**586.7** |
+| | vLLM-GPU | 252.1/474.2/537.1/**770.3** | 307.0/556.5/718.3/**1648.0** |
+| | HDF5-INDEP | 40.6/203.5/254.5/**5571.9** | 27.1/202.6/248.5/**349.9** |
+|  | REDIS | 832.9 ms | 1311.9 ms | 1496.6 ms | 1710.6 ms |
 
 > **🔥 Scalability Insights:**
-> 1.  **Tail Latency Immunity**: Cascade's P99.9 at 8 nodes (**97.8ms**) is still faster than vLLM-GPU's **average** latency at 4 nodes (**407.6ms**).
-> 2.  **The 1.6s Wall**: Competitive systems like vLLM-GPU see their P99.9 explode by **9.4x** compared to Cascade at 8 nodes, proving that traditional network-attached storage or naive GPU caching cannot handle production-scale tail requirements.
+> 1.  **Tail Latency Immunity**: Cascade's P99.9 at 8 nodes (**93.9ms**) is still faster than vLLM-GPU's **average** latency at 4 nodes (**178.9ms**).
+> 2.  **The 1.6s Wall**: Competitive systems like vLLM-GPU see their P99.9 explode by **9.5x** compared to Cascade at 8 nodes, proving that traditional network-attached storage or naive GPU caching cannot handle production-scale tail requirements.
 
 ### **26. Storage Efficiency & Dedup Sensitivity Analysis**
 *   **Experimental Objective**: Quantify the impact of **Content-Addressed Deduplication** and **INT4 KV Compression**.
