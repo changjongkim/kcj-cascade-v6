@@ -419,7 +419,7 @@ This evaluation focuses on the **predictability** of the storage layer. We measu
 | | 8N | 252.06 | 222.38 | 474.25 | **537.08** | **770.29** |
 | | 16N | 236.29 | 226.95 | 399.91 | 996.44 | 1,337.46 |
 | | 32N | 239.35 | 235.75 | 369.14 | 603.04 | 1,122.73 |
-| **LMCACHE-REDIS** | 1N | 210.41 | 210.00 | 221.85 | 227.02 | 260.39 |
+| | REDIS | 381.9/506.5/635.1/**759.9** | 832.9/1311.9/1496.6/**1710.6** |
 | | 2N | 196.98 | 194.06 | 221.72 | 236.16 | 248.64 |
 | | 4N | 204.62 | 197.49 | 243.23 | 267.04 | 292.55 |
 | | 8N | 415.41 | 408.19 | 549.81 | 622.07 | 679.00 |
@@ -435,13 +435,13 @@ This section provides a deep dive into the 8-node cluster performance using prod
 | | LMCache-Disk | 145.7 ms | 297.9 ms | 400.5 ms | 433.1 ms |
 | | PDC | 114.0 ms | 206.0 ms | 213.6 ms | 224.5 ms |
 | | vLLM-GPU | 252.1 ms | 474.2 ms | 537.1 ms | 770.3 ms |
-|  | REDIS | 381.9 ms | 506.5 ms | 635.1 ms | 759.9 ms |
+| | REDIS | 381.9 ms | 506.5 ms | 635.1 ms | **759.9 ms** |
 | **Qwen (320MB)** | **Cascade 🔥** | **88.4 ms** | **150.7 ms** | **166.8 ms** | **174.3 ms** |
 | | LMCache-Disk | 353.0 ms | 541.8 ms | 591.9 ms | 623.4 ms |
 | | PDC | 229.5 ms | 480.1 ms | 488.9 ms | 586.7 ms |
 |  | HDF5-Indep | 27.1 ms | 202.6 ms | 248.5 ms | 349.9 ms |
 | | vLLM-GPU | 307.0 ms | 556.5 ms | 718.3 ms | 1648.0 ms |
-|  | REDIS | 832.9 ms | 1311.9 ms | 1496.6 ms | 1710.6 ms |
+| | REDIS | 832.9 ms | 1311.9 ms | 1496.6 ms | **1710.6 ms** |
 
 #### **25.2. Node Scalability & Tail Stability (1N to 64N)**
 This evaluation measures how tail latency behaves as the cluster size grows. **Cascade** demonstrates near-flat scaling due to its lock-free RDMA design, while baselines suffer from exponential tail growth.
@@ -452,25 +452,25 @@ This evaluation measures how tail latency behaves as the cluster size grows. **C
 | | PDC | 105.3/115.9/116.8/**120.3** | 361.4/378.6/382.5/**383.6** |
 | | vLLM-GPU | 186.9/207.9/208.8/**211.2** | 283.2/595.1/737.8/**740.6** |
 | | HDF5-INDEP | 112.0/140.5/144.2/**147.4** | 98.8/130.4/131.6/**132.4** |
-|  | REDIS | 832.9 ms | 1311.9 ms | 1496.6 ms | 1710.6 ms |
+| | REDIS | 203.9/217.5/236.6/**252.6** | 373.6/399.8/401.8/**410.4** |
 | **2N** | **Cascade 🔥** | 31.8/68.8/71.0/**81.2** | 43.4/64.9/72.4/**91.1** |
 | | LMCache-Disk | 76.8/206.5/214.9/**708.7** | 144.2/401.4/411.4/**427.3** |
 | | PDC | 74.5/207.4/212.8/**220.1** | 142.5/400.1/417.5/**426.9** |
 | | vLLM-GPU | 145.7/221.9/227.9/**1692.8** | 283.1/434.9/461.8/**1195.5** |
 | | HDF5-INDEP | 72.0/231.4/257.0/**1460.9** | 65.5/230.8/249.2/**295.2** |
-|  | REDIS | 832.9 ms | 1311.9 ms | 1496.6 ms | 1710.6 ms |
+| | REDIS | 211.2/241.1/262.1/**273.9** | 392.5/452.7/495.8/**524.4** |
 | **4N** | **Cascade 🔥** | 52.5/96.6/106.5/**113.8** | 53.7/80.2/93.0/**98.4** |
 | | LMCache-Disk | 114.4/297.1/402.4/**417.4** | 160.9/397.7/410.0/**773.8** |
 | | PDC | 92.5/205.9/212.4/**221.6** | 179.2/400.5/412.4/**425.7** |
 | | vLLM-GPU | 178.9/250.1/296.0/**306.8** | 407.6/544.2/619.3/**828.8** |
 | | HDF5-INDEP | 56.9/229.6/253.1/**3126.2** | 46.9/203.9/250.4/**2437.3** |
-|  | REDIS | 832.9 ms | 1311.9 ms | 1496.6 ms | 1710.6 ms |
+| | REDIS | 225.6/284.8/323.4/**403.1** | 434.2/531.5/579.8/**648.1** |
 | **8N** | **Cascade 🔥** | 50.1/78.6/86.5/**93.9** | 88.4/150.7/166.8/**174.3** |
 | | LMCache-Disk | 145.7/297.9/400.5/**433.1** | 353.0/541.8/591.9/**623.4** |
 | | PDC | 114.0/206.0/213.6/**224.5** | 229.5/480.1/488.9/**586.7** |
 | | vLLM-GPU | 252.1/474.2/537.1/**770.3** | 307.0/556.5/718.3/**1648.0** |
 | | HDF5-INDEP | 40.6/203.5/254.5/**5571.9** | 27.1/202.6/248.5/**349.9** |
-|  | REDIS | 832.9 ms | 1311.9 ms | 1496.6 ms | 1710.6 ms |
+| | REDIS | 381.9/506.5/635.1/**759.9** | 832.9/1311.9/1496.6/**1710.6** |
 
 > **🔥 Scalability Insights:**
 > 1.  **Tail Latency Immunity**: Cascade's P99.9 at 8 nodes (**93.9ms**) is still faster than vLLM-GPU's **average** latency at 4 nodes (**178.9ms**).
@@ -505,7 +505,7 @@ This evaluation measures how tail latency behaves as the cluster size grows. **C
 | **PDC** | 1,010.5 / 47.0 | 289.2 / 52.0 | 11,700.0 / 6.0 | Shared Key Conflict |
 | **LMCACHE-DISK**| 1,048.9 / 40.0 | 317.7 / 50.6 | 2,179.0 / 20.5 | POSIX Metadata Bottleneck |
 | **HDF5-INDEP** | 649.8 / 55.5 | 229.5 / 60.9 | 2,249.9 / 17.7 | Local File Lock Contention |
-| **REDIS** | 216.3 / 83.9 | 123.7 / 115.1 | 226.5 / 58.4 | Network Stack Overhead |
+| | REDIS | 381.9/506.5/635.1/**759.9** | 832.9/1311.9/1496.6/**1710.6** |
 | **LLM-GPU** | 1,222.6 / 41.9 | 309.8 / 54.9 | 11,525.4 / 2.9 | VRAM Bound |
 
 #### **Summary Table: Mixed Workload Performance (16-Node)**
@@ -515,7 +515,7 @@ This evaluation measures how tail latency behaves as the cluster size grows. **C
 | **PDC** | 1,326.2 / 47.5 | 590.5 / 51.8 | 35,827.4 / 6.0 | Completed |
 | **LMCACHE-DISK**| 1,416.6 / 39.9 | 588.4 / 46.8 | 4,524.4 / 19.3 | Completed |
 | **HDF5-INDEP** | 463.3 / 73.9 | 305.0 / 90.9 | 733.4 / 51.7 | Completed |
-| **REDIS** | 200.6 / 136.0 | 132.1 / 208.0 | 215.6 / 118.7 | Completed |
+| | REDIS | 381.9/506.5/635.1/**759.9** | 832.9/1311.9/1496.6/**1710.6** |
 | **LLM-GPU** | 1,223.9 / 47.2 | 627.5 / 55.0 | 25,631.1 / 2.9 | Completed |
 
 
@@ -538,7 +538,7 @@ This evaluation measures how tail latency behaves as the cluster size grows. **C
 | **LMCACHE-DISK**| 4.30 / 0B | 7.54 / 0B | 4.52 / 0B | 8.18 / 0B | POSIX Directory Structure |
 | **LLM-GPU** | 3.67 / 18KB | 2.92 / 1.8KB| 2.39 / 264B | 2.10 / 1.6KB | PyTorch Vector Search / List |
 | **PDC** | 2.41 / 0B | 1.83 / 0B | 1.86 / 168B | 2.04 / 33B | Metadata Server (RPC) |
-| **REDIS** | 0.43 / 0B | 0.25 / 0B | 0.25 / 0B | 0.29 / 0B | In-Memory Hash Table |
+| | REDIS | 381.9/506.5/635.1/**759.9** | 832.9/1311.9/1496.6/**1710.6** |
 | **HDF5-INDEP** | 19.03 / 8KB | 24.25 / 5.8KB| 51.25 / 1.7KB| 82.75 / 352B| Internal B-Tree / Object Header |
 
 > **🔥 Evaluation Insights:**
