@@ -471,6 +471,24 @@ This evaluation measures how tail latency behaves as the cluster size grows. **C
 | | vLLM-GPU | 252.1/474.2/537.1/**770.3** | 307.0/556.5/718.3/**1648.0** |
 | | HDF5-INDEP | 40.6/203.5/254.5/**5571.9** | 27.1/202.6/248.5/**349.9** |
 | | LMCache-Redis | 381.9/506.5/635.1/**759.9** | 832.9/1311.9/1496.6/**1710.6** |
+| **16N** | **Cascade 🔥** | TBD | TBD |
+| | LMCache-Disk | 138.0/205.8/215.0/**239.3** | 259.8/413.0/456.8/**501.9** |
+| | PDC | 131.2/205.4/213.2/**223.2** | 272.2/404.4/427.9/**476.6** |
+| | vLLM-GPU | 149.7/309.3/406.1/**469.2** | 153.6/302.9/401.2/**428.7** |
+| | HDF5-INDEP | 63.6/200.0/252.9/**13346.9** | 19.4/154.1/246.1/**260.7** |
+| | LMCache-Redis | 802.3/944.7/1068.8/**1503.3** | 1770.2/2050.7/2219.0/**5247.7** |
+| **32N** | **Cascade 🔥** | TBD | TBD |
+| | LMCache-Disk | 184.1/420.5/508.2/**524.6** | 218.3/400.1/431.2/**475.4** |
+| | PDC | 144.4/206.7/213.3/**220.5** | 225.7/398.4/421.3/**471.6** |
+| | vLLM-GPU | 176.8/479.9/523.0/**605.4** | 251.4/408.1/464.3/**1732.4** |
+| | HDF5-INDEP | 103.2/21.0/250.9/**25230.9** | 30.9/32.7/246.6/**352.8** |
+| | LMCache-Redis | 1828.3/2014.0/2107.5/**2442.9** | Running |
+| **64N** | **Cascade 🔥** | Running | Running |
+| | LMCache-Disk | Running | Running |
+| | PDC | Running | Running |
+| | vLLM-GPU | Running | Running |
+| | HDF5-INDEP | Running | Running |
+| | LMCache-Redis | Pending | Pending |
 
 > **🔥 Scalability Insights:**
 > 1.  **Tail Latency Immunity**: Cascade's P99.9 at 8 nodes (**93.9ms**) is still faster than vLLM-GPU's **average** latency at 4 nodes (**178.9ms**).
