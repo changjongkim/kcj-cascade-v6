@@ -446,14 +446,21 @@ This evaluation measures how tail latency behaves as the cluster size grows. **C
 | Nodes | System | Avg (160MB) | **P99.9 (160MB)** | Avg (320MB) | **P99.9 (320MB)** |
 | :--- | :--- | :---: | :---: | :---: | :---: |
 | **1N** | **Cascade 🔥** | **9.5 ms** | **16.5 ms** | **24.2 ms** | **35.7 ms** |
-| | PDC | 47.2 ms | 59.6 ms | 95.4 ms | 156.4 ms |
+| | LMCache-Disk | 48.3 ms | 66.1 ms | 86.2 ms | 156.4 ms |
+| | PDC | 105.3 ms | 120.3 ms | 361.4 ms | 383.6 ms |
+| | vLLM-GPU | 69.5 ms | 93.0 ms | 101.1 ms | 244.0 ms |
 | **2N** | **Cascade 🔥** | **31.8 ms** | **81.3 ms** | **43.4 ms** | **91.1 ms** |
 | | PDC | 95.4 ms | 227.1 ms | 142.5 ms | 426.9 ms |
+| | LMCache-Disk | 92.1 ms | 211.5 ms | 152.4 ms | 415.6 ms |
+| | vLLM-GPU | 101.1 ms | 471.1 ms | 162.9 ms | **994.9 ms** |
 | **4N** | **Cascade 🔥** | **52.5 ms** | **113.8 ms** | **53.7 ms** | **98.4 ms** |
 | | vLLM-GPU | 178.9 ms | 306.8 ms | 407.6 ms | 828.8 ms |
-| **8N** | **Cascade 🔥** | **57.2 ms** | **93.7 ms** | **56.5 ms** | **97.8 ms** |
-| | vLLM-GPU | 252.1 ms | 770.3 ms | 307.0 ms | **1,648.0 ms** |
+| | LMCache-Disk | 114.4 ms | 417.4 ms | 160.9 ms | 773.8 ms |
+| | PDC | 92.5 ms | 221.6 ms | 179.2 ms | 425.7 ms |
+| **8N** | **Cascade 🔥** | **50.1 ms** | **93.9 ms** | **88.4 ms** | **174.3 ms** |
+| | PDC | 114.1 ms | 224.5 ms | 229.5 ms | 586.7 ms |
 | | LMCache-Disk | 145.7 ms | 433.1 ms | 353.0 ms | 623.4 ms |
+| | vLLM-GPU | 252.1 ms | 770.3 ms | 307.0 ms | **1,648.0 ms** |
 | **16N** | All Systems | TBD | TBD | TBD | TBD |
 | **32N** | All Systems | TBD | TBD | TBD | TBD |
 | **64N** | All Systems | TBD | TBD | TBD | TBD |
