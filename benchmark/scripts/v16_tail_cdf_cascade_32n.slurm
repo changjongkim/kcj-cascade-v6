@@ -1,0 +1,45 @@
+#!/bin/bash
+#SBATCH -A m5320_g
+#SBATCH -C gpu
+#SBATCH -J v16_tail_cas_32n
+#SBATCH -o benchmark/logs/v16_tail_cdf_cascade_32n_%j.out
+#SBATCH -q regular
+#SBATCH -t 01:00:00
+#SBATCH -N 32
+#SBATCH --ntasks-per-node=1
+#SBATCH --gpus-per-node=4
+
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
+source setup_env.sh
+
+# Standard RDMA environment is now handled by setup_env.sh
+# export FI_CXI_RX_MATCH_MODE=software
+# export MPICH_OFI_STARTUP_CONNECT=1
+# export FI_CXI_DEFAULT_CQ_SIZE=524288
+# export FI_CXI_OFLOW_BUF_SIZE=16777216
+# export FI_CXI_CQ_FILL_PERCENT=20
+# export FI_CXI_RETRY_COUNT=100
+# export FI_CXI_RETRY_WAIT=200
+# export FI_CXI_RDZV_PROTO=alt_read
+# export FI_CXI_OFLOW_BUF_COUNT=7
+# export FI_CXI_REQ_BUF_SIZE=33554432
+# export FI_MR_CACHE_MONITOR=disabled
+# export MPICH_OFI_NUM_NICS=1
+
+SYSTEM="cascade"
+BLOCK_SIZES="160 320"
+N=32
+
+echo "=== Tail Latency CDF - Cascade Only (32 Nodes) ==="
+
+for bs in $BLOCK_SIZES; do
+    model_name="Llama"
+    if [ "$bs" -eq "320" ]; then model_name="Qwen"; fi
+    echo "▶ Testing $SYSTEM with $model_name ($bs MB blocks)"
+    srun  -N $N -n $N --ntasks-per-node=1 \
+        python3 benchmark/scripts/v12_tail_latency_bench.py \
+        --system $SYSTEM --block-size-mb $bs --num-write-blocks 30 --num-read-ops 300
+    sleep 5
+done
+
+echo "✅ Cascade 32N experiment completed"
