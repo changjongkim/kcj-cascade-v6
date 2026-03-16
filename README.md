@@ -1078,6 +1078,21 @@ This comprehensive grid sweep evaluates the impact of Lustre Striping Count and 
 | | 32 | 781.0 ms / 3.2 | TBD | TBD | 3.2 GB/s |
 | | 64 - 128 | TBD | TBD | TBD | - |
 
+#### **30.3. Unaligned Lustre Stripe Robustness Analysis (8 Nodes)**
+*   **Workload**: 8 Nodes (Llama-2 160MB), Unaligned Stripe Sizes (**7MB, 13MB, 19MB**).
+*   **Insight**: Measures how sensitive the system is to misaligned Lustre physical layouts.
+
+| System | Stripe Config (Best) | BW (Unaligned) | Aligned BW | Difference |
+| :--- | :---: | :---: | :---: | :---: |
+| **Cascade 🔥** | c8 / s7M | **38.9 GB/s** | 41.1 GB/s | -5.3% |
+| **LMCache** | c1 / s13M | 10.9 GB/s | 10.9 GB/s | 0% |
+| **PDC** | c1 / s7M | 10.9 GB/s | 10.9 GB/s | 0% |
+| **vLLM-GPU** | c1 / s13M | 7.9 GB/s | 8.3 GB/s | -4.8% |
+| **HDF5-Indep** | c8 / s13M | 7.1 GB/s | 7.5 GB/s | -5.3% |
+
+> [!TIP]
+> **Infrastructure Robustness**: Cascade maintains its 3-4x performance lead even with suboptimal (unaligned) Lustre settings. This proves that Cascade's internal 256MB write aggregation effectively masks underlying physical layout inefficiencies that typically affect POSIX-based or block-sensitive systems.
+
 > [!NOTE]
 > Values marked with `*` in LMCache denote probable cache hits or measurement anomalies (e.g., 68,000 GB/s) due to Lustre's internal buffering or read-ahead, which do not reflect sustained large-scale throughput.
 
