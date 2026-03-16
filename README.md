@@ -1072,10 +1072,11 @@ This comprehensive grid sweep evaluates the impact of Lustre Striping Count and 
 | | 8 | 431.0 ms / 5.8 | 479.7 ms / 5.2 | 472.6 ms / 5.4 | 5.8 GB/s |
 | | 32 | 450.8 ms / 5.6 | 490.7 ms / 5.1 | 480.5 ms / 5.2 | 5.6 GB/s |
 | | 64 | 399.4 ms / 6.9 | 456.6 ms / 5.5 | 459.5 ms / 5.5 | 6.9 GB/s |
-| | 128 | 455.6 ms / 5.5 | 456.6 ms / 5.5 | TBD | 5.5 GB/s |
+| | 128 | 455.6 ms / 5.5 | 456.6 ms / 5.5 | 461.1 ms / 5.4 | 5.5 GB/s |
 | **Redis** | 1 | 797.8 ms / 3.2 | 795.1 ms / 3.2 | 805.0 ms / 3.2 | 3.2 GB/s |
-| | 8 | 821.8 ms / 3.2 | 878.0 ms / 2.9 | TBD | 3.2 GB/s |
-| | 32 - 128 | TBD | TBD | TBD | - |
+| | 8 | 821.8 ms / 3.2 | 878.0 ms / 2.9 | 836.7 ms / 3.1 | 3.2 GB/s |
+| | 32 | 781.0 ms / 3.2 | TBD | TBD | 3.2 GB/s |
+| | 64 - 128 | TBD | TBD | TBD | - |
 
 > [!NOTE]
 > Values marked with `*` in LMCache denote probable cache hits or measurement anomalies (e.g., 68,000 GB/s) due to Lustre's internal buffering or read-ahead, which do not reflect sustained large-scale throughput.
