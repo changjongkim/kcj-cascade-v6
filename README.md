@@ -998,6 +998,33 @@ found, size = store.get("sys_prompt_v1", buf)
 ```
 
 
+### **30. Lustre Striping Sensitivity Analysis (8 Nodes, Llama-2)**
+This experiment evaluates how file system-level parallelism (Lustre Striping) affects the tail latency of different KV cache storage systems.
+
+*   **Experimental Objective**: Determine which software architecture best exploits parallel file system (PFS) resources.
+*   **Configuration**: 8 Nodes (Llama-2 160MB blocks), 30 Writes/rank, 300 Reads/rank.
+*   **Stripe Variations**:
+    - **c1_s1**: 1 Stripe, 1MB (Baseline)
+    - **c8_s1**: 8 Stripes, 1MB (Standard Parallel)
+    - **c8_s8**: 8 Stripes, 8MB (Aligned Parallel)
+    - **c16_s1**: 16 Stripes, 1MB (High Concurrency)
+    - **c16_s16**: 16 Stripes, 16MB (Optimized Alignment)
+
+#### **📊 Results: P99 Tail Latency (ms) vs. Lustre Config**
+| System | c1_s1 | c8_s1 | c8_s8 | c16_s1 | c16_s16 |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Cascade 🔥** | **84.9** | **48.0** | **83.9** | **85.1** | **83.9** |
+| **PDC** | 212.4 | 229.0 | 242.2 | 241.0 | 239.7 |
+| **LMCache-Disk** | 214.6 | 230.2 | 241.9 | 283.0 | 238.8 |
+| **vLLM-GPU** | 230.6 | 245.8 | 259.4 | 298.3 | 258.1 |
+| **HDF5-INDEP** | 1063.0 | 475.5 | 303.7 | 304.6 | 310.6 |
+
+> **💡 Evaluation Insights:**
+> 1. **Cascade Efficiency**: Cascade achieves the best performance at **c8_s1 (48.0ms)**, successfully utilizing 8 OSTs without incurring significant metadata overhead.
+> 2. **Metadata Bottleneck**: PDC and LMCache-Disk show performance degradation as stripe count increases (212ms $\rightarrow$ 241ms), indicating that their per-file metadata operations are not scaling with Lustre parallelism.
+> 3. **HDF5 Recovery**: HDF5 shows massive improvement from c1 (1s+) to c8/c16 (300ms), but still fails to reach the performance levels of memory-aware systems due to its heavy internal object headers.
+> 4. **Optimal Alignment**: For 160MB blocks, the simple 8x1M configuration provided the best balance for Cascade, while more complex multi-stripe configurations (c16) introduced diminishing returns.
+
 ---
 
 ## 📂 Repository Structure
