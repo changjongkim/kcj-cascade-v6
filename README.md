@@ -477,7 +477,7 @@ This evaluation measures how tail latency behaves as the cluster size grows. **C
 | | vLLM-GPU | 149.7/309.3/406.1/**469.2** | 153.6/302.9/401.2/**428.7** |
 | | HDF5-INDEP | 63.6/200.0/252.9/**13346.9** | 19.4/154.1/246.1/**260.7** |
 | | LMCache-Redis | 802.3/944.7/1068.8/**1503.3** | 1770.2/2050.7/2219.0/**5247.7** |
-| **32N** | **Cascade 🔥** | 50.9/77.4/85.2/**94.4** | Running |
+| **32N** | **Cascade 🔥** | 50.9/77.4/85.2/**94.4** | 92.9/152.6/169.6/**193.8** |
 | | LMCache-Disk | 184.1/420.5/508.2/**524.6** | 218.3/400.1/431.2/**475.4** |
 | | PDC | 144.4/206.7/213.3/**220.5** | 225.7/398.4/421.3/**471.6** |
 | | vLLM-GPU | 176.8/479.9/523.0/**605.4** | 251.4/408.1/464.3/**1732.4** |
@@ -998,16 +998,14 @@ found, size = store.get("sys_prompt_v1", buf)
 ```
 
 
-### **30. Extreme Lustre Grid Striping Sweep (8 Nodes, Llama-2)**
+### **30. Extreme Lustre Grid Striping Sweep (8 Nodes)**
 This comprehensive grid sweep evaluates the impact of Lustre Striping Count and Size across a wide spectrum (1 to 128 counts, 1MB to 32MB sizes) to identify the physical performance boundaries of KV cache storage systems.
 
-*   **Experimental Objective**: Analyze the sensitivity of each system to Lustre metadata overhead and parallel I/O alignment.
-*   **Grid Dimensions**:
-    - **Counts**: 1, 8, 32, 64, 128
-    - **Sizes**: 1MB, 8MB, 32MB
-*   **Workload**: 8 Nodes (Llama-2 160MB blocks), 30 Writes/rank, 300 Reads/rank.
+---
 
-#### **📊 Results: P99 Tail Latency Matrix (ms)**
+#### **30.1. Llama-2 (160MB Blocks) Performance Matrix**
+*   **Workload**: 8 Nodes (Llama-2 160MB blocks), 30 Writes/rank, 300 Reads/rank.
+*   **Metric**: P99 Tail Latency (ms)
 
 | System | Stripe Count | Size: 1MB | Size: 8MB | Size: 32MB | Best Config |
 | :--- | :---: | :---: | :---: | :---: | :--- |
@@ -1018,23 +1016,55 @@ This comprehensive grid sweep evaluates the impact of Lustre Striping Count and 
 | | 128 | 75.5 | 91.5 | 96.5 | |
 | **PDC** | 1 | 214.0 | 213.6 | 216.8 | |
 | | 8 | 231.4 | 242.3 | 226.3 | |
-| | 32 | 266.6 | 266.8 | 225.9 | |
-| | 64 | 316.3 | 272.3 | 230.4 | |
 | | 128 | 433.6 | 269.4 | 229.7 | 213.6ms (c1_s8M) |
 | **vLLM-GPU** | 1 | 233.1 | 231.1 | 232.5 | |
 | | 8 | 249.9 | 261.8 | 243.1 | |
-| | 32 | 331.5 | 285.4 | 256.8 | |
-| | 64 | 530.0 | 520.8 | 244.6 | |
 | | 128 | 624.6 | 290.2 | 252.0 | 231.1ms (c1_s8M) |
 
-> **💡 Extreme Scaling Insights:**
-> 1. **The 32-Stripe Sweet Spot**: Cascade reaches its peak performance at **c32 (48.0ms)**, successfully aggregate-loading 160MB blocks across 32 Lustre OSTs. This highlights Cascade's superior I/O orchestration compared to other systems.
-> 2. **Metadata Degradation Wall**: PDC and vLLM-GPU exhibit a clear "performance wall" as stripe counts increase. At 128 stripes, P99 latency nearly doubles (or worse) for small stripe sizes (1MB), as the overhead of coordinating with 128 OSTs for every file access overwhelms their software layers.
-> 3. **Size-Alignment Paradox**: For systems like PDC/vLLM, increasing the **Stripe Size (32MB)** helps mitigate the 128-count penalty by reducing the number of OSTs actually touched for a single 160MB block. However, they still remain ~5x slower than Cascade.
-> 4. **Scalability Contrast**: While Cascade maintains sub-100ms P99 across almost the entire grid, other systems are extremely sensitive to Lustre parameters, making them fragile in dynamic HPC environments.
+---
+
+#### **30.2. Qwen-2.5 (320MB Blocks) Performance Matrix**
+*   **Workload**: 8 Nodes (Qwen-2.5 72B, 320MB blocks), 30 Writes/rank, 300 Reads/rank.
+*   **Metric**: Avg TTFT (ms) / Aggregated BW (GB/s)
+
+| System | Stripe Count | Size: 1MB | Size: 8MB | Size: 32MB | Agg. BW (Max) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Cascade 🔥** | 1 | 94.8 ms / 30.5 | 77.0 ms / 36.5 | 68.8 ms / 37.9 | 37.9 GB/s |
+| | 8 | 67.0 ms / 39.8 | 75.5 ms / 36.6 | **59.5 ms / 42.0** | 42.0 GB/s |
+| | 32 | 75.0 ms / 36.5 | 75.6 ms / 36.5 | **59.3 ms / 42.1** | **42.1 GB/s** |
+| | 64 | 67.8 ms / 39.2 | 75.3 ms / 36.8 | 74.2 ms / 37.0 | 39.2 GB/s |
+| | 128 | Timeout | Timeout | Timeout | - |
+| **LMCache** | 1 | 226.7 ms / 11.0| 223.6 ms / 11.2| 1.5 ms* / 68K* | 11.2 GB/s |
+| | 8 | 83.5 ms* / 49K* | 190.4 ms / 13.4| 208.3 ms / 12.2| 13.4 GB/s |
+| | 32 | 241.6 ms / 10.4| 235.8 ms / 10.6| 211.9 ms / 11.9| 11.9 GB/s |
+| | 64 | 248.6 ms / 10.1| 249.4 ms / 10.1| 233.9 ms / 10.7| 10.7 GB/s |
+| | 128 | 271.3 ms / 9.4 | 256.8 ms / 9.8 | TBD | 9.8 GB/s |
+| **PDC** | 1 | 248.2 ms / 10.2| 243.6 ms / 10.3| 241.2 ms / 10.4| 10.4 GB/s |
+| | 8 | 234.9 ms / 10.7| 232.6 ms / 10.8| 229.7 ms / 10.9| 10.9 GB/s |
+| | 32 | 239.2 ms / 10.5| 243.2 ms / 10.3| 242.8 ms / 10.3| 10.5 GB/s |
+| | 64 | 240.4 ms / 10.4| 241.8 ms / 10.4| 229.5 ms / 10.9| 10.9 GB/s |
+| | 128 | 236.5 ms / 10.6| TBD | TBD | 10.6 GB/s |
+| **HDF5-Indep** | 1 | 250.8 ms / 10.0| 251.9 ms / 9.9 | 241.2 ms / 10.4| 10.4 GB/s |
+| | 8 | 205.1 ms / 12.4| 192.3 ms / 13.0| 193.9 ms / 12.9| 13.0 GB/s |
+| | 32 | 198.0 ms / 12.7| 194.2 ms / 12.9| 192.4 ms / 13.0| 13.0 GB/s |
+| | 64 | 194.7 ms / 12.9| 203.0 ms / 12.3| TBD | 12.9 GB/s |
+| **vLLM-GPU** | 1 - 128 | TBD | TBD | TBD | - |
 
 > [!NOTE]
-> LMCache-Disk and HDF5-Independent were excluded from the full matrix due to extreme latency (HDF5 > 300ms, LMCache-Disk > 20s) in initial trials. Redis grid analysis is currently in progress. 
+> Values marked with `*` in LMCache denote probable cache hits or measurement anomalies (e.g., 68,000 GB/s) due to Lustre's internal buffering or read-ahead, which do not reflect sustained large-scale throughput.
+
+> **💡 Qwen Scaling Observation (Full Grid):**
+| **Stripe Count** | **Size: 1MB** | **Size: 8MB** | **Size: 32MB** | **Agg. BW (Max)** |
+| :---: | :---: | :---: | :---: | :---: |
+| 1 | 94.8 / 30.5 | 77.0 / 36.5 | 68.8 / 37.9 | 37.9 GB/s |
+| 8 | 67.0 / 39.8 | 75.5 / 36.6 | **59.5 / 42.0** | 42.0 GB/s |
+| 32 | 75.0 / 36.5 | 75.6 / 36.5 | **59.3 / 42.1** | **42.1 GB/s** |
+| 64 | 67.8 / 39.2 | 75.3 / 36.8 | 74.2 / 37.0 | 39.2 GB/s |
+| 128 | Timeout | Timeout | Timeout | - |
+
+> **💡 Observation Insights:**
+> 1. **Block Size Sensitivity**: As block size doubles (160MB $\rightarrow$ 320MB), the importance of Lustre **Stripe Size** increases. Cascade improved TTFT by **27%** simply by switching from 1MB to 32MB stripe size at Count=1.
+> 2. **Throughput Scaling**: Cascade is already hitting **42 GB/s** aggregated bandwidth with only 8 stripes, showcasing efficient usage of the Slingshot-11 network and Lustre OSTs.
 
 ---
 
