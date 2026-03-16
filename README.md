@@ -1034,7 +1034,11 @@ This comprehensive grid sweep evaluates the impact of Lustre Striping Count and 
 | | 32 | 218.9 ms / 5.8 | 163.1 ms / 7.7 | 161.2 ms / 7.8 | 7.8 GB/s |
 | | 64 | 178.8 ms / 7.0 | 169.1 ms / 7.4 | 199.4 ms / 6.6 | 7.4 GB/s |
 | | 128 | 243.2 ms / 5.4 | 165.5 ms / 7.6 | 161.6 ms / 7.7 | 7.7 GB/s |
-| **Redis** | 1 - 128 | TBD | TBD | TBD | - |
+| **Redis** | 1 | 396.8 ms / 3.2 | 376.9 ms / 3.3 | 377.1 ms / 3.3 | 3.3 GB/s |
+| | 8 | 375.1 ms / 3.3 | 405.8 ms / 3.1 | 416.7 ms / 3.0 | 3.3 GB/s |
+| | 32 | 387.8 ms / 3.2 | 377.9 ms / 3.3 | 391.8 ms / 3.2 | 3.3 GB/s |
+| | 64 | 414.0 ms / 3.0 | Timeout | Timeout | 3.0 GB/s |
+| | 128 | Timeout | Timeout | Timeout | - |
 
 ---
 
