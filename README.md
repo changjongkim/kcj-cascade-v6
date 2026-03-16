@@ -526,7 +526,7 @@ This experiment evaluates system behavior under sudden traffic spikes, simulatin
 
 | System | Calm Baseline (P99 Read) | **Burst 10× (P99 Read)** | Recovery (P99 Read) | **Degradation** |
 | :--- | :---: | :---: | :---: | :---: |
-| **Cascade V17 🔥** | 53.1 ms* | **95.6 ms*** | 32.19 ms | **STABLE** |
+| **Cascade V17 🔥** | 69.0 ms | **95.6 ms** | 69.4 ms | **+38.5%** (STABLE) |
 | **PDC** | 90.95 ms | **699.09 ms** | 95.51 ms | **+668.7%** |
 | **LMCache-Disk** | 75.68 ms | **507.70 ms** | 96.98 ms | **+570.8%** |
 | **vLLM-GPU** | 133.25 ms | **1034.64 ms** | 125.07 ms | **+676.5%** |
