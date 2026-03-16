@@ -1019,7 +1019,11 @@ This comprehensive grid sweep evaluates the impact of Lustre Striping Count and 
 | | 32 | 154.1 ms / 8.2 | 123.7 ms / 10.1| 214.4 ms / 5.9 | 10.1 GB/s |
 | | 64 | 138.8 ms / 9.0 | 122.0 ms / 10.2| 117.7 ms / 10.6| 10.6 GB/s |
 | | 128 | 154.8 ms / 8.1 | 122.5 ms / 10.2| 120.8 ms / 10.4| 10.4 GB/s |
-| **PDC** | 1 - 128 | TBD | TBD | TBD | - |
+| **PDC** | 1 | 115.5 ms / 10.8| 114.9 ms / 10.9| 114.7 ms / 10.9| 10.9 GB/s |
+| | 8 | 117.8 ms / 10.6| 143.0 ms / 8.9 | 124.7 ms / 10.2| 10.6 GB/s |
+| | 32 | 120.9 ms / 10.3| 121.5 ms / 10.3| 116.8 ms / 10.7| 10.7 GB/s |
+| | 64 | 126.3 ms / 9.9 | 135.0 ms / 9.5 | 118.1 ms / 10.6| 10.6 GB/s |
+| | 128 | 137.8 ms / 9.1 | 123.8 ms / 10.1| 121.5 ms / 10.3| 10.3 GB/s |
 | **HDF5-Indep** | 1 - 128 | TBD | TBD | TBD | - |
 | **vLLM-GPU** | 1 - 128 | TBD | TBD | TBD | - |
 | **Redis** | 1 - 128 | TBD | TBD | TBD | - |
