@@ -1005,15 +1005,20 @@ This comprehensive grid sweep evaluates the impact of Lustre Striping Count and 
 
 #### **30.1. Llama-2 (160MB Blocks) Performance Matrix**
 *   **Workload**: 8 Nodes (Llama-2 160MB blocks), 30 Writes/rank, 300 Reads/rank.
-*   **Metric**: P99 Tail Latency (ms)
+*   **Metric**: Avg TTFT (ms) / Aggregated BW (GB/s)
 
 | System | Stripe Count | Size: 1MB | Size: 8MB | Size: 32MB | Agg. BW (Max) |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Cascade 🔥** | 1 | 46.0 ms / 30.4 | 41.7 ms / 33.4 | 30.4 ms / 41.1 | 41.1 GB/s |
-| | 8 - 128 | TBD | TBD | TBD | - |
+| | 8 | 30.9 ms / 40.4 | 37.4 ms / 35.4 | 35.2 ms / 37.4 | 40.4 GB/s |
+| | 32 | 38.0 ms / 36.1 | 34.8 ms / 38.1 | **32.5 ms / 39.0** | 39.0 GB/s |
+| | 64 | 34.3 ms / 38.1 | 34.6 ms / 38.3 | 34.4 ms / 38.2 | 38.3 GB/s |
+| | 128 | 50.1 ms / 28.1 | 38.2 ms / 36.0 | 43.2 ms / 32.2 | 36.0 GB/s |
 | **LMCache** | 1 | 114.8 ms / 10.9| 114.4 ms / 10.9| 114.7 ms / 10.9| 10.9 GB/s |
-| | 8 | 117.3 ms / 10.7| TBD | TBD | 10.7 GB/s |
-| | 32 - 128 | TBD | TBD | TBD | - |
+| | 8 | 117.3 ms / 10.7| 118.2 ms / 10.6| 171.6 ms / 7.4 | 10.7 GB/s |
+| | 32 | 154.1 ms / 8.2 | 123.7 ms / 10.1| 214.4 ms / 5.9 | 10.1 GB/s |
+| | 64 | 138.8 ms / 9.0 | 122.0 ms / 10.2| 117.7 ms / 10.6| 10.6 GB/s |
+| | 128 | 154.8 ms / 8.1 | 122.5 ms / 10.2| 120.8 ms / 10.4| 10.4 GB/s |
 | **PDC** | 1 - 128 | TBD | TBD | TBD | - |
 | **HDF5-Indep** | 1 - 128 | TBD | TBD | TBD | - |
 | **vLLM-GPU** | 1 - 128 | TBD | TBD | TBD | - |
@@ -1051,6 +1056,8 @@ This comprehensive grid sweep evaluates the impact of Lustre Striping Count and 
 | | 8 | 431.0 ms / 5.8 | 479.7 ms / 5.2 | 472.6 ms / 5.4 | 5.8 GB/s |
 | | 32 | 450.8 ms / 5.6 | 490.7 ms / 5.1 | 480.5 ms / 5.2 | 5.6 GB/s |
 | | 64 - 128 | Timeout | Timeout | Timeout | - |
+| **Redis** | 1 | 797.8 ms / 3.2 | 795.1 ms / 3.2 | 805.0 ms / 3.2 | 3.2 GB/s |
+| | 8 - 128 | TBD | TBD | TBD | - |
 
 > [!NOTE]
 > Values marked with `*` in LMCache denote probable cache hits or measurement anomalies (e.g., 68,000 GB/s) due to Lustre's internal buffering or read-ahead, which do not reflect sustained large-scale throughput.
