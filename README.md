@@ -1037,8 +1037,8 @@ This comprehensive grid sweep evaluates the impact of Lustre Striping Count and 
 | **Redis** | 1 | 396.8 ms / 3.2 | 376.9 ms / 3.3 | 377.1 ms / 3.3 | 3.3 GB/s |
 | | 8 | 375.1 ms / 3.3 | 405.8 ms / 3.1 | 416.7 ms / 3.0 | 3.3 GB/s |
 | | 32 | 387.8 ms / 3.2 | 377.9 ms / 3.3 | 391.8 ms / 3.2 | 3.3 GB/s |
-| | 64 | 414.0 ms / 3.0 | Timeout | Timeout | 3.0 GB/s |
-| | 128 | Timeout | Timeout | Timeout | - |
+| | 64 | 414.0 ms / 3.0 | 417.7 ms / 3.0 | 394.4 ms / 3.2 | 3.2 GB/s |
+| | 128 | 385.6 ms / 3.2 | 395.6 ms / 3.2 | 401.2 ms / 3.1 | 3.2 GB/s |
 
 ---
 
@@ -1052,17 +1052,17 @@ This comprehensive grid sweep evaluates the impact of Lustre Striping Count and 
 | | 8 | 67.0 ms / 39.8 | 75.5 ms / 36.6 | **59.5 ms / 42.0** | 42.0 GB/s |
 | | 32 | 75.0 ms / 36.5 | 75.6 ms / 36.5 | **59.3 ms / 42.1** | **42.1 GB/s** |
 | | 64 | 67.8 ms / 39.2 | 75.3 ms / 36.8 | 74.2 ms / 37.0 | 39.2 GB/s |
-| | 128 | Timeout | Timeout | Timeout | - |
+| | 128 | 98.3 ms / 28.6 | 72.6 ms / 37.0 | 72.4 ms / 37.3 | 37.3 GB/s |
 | **LMCache** | 1 | 226.7 ms / 11.0| 223.6 ms / 11.2| 1.5 ms* / 68K* | 11.2 GB/s |
 | | 8 | 83.5 ms* / 49K* | 190.4 ms / 13.4| 208.3 ms / 12.2| 13.4 GB/s |
 | | 32 | 241.6 ms / 10.4| 235.8 ms / 10.6| 211.9 ms / 11.9| 11.9 GB/s |
 | | 64 | 248.6 ms / 10.1| 249.4 ms / 10.1| 233.9 ms / 10.7| 10.7 GB/s |
-| | 128 | 271.3 ms / 9.4 | 256.8 ms / 9.8 | Timeout | 9.8 GB/s |
+| | 128 | 271.3 ms / 9.4 | 256.8 ms / 9.8 | 231.2 ms / 10.8| 10.8 GB/s |
 | **PDC** | 1 | 248.2 ms / 10.2| 243.6 ms / 10.3| 241.2 ms / 10.4| 10.4 GB/s |
 | | 8 | 234.9 ms / 10.7| 232.6 ms / 10.8| 229.7 ms / 10.9| 10.9 GB/s |
 | | 32 | 239.2 ms / 10.5| 243.2 ms / 10.3| 242.8 ms / 10.3| 10.5 GB/s |
 | | 64 | 240.4 ms / 10.4| 241.8 ms / 10.4| 229.5 ms / 10.9| 10.9 GB/s |
-| | 128 | 236.5 ms / 10.6| Timeout | Timeout | 10.6 GB/s |
+| | 128 | 236.5 ms / 10.6| 228.3 ms / 11.0| 227.0 ms / 11.0| 11.0 GB/s |
 | **HDF5-Indep** | 1 | 250.8 ms / 10.0| 251.9 ms / 9.9 | 241.2 ms / 10.4| 10.4 GB/s |
 | | 8 | 205.1 ms / 12.4| 192.8 ms / 13.0| 193.9 ms / 12.9| 13.0 GB/s |
 | | 32 | 198.0 ms / 12.7| 194.2 ms / 12.9| 192.4 ms / 13.0| 13.0 GB/s |
@@ -1071,9 +1071,11 @@ This comprehensive grid sweep evaluates the impact of Lustre Striping Count and 
 | **vLLM-GPU** | 1 | 468.5 ms / 5.3 | 458.7 ms / 5.5 | 446.7 ms / 5.6 | 5.6 GB/s |
 | | 8 | 431.0 ms / 5.8 | 479.7 ms / 5.2 | 472.6 ms / 5.4 | 5.8 GB/s |
 | | 32 | 450.8 ms / 5.6 | 490.7 ms / 5.1 | 480.5 ms / 5.2 | 5.6 GB/s |
-| | 64 - 128 | Timeout | Timeout | Timeout | - |
+| | 64 | 399.4 ms / 6.9 | 456.6 ms / 5.5 | 459.5 ms / 5.5 | 6.9 GB/s |
+| | 128 | 455.6 ms / 5.5 | 456.6 ms / 5.5 | TBD | 5.5 GB/s |
 | **Redis** | 1 | 797.8 ms / 3.2 | 795.1 ms / 3.2 | 805.0 ms / 3.2 | 3.2 GB/s |
-| | 8 - 128 | TBD | TBD | TBD | - |
+| | 8 | 821.8 ms / 3.2 | 878.0 ms / 2.9 | TBD | 3.2 GB/s |
+| | 32 - 128 | TBD | TBD | TBD | - |
 
 > [!NOTE]
 > Values marked with `*` in LMCache denote probable cache hits or measurement anomalies (e.g., 68,000 GB/s) due to Lustre's internal buffering or read-ahead, which do not reflect sustained large-scale throughput.
