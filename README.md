@@ -1007,19 +1007,17 @@ This comprehensive grid sweep evaluates the impact of Lustre Striping Count and 
 *   **Workload**: 8 Nodes (Llama-2 160MB blocks), 30 Writes/rank, 300 Reads/rank.
 *   **Metric**: P99 Tail Latency (ms)
 
-| System | Stripe Count | Size: 1MB | Size: 8MB | Size: 32MB | Best Config |
-| :--- | :---: | :---: | :---: | :---: | :--- |
-| **Cascade 🔥** | 1 | 91.9 | 50.1 | 106.9 | |
-| | 8 | 83.2 | 81.2 | 76.1 | |
-| | **32** | **48.0** | **48.5** | 80.0 | **Best (48.0ms)** |
-| | 64 | 48.6 | 48.5 | 78.3 | |
-| | 128 | 75.5 | 91.5 | 96.5 | |
-| **PDC** | 1 | 214.0 | 213.6 | 216.8 | |
-| | 8 | 231.4 | 242.3 | 226.3 | |
-| | 128 | 433.6 | 269.4 | 229.7 | 213.6ms (c1_s8M) |
-| **vLLM-GPU** | 1 | 233.1 | 231.1 | 232.5 | |
-| | 8 | 249.9 | 261.8 | 243.1 | |
-| | 128 | 624.6 | 290.2 | 252.0 | 231.1ms (c1_s8M) |
+| System | Stripe Count | Size: 1MB | Size: 8MB | Size: 32MB | Agg. BW (Max) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Cascade 🔥** | 1 | 46.0 ms / 30.4 | 41.7 ms / 33.4 | 30.4 ms / 41.1 | 41.1 GB/s |
+| | 8 - 128 | TBD | TBD | TBD | - |
+| **LMCache** | 1 | 114.8 ms / 10.9| 114.4 ms / 10.9| 114.7 ms / 10.9| 10.9 GB/s |
+| | 8 | 117.3 ms / 10.7| TBD | TBD | 10.7 GB/s |
+| | 32 - 128 | TBD | TBD | TBD | - |
+| **PDC** | 1 - 128 | TBD | TBD | TBD | - |
+| **HDF5-Indep** | 1 - 128 | TBD | TBD | TBD | - |
+| **vLLM-GPU** | 1 - 128 | TBD | TBD | TBD | - |
+| **Redis** | 1 - 128 | TBD | TBD | TBD | - |
 
 ---
 
@@ -1049,7 +1047,10 @@ This comprehensive grid sweep evaluates the impact of Lustre Striping Count and 
 | | 32 | 198.0 ms / 12.7| 194.2 ms / 12.9| 192.4 ms / 13.0| 13.0 GB/s |
 | | 64 | 194.7 ms / 12.9| 203.0 ms / 12.3| 202.5 ms / 12.3| 12.9 GB/s |
 | | 128 | 217.6 ms / 11.5| 234.5 ms / 10.8| 217.2 ms / 11.5| 11.5 GB/s |
-| **vLLM-GPU** | 1 - 128 | TBD | TBD | TBD | - |
+| **vLLM-GPU** | 1 | 468.5 ms / 5.3 | 458.7 ms / 5.5 | 446.7 ms / 5.6 | 5.6 GB/s |
+| | 8 | 431.0 ms / 5.8 | 479.7 ms / 5.2 | 472.6 ms / 5.4 | 5.8 GB/s |
+| | 32 | 450.8 ms / 5.6 | 490.7 ms / 5.1 | 480.5 ms / 5.2 | 5.6 GB/s |
+| | 64 - 128 | Timeout | Timeout | Timeout | - |
 
 > [!NOTE]
 > Values marked with `*` in LMCache denote probable cache hits or measurement anomalies (e.g., 68,000 GB/s) due to Lustre's internal buffering or read-ahead, which do not reflect sustained large-scale throughput.
