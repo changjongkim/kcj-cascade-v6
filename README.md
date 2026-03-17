@@ -1127,12 +1127,13 @@ Expanding the evaluation to 32 nodes (128 GPUs) confirms Cascade's superior scal
 | **LMCache** | 1-128 | 32.1 GB/s | 33.2 GB/s | 34.0 GB/s | 34.2 GB/s |
 | **PDC** | 1-128 | 32.8 GB/s | 33.1 GB/s | 34.2 GB/s | 34.2 GB/s |
 | **vLLM-GPU** | 1-128 | 23.6 GB/s | 26.7 GB/s | 23.1 GB/s | 26.7 GB/s |
-| **HDF5-Indep** | 1-128 | 6.3 GB/s | 6.3 GB/s | 6.6 GB/s | 7.3 GB/s |
+| **HDF5-Indep** | 1-128 | 6.5 GB/s | 7.1 GB/s | 7.2 GB/s | 7.2 GB/s |
+| **Redis** | 1-128 | 6.0 GB/s | 6.2 GB/s | 6.2 GB/s | 6.2 GB/s |
 
 **Key Insights from 32-Node Scale:**
 - **3x Linear Scaling**: Cascade's peak performance jumped from ~38 GB/s (8 nodes) to **112.6 GB/s** (32 nodes), matching the cluster's scaling factor.
-- **Superior Bandwidth Saturation**: Cascade achieves 3-4x higher bandwidth than LMCache, PDC, or vLLM-GPU at scale, proving that its distributed metadata and write aggregation are critical for HPC filesystems.
-- **Redis & HDF5 Bottlenecks**: Redis struggled with host synchronization at 32-node scale, while HDF5 performance degraded significantly due to Lustre metadata contention, leading to timeouts in some configurations.
+- **Superior Bandwidth Saturation**: Cascade achieves **3.3x** higher bandwidth than LMCache/PDC and **15x+** higher than Redis/HDF5 at scale, proving that its RDMA-based data plane is critical for bypassing OS/filesystem overheads.
+- **Redis & HDF5 Plateaus**: Both Redis and HDF5 plateaued around **6-7 GB/s** regardless of stripe count, highlighting the severe overhead of TCP/IP or single-file Lustre metadata contention at 32-node 128-GPU scale.
 
 ### 30.5 Workload Robustness: Variable Block Size (LLM-like)
 
@@ -1145,15 +1146,24 @@ This experiment simulates real-world LLM serving scenarios (e.g., ShareGPT) wher
 | | 4 | **25.2 ms** | **15.3 ms** | **127.6 ms** | **171.7 ms** | **22.5 GB/s** |
 | | 8 | **34.5 ms** | **16.9 ms** | **222.4 ms** | **323.8 ms** | **35.4 GB/s** |
 | **LMCache** | 1 | 40.7 ms | 30.5 ms | 135.9 ms | 158.5 ms | 3.2 GB/s |
+| | 2 | 110.3 ms | 53.8 ms | 726.5 ms | 3329.2 ms | 2.8 GB/s |
+| | 4 | 115.6 ms | 70.7 ms | 660.7 ms | 939.6 ms | 4.9 GB/s |
 | | 8 | 133.6 ms | 90.2 ms | 682.2 ms | 1037.8 ms | 8.4 GB/s |
 | **PDC** | 1 | 40.9 ms | 30.2 ms | 147.8 ms | 170.7 ms | 3.2 GB/s |
+| | 2 | 98.5 ms | 54.6 ms | 699.2 ms | 977.9 ms | 3.1 GB/s |
+| | 4 | 113.2 ms | 70.9 ms | 665.2 ms | 940.3 ms | 5.0 GB/s |
 | | 8 | 130.7 ms | 89.1 ms | 645.8 ms | 945.9 ms | 8.6 GB/s |
 | **vLLM-GPU** | 1 | 110.9 ms | 83.7 ms | 422.2 ms | 424.0 ms | 1.2 GB/s |
+| | 2 | 151.2 ms | 102.7 ms | 782.6 ms | 1055.9 ms | 2.0 GB/s |
 | | 4 | 150.3 ms | 109.3 ms | 738.8 ms | 1014.0 ms | 3.8 GB/s |
 | | 8 | 160.0 ms | 115.2 ms | 732.8 ms | 1087.6 ms | 7.0 GB/s |
 | **HDF5** | 1 | 20.8 ms | 0.04 ms | 433.1 ms | 455.6 ms | 6.2 GB/s |
+| | 2 | 37.1 ms | 19.5 ms | 471.5 ms | 1005.0 ms | 8.4 GB/s |
+| | 4 | 128.0 ms | 61.7 ms | 641.1 ms | 1224.3 ms | 6.2 GB/s |
 | | 8 | 205.6 ms | 139.7 ms | 806.5 ms | 1009.3 ms | 6.9 GB/s |
 | **Redis** | 1 | 199.6 ms | 159.4 ms | 780.7 ms | 825.9 ms | 0.7 GB/s |
+| | 2 | 196.9 ms | 135.3 ms | 924.2 ms | 990.8 ms | 1.6 GB/s |
+| | 4 | 202.2 ms | 162.1 ms | 777.0 ms | 951.2 ms | 2.8 GB/s |
 | | 8 | 347.5 ms | 284.9 ms | 1107.2 ms | 1708.5 ms | 3.3 GB/s |
 
 **Key Findings:**
