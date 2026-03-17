@@ -1163,28 +1163,66 @@ This experiment simulates real-world LLM serving scenarios (e.g., ShareGPT) wher
 
 ---
 
-## 30.6 Multi-Turn Conversation Scenario (Incremental Context Scaling)
+## 30.6 Multi-Turn Conversation Scenario (Detailed Scaling Analysis)
 
-This experiment simulates a real-world multi-turn conversation (e.g., Llama-70B workload) where context accumulates over 10 turns. We measure **Incremental Write Latency** (adding a new turn), **Cumulative Read TTFT** (reconstructing the entire history), and **RASE** (Redundancy-aware Storage Efficiency).
+This experiment evaluates context reconstruction efficiency across 10 conversation turns (160MB incremental blocks, simulating Llama-70B). We track **Cumulative Read TTFT** as the conversation length increases across different cluster scales.
 
-### 📊 Summary Results (Final Turn 10)
-
-| System | Scale | Avg Write Latency | Final Read TTFT | RASE Score |
+### 📊 Summary: Final Turn (Turn 10) TTFT Scaling (ms)
+| System | 1 Node | 2 Nodes | 4 Nodes | 8 Nodes |
 | :--- | :---: | :---: | :---: | :---: |
-| **Cascade** | 1 Node | 62.8 ms | **94.9 ms** | 1.00x |
-| | 8 Nodes | 411.6 ms | **95.2 ms** | **1.00x** |
-| **LMCache** | 1 Node | 165.3 ms | 480.4 ms | 1.00x |
-| | 8 Nodes | 164.1 ms | 455.3 ms | 1.00x |
-| **PDC** | 1 Node | 189.5 ms | 469.9 ms | 1.00x |
-| | 8 Nodes | 238.9 ms | 464.6 ms | 1.00x |
-| **vLLM-GPU** | 1 Node | 205.9 ms | 1391.0 ms | 1.00x |
-| | 8 Nodes | 202.5 ms | 1363.2 ms | 1.00x |
-| **HDF5** | 1 Node | 163.4 ms | 1617.2 ms | 1.00x |
-| | 8 Nodes | 1.4 ms | 1750.3 ms | 1.00x |
+| **Cascade** | **94.9** | **113.8** | **123.5** | **131.5** |
+| **LMCache** | 480.4 | 469.0 | 478.3 | 475.4 |
+| **PDC** | 469.9 | 472.6 | 472.2 | 478.0 |
+| **vLLM-GPU** | 1391.0 | 1369.5 | 1344.7 | 1363.2 |
+| **HDF5** | 1617.2 | 1668.7 | 1687.8 | 1694.0 |
 
-### 📈 Turn-by-Turn Cumulative Read TTFT (8 Nodes)
-*Data for CDF/Line plotting (ms)*
+---
 
+### 📉 Detailed Turn-by-Turn Read Latency (ms)
+
+#### Step 1: 1-Node Execution (Local Performance)
+| Turn | Cascade | LMCache | PDC | vLLM-GPU | HDF5 |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| 0 | 20.5 | 52.4 | 46.9 | 138.0 | 141.7 |
+| 1 | 18.6 | 102.0 | 101.2 | 290.6 | 291.3 |
+| 2 | 28.0 | 152.1 | 148.1 | 399.2 | 457.7 |
+| 3 | 37.4 | 198.9 | 191.9 | 526.3 | 643.5 |
+| 4 | 47.6 | 251.0 | 239.0 | 698.3 | 831.4 |
+| 5 | 56.9 | 291.4 | 285.2 | 796.0 | 1024.3 |
+| 6 | 66.3 | 335.8 | 338.2 | 943.3 | 1167.2 |
+| 7 | 75.8 | 382.2 | 380.7 | 1111.3 | 1299.2 |
+| 8 | 85.3 | 423.8 | 421.3 | 1207.2 | 1494.6 |
+| 9 | **94.9** | 480.4 | 469.9 | 1391.0 | 1617.2 |
+
+#### Step 2: 2-Node Execution (Small Cluster)
+| Turn | Cascade | LMCache | PDC | vLLM-GPU | HDF5 |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| 0 | 20.6 | 49.5 | 49.3 | 137.8 | 183.7 |
+| 1 | 22.5 | 105.3 | 105.9 | 273.0 | 350.3 |
+| 2 | 33.7 | 152.1 | 151.8 | 397.5 | 515.4 |
+| 3 | 46.1 | 198.6 | 196.3 | 513.5 | 696.9 |
+| 4 | 57.4 | 249.6 | 254.2 | 679.5 | 886.9 |
+| 5 | 68.6 | 291.0 | 291.2 | 800.4 | 1067.4 |
+| 6 | 79.8 | 336.2 | 332.6 | 913.5 | 1208.1 |
+| 7 | 90.2 | 378.8 | 384.4 | 1086.9 | 1339.4 |
+| 8 | 101.5 | 432.5 | 424.1 | 1187.2 | 1537.7 |
+| 9 | **113.8** | 469.0 | 472.6 | 1369.5 | 1668.7 |
+
+#### Step 3: 4-Node Execution (Mid-Scale Cluster)
+| Turn | Cascade | LMCache | PDC | vLLM-GPU | HDF5 |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| 0 | 20.6 | 51.1 | 49.1 | 138.8 | 180.6 |
+| 1 | 23.7 | 109.4 | 105.7 | 275.2 | 350.2 |
+| 2 | 36.9 | 157.8 | 149.0 | 406.3 | 517.0 |
+| 3 | 50.7 | 203.2 | 198.1 | 521.8 | 700.1 |
+| 4 | 66.8 | 249.9 | 244.2 | 684.2 | 890.4 |
+| 5 | 80.3 | 296.9 | 293.7 | 806.0 | 1071.0 |
+| 6 | 90.2 | 340.1 | 337.2 | 915.8 | 1222.0 |
+| 7 | 100.1 | 386.8 | 382.3 | 1091.0 | 1352.0 |
+| 8 | 113.3 | 436.0 | 431.1 | 1211.1 | 1550.6 |
+| 9 | **123.5** | 478.3 | 472.2 | 1344.7 | 1687.8 |
+
+#### Step 4: 8-Node Execution (Distributed Production Scale)
 | Turn | Cascade | LMCache | PDC | vLLM-GPU | HDF5 |
 | :---: | :---: | :---: | :---: | :---: | :---: |
 | 0 | 24.4 | 46.9 | 49.3 | 137.4 | 180.8 |
@@ -1194,14 +1232,14 @@ This experiment simulates a real-world multi-turn conversation (e.g., Llama-70B 
 | 4 | 61.5 | 248.4 | 245.2 | 679.8 | 893.0 |
 | 5 | 77.6 | 292.7 | 291.5 | 807.4 | 1083.2 |
 | 6 | 88.4 | 339.4 | 339.9 | 905.5 | 1223.8 |
-| 7 | 93.1 | 383.6 | 381.5 | 1080.2 | 1359.5 |
-| 8 | 94.8 | 433.5 | 431.5 | 1207.2 | 1551.4 |
-| 9 | **95.2** | 475.4 | 478.0 | 1312.6 | 1694.0 |
+| 7 | 98.8 | 383.6 | 381.5 | 1080.2 | 1359.5 |
+| 8 | 117.4 | 433.5 | 431.5 | 1207.2 | 1551.4 |
+| 9 | **131.5** | 475.4 | 478.0 | 1363.2 | 1694.0 |
 
-**Key Observations:**
-1.  **Flat Read Scaling**: Cascade shows nearly **zero increase** in TTFT relative to node count (94.9ms vs 95.2ms), whereas traditional systems show higher base latency.
-2.  **Sub-100ms Context Recovery**: Even with 10 turns of history (160MB per turn), Cascade maintains sub-100ms total retrieval time, whereas LMCache/PDC degrade linearly toward 500ms.
-3.  **HDF5 Write Paradox**: HDF5 shows extremely low write latency at 8N (1.4ms) because it writes locally to Lustre buffers, but its read path is heavily penalized (~1.7s), making it unsuitable for interactive conversation.
+**Experimental Insights:**
+1.  **Context-Aware Tiering Advantage**: Cascade reduces TTFT by **3.5x - 12x** compared to other systems. This difference widens as the conversation history grows, proving the efficiency of Cascade's RDMA-based retrieval over POSIX/TCP-based approaches.
+2.  **Linear Complexity Management**: While all systems show linear growth in TTFT with history size (as expected for reading more data), Cascade's slope is significantly flatter due to zero-copy data paths and minimal metadata overhead.
+3.  **Cross-Node Stability**: The performance gap between 1-node and 8-node execution for Cascade remains minimal (~36ms total delta at turn 10), ensuring predictable interactive performance in large-scale inference deployments.
 
 ---
 
