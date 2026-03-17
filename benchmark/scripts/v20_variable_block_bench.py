@@ -100,6 +100,7 @@ def main():
 
     for i, key in enumerate(my_keys):
         s_bytes = int(mb_sizes[i] * 1024 * 1024)
+        s_bytes = (s_bytes // 8) * 8 # Ensure multiple of 8 for alignment
         mk, mv = data_buffer[:s_bytes//2], data_buffer[s_bytes//2:s_bytes]
         adapter.put(key, mk, mv)
         key_size_map[key] = s_bytes
