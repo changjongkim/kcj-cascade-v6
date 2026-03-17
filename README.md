@@ -1163,6 +1163,48 @@ This experiment simulates real-world LLM serving scenarios (e.g., ShareGPT) wher
 
 ---
 
+## 30.6 Multi-Turn Conversation Scenario (Incremental Context Scaling)
+
+This experiment simulates a real-world multi-turn conversation (e.g., Llama-70B workload) where context accumulates over 10 turns. We measure **Incremental Write Latency** (adding a new turn), **Cumulative Read TTFT** (reconstructing the entire history), and **RASE** (Redundancy-aware Storage Efficiency).
+
+### 📊 Summary Results (Final Turn 10)
+
+| System | Scale | Avg Write Latency | Final Read TTFT | RASE Score |
+| :--- | :---: | :---: | :---: | :---: |
+| **Cascade** | 1 Node | 62.8 ms | **94.9 ms** | 1.00x |
+| | 8 Nodes | 411.6 ms | **95.2 ms** | **1.00x** |
+| **LMCache** | 1 Node | 165.3 ms | 480.4 ms | 1.00x |
+| | 8 Nodes | 164.1 ms | 455.3 ms | 1.00x |
+| **PDC** | 1 Node | 189.5 ms | 469.9 ms | 1.00x |
+| | 8 Nodes | 238.9 ms | 464.6 ms | 1.00x |
+| **vLLM-GPU** | 1 Node | 205.9 ms | 1391.0 ms | 1.00x |
+| | 8 Nodes | 202.5 ms | 1363.2 ms | 1.00x |
+| **HDF5** | 1 Node | 163.4 ms | 1617.2 ms | 1.00x |
+| | 8 Nodes | 1.4 ms | 1750.3 ms | 1.00x |
+
+### 📈 Turn-by-Turn Cumulative Read TTFT (8 Nodes)
+*Data for CDF/Line plotting (ms)*
+
+| Turn | Cascade | LMCache | PDC | vLLM-GPU | HDF5 |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| 0 | 24.4 | 46.9 | 49.3 | 137.4 | 180.8 |
+| 1 | 23.6 | 103.8 | 102.8 | 272.4 | 349.1 |
+| 2 | 39.8 | 152.7 | 153.3 | 404.4 | 515.0 |
+| 3 | 51.5 | 199.0 | 197.6 | 516.6 | 706.7 |
+| 4 | 61.5 | 248.4 | 245.2 | 679.8 | 893.0 |
+| 5 | 77.6 | 292.7 | 291.5 | 807.4 | 1083.2 |
+| 6 | 88.4 | 339.4 | 339.9 | 905.5 | 1223.8 |
+| 7 | 93.1 | 383.6 | 381.5 | 1080.2 | 1359.5 |
+| 8 | 94.8 | 433.5 | 431.5 | 1207.2 | 1551.4 |
+| 9 | **95.2** | 475.4 | 478.0 | 1312.6 | 1694.0 |
+
+**Key Observations:**
+1.  **Flat Read Scaling**: Cascade shows nearly **zero increase** in TTFT relative to node count (94.9ms vs 95.2ms), whereas traditional systems show higher base latency.
+2.  **Sub-100ms Context Recovery**: Even with 10 turns of history (160MB per turn), Cascade maintains sub-100ms total retrieval time, whereas LMCache/PDC degrade linearly toward 500ms.
+3.  **HDF5 Write Paradox**: HDF5 shows extremely low write latency at 8N (1.4ms) because it writes locally to Lustre buffers, but its read path is heavily penalized (~1.7s), making it unsuitable for interactive conversation.
+
+---
+
 ## 📂 Repository Structure
 ```
 kcj-cascade-v6/
