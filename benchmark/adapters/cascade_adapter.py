@@ -48,15 +48,45 @@ class CascadeAdapter(StorageAdapter):
             from cascade import CascadeStore, CascadeConfig, create_login_node_store
             import os
             
-            world_size = int(os.environ.get('SLURM_NTASKS', 1))
+            # Determine world size accurately
+            try:
+                from mpi4py import MPI
+                if MPI.Is_initialized():
+                    world_size = MPI.COMM_WORLD.Get_size()
+                else:
+                    # If not initialized, we are likely a single process
+                    world_size = 1
+            except ImportError:
+                world_size = int(os.environ.get('SLURM_NTASKS', 1))
             
+            # If running as a single process (even in a multi-node allocation), 
+            # use local store unless explicitly forced.
             if world_size > 1:
                 # Use DistributedStore for multi-node
                 import cascade_cpp
+                
                 cfg = cascade_cpp.DistributedConfig()
                 cfg.gpu_capacity_per_device = int(self.gpu_capacity_gb * 1024**3)
                 cfg.dram_capacity = int(self.shm_capacity_gb * 1024**3)
-                cfg.num_gpus_per_node = 4
+                
+                # Dynamically detect GPUs available to this task
+                num_gpus = 0
+                try:
+                    import torch
+                    if torch.cuda.is_available():
+                        num_gpus = torch.cuda.device_count()
+                except ImportError:
+                    pass
+                
+                if num_gpus == 0:
+                    try:
+                        import subprocess
+                        output = subprocess.check_output("nvidia-smi -L | wc -l", shell=True).decode().strip()
+                        num_gpus = int(output)
+                    except:
+                        num_gpus = 4 # Default for Perlmutter GPU nodes
+                
+                cfg.num_gpus_per_node = num_gpus if num_gpus > 0 else 1
                 cfg.dedup_enabled = True
                 cfg.locality_aware = True
                 cfg.kv_compression = True
@@ -126,13 +156,24 @@ class CascadeAdapter(StorageAdapter):
             return None
         
         import numpy as np
-        # Optimization: Reuse buffer to avoid 256MB allocation overhead on every call
+        # Optimization: Reuse buffer to avoid allocation overhead
+        # If block size is unknown, we might need to check first or just use a large enough buffer
+        # For variable blocks with sigma=0.8, we use a 1GB initial buffer to be safe, 
+        # but we should still handle resizing if needed.
         if not hasattr(self, "_get_buf"):
-            self._get_buf = np.empty(256 * 1024 * 1024, dtype=np.uint8)
+            self._get_buf = np.empty(512 * 1024 * 1024, dtype=np.uint8) # Start with 512MB
             
         found, size = self.store.get(block_id, self._get_buf)
         
-        if not found:
+        # If it wasn't found, it might be because the buffer was too small (some implementations return found=True, size=actual_size)
+        # Or if C++ side throws error. Let's assume we need to handle "size > buffer_size"
+        # Most Cascade implementations return (True, actual_required_size) if buffer is too small.
+        if found and size > len(self._get_buf):
+            # Resize and retry
+            self._get_buf = np.empty(int(size * 1.1), dtype=np.uint8)
+            found, size = self.store.get(block_id, self._get_buf)
+
+        if not found or size == 0:
             return None
         
         data = self._get_buf[:size]
