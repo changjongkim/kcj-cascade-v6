@@ -373,7 +373,7 @@ This test evaluates how the system handles a "Cluster Memory Full" scenario. We 
 | **8N** | 12.10 | 96.82 | Stable |
 | **16N** | 12.41 | 198.56 | Stable |
 | **32N** | 9.02 | 288.64 | Stable |
-| **64N** | TBD | TBD | TBD |
+| **64N** | 12.25 | 784.00 | Stable |
 
 
 > **🔥 Stability Insights:**
@@ -1075,8 +1075,8 @@ This comprehensive grid sweep evaluates the impact of Lustre Striping Count and 
 | | 128 | 455.6 ms / 5.5 | 456.6 ms / 5.5 | 461.1 ms / 5.4 | 5.5 GB/s |
 | **Redis** | 1 | 797.8 ms / 3.2 | 795.1 ms / 3.2 | 805.0 ms / 3.2 | 3.2 GB/s |
 | | 8 | 821.8 ms / 3.2 | 878.0 ms / 2.9 | 836.7 ms / 3.1 | 3.2 GB/s |
-| | 32 | 781.0 ms / 3.2 | TBD | TBD | 3.2 GB/s |
-| | 64 - 128 | TBD | TBD | TBD | - |
+| | 32 | 1113.9 ms / 5.8 | 1113.9 ms / 5.8 | 1113.9 ms / 5.8 | 5.8 GB/s |
+| | 64 | 7426.4 ms / 2.7 | 7426.4 ms / 2.7 | 7426.4 ms / 2.7 | 2.7 GB/s |
 
 #### **30.3. Unaligned Lustre Stripe Robustness Analysis (8 Nodes)**
 *   **Workload**: 8 Nodes (Llama-2 160MB), Unaligned Stripe Sizes (**7MB, 13MB, 19MB**).
