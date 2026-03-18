@@ -1147,36 +1147,42 @@ This experiment simulates real-world LLM serving scenarios (e.g., ShareGPT) wher
 | | 8 | **34.5 ms** | **16.9 ms** | **222.4 ms** | **323.8 ms** | **35.4 GB/s** |
 | | 16 | **29.7 ms** | **8.7 ms** | **173.0 ms** | **176.4 ms** | **78.3 GB/s** |
 | | 32 | **49.4 ms** | **38.5 ms** | **113.8 ms** | **196.2 ms** | **121.3 GB/s** |
+| | 64 | **16.38 ms** | **11.18 ms** | **123.59 ms** | **650.6 ms** | **285.5 GB/s** |
 | **LMCache** | 1 | 40.7 ms | 30.5 ms | 135.9 ms | 158.5 ms | 3.2 GB/s |
 | | 2 | 110.3 ms | 53.8 ms | 726.5 ms | 3329.2 ms | 2.8 GB/s |
 | | 4 | 115.6 ms | 70.7 ms | 660.7 ms | 939.6 ms | 4.9 GB/s |
 | | 8 | 133.6 ms | 90.2 ms | 682.2 ms | 1037.8 ms | 8.4 GB/s |
 | | 16 | 156.0 ms | 109.5 ms | 714.4 ms | 1059.4 ms | 15.6 GB/s |
 | | 32 | 105.2 ms | 64.9 ms | 673.6 ms | 997.2 ms | 45.8 GB/s |
+| | 64 | 34.20 ms | 21.45 ms | 335.24 ms | 939.9 ms | 126.8 GB/s |
 | **PDC** | 1 | 40.9 ms | 30.2 ms | 147.8 ms | 170.7 ms | 3.2 GB/s |
 | | 2 | 98.5 ms | 54.6 ms | 699.2 ms | 977.9 ms | 3.1 GB/s |
 | | 4 | 113.2 ms | 70.9 ms | 665.2 ms | 940.3 ms | 5.0 GB/s |
 | | 8 | 130.7 ms | 89.1 ms | 645.8 ms | 945.9 ms | 8.6 GB/s |
 | | 16 | 155.7 ms | 110.0 ms | 702.2 ms | 1059.6 ms | 15.6 GB/s |
 | | 32 | 159.3 ms | 115.3 ms | 684.2 ms | 998.9 ms | 30.1 GB/s |
+| | 64 | 34.23 ms | 21.52 ms | 327.96 ms | 934.8 ms | 126.8 GB/s |
 | **vLLM-GPU** | 1 | 110.9 ms | 83.7 ms | 422.2 ms | 424.0 ms | 1.2 GB/s |
 | | 2 | 151.2 ms | 102.7 ms | 782.6 ms | 1055.9 ms | 2.0 GB/s |
 | | 4 | 150.3 ms | 109.3 ms | 738.8 ms | 1014.0 ms | 3.8 GB/s |
 | | 8 | 160.0 ms | 115.2 ms | 732.8 ms | 1087.6 ms | 7.0 GB/s |
 | | 16 | 185.9 ms | 131.6 ms | 855.4 ms | 1355.0 ms | 13.1 GB/s |
 | | 32 | 198.1 ms | 137.4 ms | 1020.7 ms | 2220.4 ms | 24.4 GB/s |
+| | 64 | 58.21 ms | 55.13 ms | 365.53 ms | 1063.4 ms | 73.8 GB/s |
 | **HDF5** | 1 | 20.8 ms | 0.04 ms | 433.1 ms | 455.6 ms | 6.2 GB/s |
 | | 2 | 37.1 ms | 19.5 ms | 471.5 ms | 1005.0 ms | 8.4 GB/s |
 | | 4 | 128.0 ms | 61.7 ms | 641.1 ms | 1224.3 ms | 6.2 GB/s |
 | | 8 | 205.6 ms | 139.7 ms | 806.5 ms | 1009.3 ms | 6.9 GB/s |
 | | 16 | 424.5 ms | 317.4 ms | 760.6 ms | 20447.1 ms | 4.6 GB/s |
 | | 32 | 895.2 ms | 666.3 ms | 2266.3 ms | 38774.3 ms | 6.0 GB/s |
+| | 64 | PENDING | - | - | - | - |
 | **Redis** | 1 | 199.6 ms | 159.4 ms | 780.7 ms | 825.9 ms | 0.7 GB/s |
 | | 2 | 196.9 ms | 135.3 ms | 924.2 ms | 990.8 ms | 1.6 GB/s |
 | | 4 | 202.2 ms | 162.1 ms | 777.0 ms | 951.2 ms | 2.8 GB/s |
 | | 8 | 347.5 ms | 284.9 ms | 1107.2 ms | 1708.5 ms | 3.3 GB/s |
 | | 16 | 505.1 ms | 459.2 ms | 1717.7 ms | 2306.8 ms | 4.8 GB/s |
 | | 32 | 503.4 ms | 281.7 ms | 2366.9 ms | 3170.6 ms | 9.5 GB/s |
+| | 64 | PENDING (RERUN) | - | - | - | - |
 
 **Key Findings:**
 1.  **Write Aggregation Benefit**: Cascade leverages its 256MB write aggregation to mitigate the performance penalty of smaller, fragmented blocks, maintaining **4x higher bandwidth** than LMCache or PDC at 8 nodes.

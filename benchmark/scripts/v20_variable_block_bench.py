@@ -55,12 +55,21 @@ def main():
     elif "redis" in args.system.lower():
         tmp_h_dir = REPO_ROOT / "benchmark" / "tmp" / f"hosts_{job_id}"
         wait_count = 0
-        while not (tmp_h_dir / "redis_host").exists() and wait_count < 30:
-            time.sleep(1)
-            wait_count += 1
-        with open(tmp_h_dir / "redis_host", 'r') as f:
-            shared_redis_host = f.read().strip()
-        config = {"host": shared_redis_host, "port": args.redis_port}
+        
+        if args.system.lower() == "redis-dist":
+            while not (tmp_h_dir / "all_hosts").exists() and wait_count < 30:
+                time.sleep(1)
+                wait_count += 1
+            with open(tmp_h_dir / "all_hosts", 'r') as f:
+                hosts = [line.strip() for line in f if line.strip()]
+            config = {"hosts": hosts, "port": args.redis_port}
+        else:
+            while not (tmp_h_dir / "redis_host").exists() and wait_count < 30:
+                time.sleep(1)
+                wait_count += 1
+            with open(tmp_h_dir / "redis_host", 'r') as f:
+                shared_redis_host = f.read().strip()
+            config = {"host": shared_redis_host, "port": args.redis_port}
     elif args.system.lower() == "lmcache":
         l_path = args.storage_path if args.storage_path else f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/lmcache_tail_{job_id}"
         config = {"storage_path": l_path}
@@ -105,12 +114,6 @@ def main():
         adapter.put(key, mk, mv)
         key_size_map[key] = s_bytes
     
-    # Share distribution info via temporary files so any rank can know the size of any other rank's keys
-    dist_dir = REPO_ROOT / "benchmark" / "tmp" / f"sizes_{job_id}"
-    dist_dir.mkdir(parents=True, exist_ok=True)
-    with open(dist_dir / f"rank_{rank}.json", "w") as f:
-        json.dump(key_size_map, f)
-
     adapter.flush()
     if hasattr(adapter, "sync_metadata"): adapter.sync_metadata()
     file_barrier("warmup")
@@ -118,15 +121,21 @@ def main():
     # Phase 2: Concurrent Random Reads
     print_rank0(f"Phase 2: Performing {args.num_read_ops} variable random reads concurrent across {world} ranks...")
     
-    # Load all keys' sizes
-    global_key_sizes = {}
-    for r in range(world):
-        with open(dist_dir / f"rank_{r}.json", "r") as f:
-            global_key_sizes.update(json.load(f))
-
     all_ranks = list(range(world))
     latencies = []
     total_bytes_read = 0
+    
+    # Pre-generate rank-to-sizes mapping deterministically to avoid JSON sharing
+    def get_rank_sizes(r_id):
+        np.random.seed(r_id + 42)
+        mu_r = np.log(args.block_size_mb) - (args.sigma**2 / 2)
+        sizes = np.random.lognormal(mu_r, args.sigma, args.num_write_blocks)
+        sizes = np.clip(sizes, 1.0, 1024.0)
+        return [(int(s * 1024 * 1024) // 8) * 8 for s in sizes]
+
+    # Pre-compute needed sizes for bandwidth calculation
+    # (Only for the blocks we will actually read to save time)
+    # Actually, we can just compute it on the fly during the read loop
     
     file_barrier("measure_start")
     start_time = time.perf_counter()
@@ -136,11 +145,14 @@ def main():
         target_b = np.random.randint(0, args.num_write_blocks)
         key = f"tail_r{target_r}_b{target_b}"
         
+        # Determine size of target block deterministically
+        target_sizes = get_rank_sizes(target_r)
+        total_bytes_read += target_sizes[target_b]
+
         t0 = time.perf_counter()
         adapter.get(key)
         t_lat = (time.perf_counter() - t0) * 1000 # ms
         latencies.append(t_lat)
-        total_bytes_read += global_key_sizes.get(key, 0)
     
     end_time = time.perf_counter()
     duration = end_time - start_time
