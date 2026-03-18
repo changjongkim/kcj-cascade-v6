@@ -128,9 +128,6 @@ class HDF5Adapter(StorageAdapter):
                 self.h5file['values'].create_dataset(dataset_name, data=val_arr, **kwargs)
 
             self.h5file.flush()
-            # Flush to OS and sync for multi-node visibility
-            if hasattr(os, 'sync'):
-                os.sync()
             
             self._writes += 1
             return True
@@ -169,8 +166,7 @@ class HDF5Adapter(StorageAdapter):
                     other_path = str(p.parent / f"{p.name.replace(f'_r{self.rank}', f'_r{r}')}")
                     
                     if not os.path.exists(other_path):
-                        import subprocess
-                        subprocess.run(["ls", "-f", str(p.parent)], capture_output=True)
+                        pass # Avoid expensive ls -f on Lustre
                     
                     if os.path.exists(other_path):
                         try:
