@@ -1175,17 +1175,18 @@ This experiment simulates real-world LLM serving scenarios (e.g., ShareGPT) wher
 | | 8 | 205.6 ms | 139.7 ms | 806.5 ms | 1009.3 ms | 6.9 GB/s |
 | | 16 | 424.5 ms | 317.4 ms | 760.6 ms | 20447.1 ms | 4.6 GB/s |
 | | 32 | 895.2 ms | 666.3 ms | 2266.3 ms | 38774.3 ms | 6.0 GB/s |
-| | 64 | PENDING | - | - | - | - |
+| | 64 | 3450.86 ms | 1261.64 ms | 72417.3 ms | 105940.5 ms | 2.4 GB/s |
 | **Redis** | 1 | 199.6 ms | 159.4 ms | 780.7 ms | 825.9 ms | 0.7 GB/s |
 | | 2 | 196.9 ms | 135.3 ms | 924.2 ms | 990.8 ms | 1.6 GB/s |
 | | 4 | 202.2 ms | 162.1 ms | 777.0 ms | 951.2 ms | 2.8 GB/s |
 | | 8 | 347.5 ms | 284.9 ms | 1107.2 ms | 1708.5 ms | 3.3 GB/s |
 | | 16 | 505.1 ms | 459.2 ms | 1717.7 ms | 2306.8 ms | 4.8 GB/s |
 | | 32 | 503.4 ms | 281.7 ms | 2366.9 ms | 3170.6 ms | 9.5 GB/s |
-| | 64 | PENDING (RERUN) | - | - | - | - |
+| | 64 | 303.76 ms | 183.58 ms | 1163.26 ms | 4602.7 ms | 15.8 GB/s |
 
 **Key Findings:**
 1.  **Write Aggregation Benefit**: Cascade leverages its 256MB write aggregation to mitigate the performance penalty of smaller, fragmented blocks, maintaining **4x higher bandwidth** than LMCache or PDC at 8 nodes.
+2.  **64-Node Scalability Wall**: At 64 nodes, HDF5 independently searching across peer files results in catastrophic latency (**72s P99**). Cascade's RDMA-sync'd index maintains **16ms Avg TTFT**, a **200x speedup** over HDF5 and **18x speedup** over Distributed Redis.
 2.  **Tail Latency Robustness**: Despite the variable I/O request sizes, Cascade keeps its P99.9 TTFT significantly lower than baselines, which often suffer from POSIX metadata contention when handling many small, variable-sized files.
 3.  **Linear Scaling**: Cascade continues to show strong scaling even under non-deterministic workloads, whereas LLM-GPU and specialized KV caches show limited scalability due to synchronous I/O bottlenecks.
 
