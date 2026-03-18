@@ -1145,8 +1145,8 @@ This experiment simulates real-world LLM serving scenarios (e.g., ShareGPT) wher
 | | 2 | **20.8 ms** | **12.2 ms** | **136.1 ms** | **165.3 ms** | **15.0 GB/s** |
 | | 4 | **25.2 ms** | **15.3 ms** | **127.6 ms** | **171.7 ms** | **22.5 GB/s** |
 | | 8 | **34.5 ms** | **16.9 ms** | **222.4 ms** | **323.8 ms** | **35.4 GB/s** |
-| | 16 | *TBD* | *TBD* | *TBD* | *TBD* | *TBD* |
-| | 32 | *TBD* | *TBD* | *TBD* | *TBD* | *TBD* |
+| | 16 | **29.7 ms** | **8.7 ms** | **173.0 ms** | **176.4 ms** | **78.3 GB/s** |
+| | 32 | **49.4 ms** | **38.5 ms** | **113.8 ms** | **196.2 ms** | **121.3 GB/s** |
 | **LMCache** | 1 | 40.7 ms | 30.5 ms | 135.9 ms | 158.5 ms | 3.2 GB/s |
 | | 2 | 110.3 ms | 53.8 ms | 726.5 ms | 3329.2 ms | 2.8 GB/s |
 | | 4 | 115.6 ms | 70.7 ms | 660.7 ms | 939.6 ms | 4.9 GB/s |
@@ -1169,14 +1169,14 @@ This experiment simulates real-world LLM serving scenarios (e.g., ShareGPT) wher
 | | 2 | 37.1 ms | 19.5 ms | 471.5 ms | 1005.0 ms | 8.4 GB/s |
 | | 4 | 128.0 ms | 61.7 ms | 641.1 ms | 1224.3 ms | 6.2 GB/s |
 | | 8 | 205.6 ms | 139.7 ms | 806.5 ms | 1009.3 ms | 6.9 GB/s |
-| | 16 | 362.5 ms | 317.5 ms | 794.2 ms | 5181.5 ms | 6.8 GB/s |
-| | 32 | *TBD* | *TBD* | *TBD* | *TBD* | *TBD* |
+| | 16 | 424.5 ms | 317.4 ms | 760.6 ms | 20447.1 ms | 4.6 GB/s |
+| | 32 | 895.2 ms | 666.3 ms | 2266.3 ms | 38774.3 ms | 6.0 GB/s |
 | **Redis** | 1 | 199.6 ms | 159.4 ms | 780.7 ms | 825.9 ms | 0.7 GB/s |
 | | 2 | 196.9 ms | 135.3 ms | 924.2 ms | 990.8 ms | 1.6 GB/s |
 | | 4 | 202.2 ms | 162.1 ms | 777.0 ms | 951.2 ms | 2.8 GB/s |
 | | 8 | 347.5 ms | 284.9 ms | 1107.2 ms | 1708.5 ms | 3.3 GB/s |
-| | 16 | *TBD* | *TBD* | *TBD* | *TBD* | *TBD* |
-| | 32 | *TBD* | *TBD* | *TBD* | *TBD* | *TBD* |
+| | 16 | 505.1 ms | 459.2 ms | 1717.7 ms | 2306.8 ms | 4.8 GB/s |
+| | 32 | 503.4 ms | 281.7 ms | 2366.9 ms | 3170.6 ms | 9.5 GB/s |
 
 **Key Findings:**
 1.  **Write Aggregation Benefit**: Cascade leverages its 256MB write aggregation to mitigate the performance penalty of smaller, fragmented blocks, maintaining **4x higher bandwidth** than LMCache or PDC at 8 nodes.
