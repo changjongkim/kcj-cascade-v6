@@ -1025,28 +1025,28 @@ Sessions scaled proportionally: 1N=50, 2N=100, 4N=200, 8N=400 to maintain consis
 
 | Metric | 1N (50 sess) | 2N (100 sess) | 4N (200 sess) | 8N (400 sess) |
 | :--- | :---: | :---: | :---: | :---: |
-| **Requests (per rank)** | 81 | 83 | pending | pending |
-| **Hit Rate** | **60.5%** | **54.2%** | pending | pending |
-| **Prefill (MISS)** | 994.3 ms | 947.6 ms | pending | pending |
-| **Cascade GET** | **25.0 ms** | **21.5 ms** | pending | pending |
-| **Cascade PUT** | 239.0 ms | 971.2 ms | pending | pending |
-| **Deserialize (Python overhead)** | 476.9 ms | 697.7 ms | pending | pending |
+| **Requests (per rank)** | 81 | 83 | 83 | 86 |
+| **Hit Rate** | **60.5%** | **54.2%** | **61.4%** | **55.8%** |
+| **Prefill (MISS)** | 994.3 ms | 947.6 ms | 994.9 ms | 1039.3 ms |
+| **Cascade GET** | **25.0 ms** | **21.5 ms** | **23.6 ms** | **27.3 ms** |
+| **Cascade PUT** | 239.0 ms | 971.2 ms | 1397.7 ms | 1678.3 ms |
+| **Deserialize (Python overhead)** | 476.9 ms | 697.7 ms | 1830.0 ms | 1017.7 ms |
 
 ##### TTFT Comparison (deserialize excluded)
 
 | | 1N | 2N | 4N | 8N |
 | :--- | :---: | :---: | :---: | :---: |
-| **MISS TTFT** (prefill + PUT) | ~1233 ms | ~1919 ms | pending | pending |
-| **HIT TTFT** (GET + partial prefill) | ~175 ms | ~171 ms | pending | pending |
-| **E2E Speedup** | **7.0×** | **11.2×** | pending | pending |
-| **Prefill vs GET** | **40×** | **44×** | pending | pending |
+| **MISS TTFT** (prefill + PUT) | ~1233 ms | ~1919 ms | ~2393 ms | ~2718 ms |
+| **HIT TTFT** (GET + partial prefill) | ~175 ms | ~171 ms | ~174 ms | ~177 ms |
+| **E2E Speedup** | **7.0×** | **11.2×** | **13.7×** | **15.4×** |
+| **Prefill vs GET** | **40×** | **44×** | **42×** | **38×** |
 
 > **Key Findings (C, scaled sessions):**
-> 1. **Hit rate improved** by scaling sessions proportionally: 1N 60.5% (vs 52.8% in B), 2N 54.2% (vs 33.3% in B).
-> 2. **Cascade GET remains stable at 21–25 ms** for 320MB blocks across 1–2 nodes, consistent with trace-driven results.
-> 3. **HIT TTFT ~170 ms** is consistent across nodes — Cascade retrieval + partial prefill overhead does not grow with scale.
-> 4. **Speedup increases with nodes**: 7.0× (1N) → 11.2× (2N), driven by higher MISS TTFT from distributed PUT overhead while HIT TTFT stays constant.
-> 5. 4N/8N results pending — expected to show continued scaling with consistent GET latency.
+> 1. **Hit rate stabilized at 55–61%** across all node counts by scaling sessions proportionally (vs 20–33% in B).
+> 2. **Cascade GET stable at 21–27 ms** for 320MB blocks across 1–8 nodes, consistent with trace-driven results (20.9 ms).
+> 3. **HIT TTFT ~175 ms is constant** across 1–8 nodes — Cascade retrieval + partial prefill overhead does not grow with scale.
+> 4. **Speedup scales with nodes**: 7.0× (1N) → 11.2× (2N) → 13.7× (4N) → 15.4× (8N), driven by increasing MISS TTFT from distributed PUT overhead while HIT TTFT stays constant.
+> 5. **Prefill vs GET reduction remains 38–44×** across all scales, confirming Cascade's retrieval advantage is independent of cluster size.
 
 #### D. Results — Block Size Comparison (1N, A100-80GB, FP16, 50 sessions)
 
