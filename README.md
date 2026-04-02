@@ -972,14 +972,20 @@ TTFT measured as time-to-first-token (decode excluded). Sessions scaled per node
 
 | Metric | 1N | 2N | 4N | 8N |
 | :--- | :---: | :---: | :---: | :---: |
-| **MISS TTFT (avg)** | 959.5 ms | 1234.0 ms | pending | pending |
-| **HIT TTFT (avg)** | 536.7 ms | 471.0 ms | pending | pending |
-| **HIT TTFT (P50)** | 322.1 ms | 318.8 ms | pending | pending |
-| **Prefill (MISS)** | 482.2 ms | 483.9 ms | pending | pending |
-| **Cascade GET** | **0.6 ms** | **1.0 ms** | pending | pending |
-| **Cascade PUT** | 96.4 ms | 298.9 ms | pending | pending |
-| **Hit Rate** | 46.2% | 43.5% | pending | pending |
-| **E2E Speedup** | **1.8×** | **2.6×** | pending | pending |
+| **MISS TTFT (avg)** | 959.5 ms | 1234.0 ms | 1501.6 ms | 1338.6 ms |
+| **HIT TTFT (avg)** | 536.7 ms | 471.0 ms | 450.7 ms | 505.9 ms |
+| **HIT TTFT (P50)** | 322.1 ms | 318.8 ms | 334.0 ms | 398.9 ms |
+| **Prefill (MISS)** | 482.2 ms | 483.9 ms | 522.7 ms | 582.8 ms |
+| **Cascade GET** | **0.6 ms** | **1.0 ms** | **0.8 ms** | **0.7 ms** |
+| **Cascade PUT** | 96.4 ms | 298.9 ms | 515.7 ms | 372.4 ms |
+| **Hit Rate** | 46.2% | 43.5% | 42.2% | 33.3% |
+| **E2E Speedup** | **1.8×** | **2.6×** | **3.3×** | **2.6×** |
+
+> **Key Findings (A, short prefix):**
+> 1. **Cascade GET stable at 0.6–1.0 ms** for small blocks across 1–8 nodes.
+> 2. **Speedup scales up to 4N (3.3×)**, then decreases at 8N (2.6×) due to hit rate drop (33.3%) from increased prefix diversity across more nodes.
+> 3. **HIT TTFT P50 ~320–400 ms** is consistent, dominated by partial prefill of new tokens.
+> 4. **Prefill vs GET: 482ms → 0.6ms = 800× reduction** at 1N, confirming Cascade's retrieval advantage even for small blocks.
 
 #### B. Results — Long Prefix (1024 tokens = 320MB KV blocks, A100-80GB, FP16)
 
