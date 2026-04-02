@@ -1009,13 +1009,44 @@ This experiment validates Cascade's impact on **real LLM inference** by running 
 | **Trace-driven GET (paper Section 4.1)** | 20.9 ms | — |
 | **Trace-driven match** | **Yes (20.3 ≈ 20.9)** | — |
 
-> **Key Findings:**
+> **Key Findings (B, initial run — 20 sessions):**
 > 1. **Cascade GET = 20.3 ms for 320MB blocks** matches trace-driven results (20.9 ms), validating that inference integration does not degrade Cascade's storage performance.
 > 2. **50× prefill reduction** at 1N: full prefill (1014 ms) replaced by Cascade GET (20.3 ms) for cached prefixes.
 > 3. **7.2× E2E TTFT speedup** at 1N and **15.4×** at 2N when deserialize overhead is excluded (deserialize is Python glue code, not Cascade).
 > 4. **Short prefix (0.6–2.0 ms GET)** and **long prefix (20–30 ms GET)** results are consistent — Cascade GET scales linearly with block size.
 > 5. **INT8 quantization** enables GPU pool for CUDA P2P but introduces dequantize overhead, resulting in lower speedup vs. FP16.
 > 6. **Residual HIT TTFT** is dominated by partial prefill of new tokens, confirming Cascade is not the bottleneck.
+
+#### C. Results — Long Prefix Scaling (320MB, A100-80GB, FP16, sessions scaled per node)
+
+Sessions scaled proportionally: 1N=50, 2N=100, 4N=200, 8N=400 to maintain consistent hit rate across node counts.
+
+##### Raw Measurements
+
+| Metric | 1N (50 sess) | 2N (100 sess) | 4N (200 sess) | 8N (400 sess) |
+| :--- | :---: | :---: | :---: | :---: |
+| **Requests (per rank)** | 81 | 83 | pending | pending |
+| **Hit Rate** | **60.5%** | **54.2%** | pending | pending |
+| **Prefill (MISS)** | 994.3 ms | 947.6 ms | pending | pending |
+| **Cascade GET** | **25.0 ms** | **21.5 ms** | pending | pending |
+| **Cascade PUT** | 239.0 ms | 971.2 ms | pending | pending |
+| **Deserialize (Python overhead)** | 476.9 ms | 697.7 ms | pending | pending |
+
+##### TTFT Comparison (deserialize excluded)
+
+| | 1N | 2N | 4N | 8N |
+| :--- | :---: | :---: | :---: | :---: |
+| **MISS TTFT** (prefill + PUT) | ~1233 ms | ~1919 ms | pending | pending |
+| **HIT TTFT** (GET + partial prefill) | ~175 ms | ~171 ms | pending | pending |
+| **E2E Speedup** | **7.0×** | **11.2×** | pending | pending |
+| **Prefill vs GET** | **40×** | **44×** | pending | pending |
+
+> **Key Findings (C, scaled sessions):**
+> 1. **Hit rate improved** by scaling sessions proportionally: 1N 60.5% (vs 52.8% in B), 2N 54.2% (vs 33.3% in B).
+> 2. **Cascade GET remains stable at 21–25 ms** for 320MB blocks across 1–2 nodes, consistent with trace-driven results.
+> 3. **HIT TTFT ~170 ms** is consistent across nodes — Cascade retrieval + partial prefill overhead does not grow with scale.
+> 4. **Speedup increases with nodes**: 7.0× (1N) → 11.2× (2N), driven by higher MISS TTFT from distributed PUT overhead while HIT TTFT stays constant.
+> 5. 4N/8N results pending — expected to show continued scaling with consistent GET latency.
 
 ---
 
