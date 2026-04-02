@@ -951,6 +951,43 @@ A single server's raw DRAM read speed naturally reaches **100~200 GB/s**. By byp
 
 ---
 
+---
+
+### 📊 Section 4.8: End-to-End Inference with Cascade KV Cache (Qwen-2.5-72B)
+
+This experiment validates Cascade's impact on **real LLM inference** by running actual Qwen-2.5-72B model prefill/decode with Cascade KV cache management. Unlike trace-driven evaluation (Sections 4.1–4.7), this measures the full inference pipeline including GPU prefill computation, KV cache serialization, Cascade PUT/GET, and token generation.
+
+#### Experimental Setup
+- **Model**: Qwen-2.5-72B (FP16 / INT8 quantized via bitsandbytes)
+- **Hardware**: NERSC Perlmutter, A100-40GB × 4 per node, HPE Slingshot-11
+- **Dataset**: ShareGPT (multi-turn conversations, ~46% prefix overlap)
+- **Workload**: 50–400 sessions × 2–3 turns per session
+- **TTFT Definition**: Time from request arrival to first token generation (excludes remaining decode)
+- **Cache MISS**: Full GPU prefill → Cascade PUT → first token
+- **Cache HIT**: Cascade GET → deserialize → partial prefill (new tokens only) → first token
+
+#### Results (Short Prefix, ShareGPT Default)
+
+| Metric | 1N FP16 | 1N INT8 | 2N FP16 | 2N INT8 | 4N INT8 | 8N INT8 |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **MISS TTFT (avg)** | 1329 ms | 1574 ms | 1302 ms | 2165 ms | 1949 ms | 2055 ms |
+| **HIT TTFT (avg)** | 900 ms | 1034 ms | 451 ms | 995 ms | 943 ms | 1058 ms |
+| **HIT TTFT (P50)** | 692 ms | 870 ms | 298 ms | 885 ms | 869 ms | 944 ms |
+| **Prefill (MISS)** | 483 ms | 706 ms | 477 ms | 703 ms | 741 ms | 819 ms |
+| **Cascade GET** | **0.6 ms** | **1.0 ms** | **0.7 ms** | **1.1 ms** | **1.1 ms** | **2.0 ms** |
+| **Cascade PUT** | 96 ms | 126 ms | 368 ms | 502 ms | 430 ms | 407 ms |
+| **Hit Rate** | 46.2% | 46.2% | 43.5% | 43.5% | 42.2% | 33.3% |
+| **E2E Speedup** | **1.5×** | **1.5×** | **2.9×** | **2.2×** | **2.1×** | **1.9×** |
+
+> **Key Findings:**
+> 1. **Cascade GET latency (0.6–2.0 ms)** eliminates full prefill computation (477–819 ms), representing a **681× reduction** in pure retrieval vs. prefill cost.
+> 2. **Best E2E speedup of 2.9×** achieved at 2N FP16, where cross-node RDMA enables KV cache sharing without GPU memory contention.
+> 3. **Residual HIT TTFT** is dominated by partial prefill of new tokens (not Cascade overhead), confirming that Cascade's storage layer is not the bottleneck.
+> 4. **INT8 quantization** enables GPU pool allocation for CUDA P2P but introduces dequantize overhead, resulting in lower E2E speedup compared to FP16.
+> 5. **Consistent with trace-driven results**: Cascade retrieval latency remains sub-2 ms regardless of node count, matching the storage-layer performance demonstrated in Sections 4.1–4.7.
+
+---
+
 ## 🔧 Installation & Usage
 
 ### Prerequisites
