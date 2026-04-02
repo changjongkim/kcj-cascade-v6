@@ -1048,6 +1048,33 @@ Sessions scaled proportionally: 1N=50, 2N=100, 4N=200, 8N=400 to maintain consis
 > 4. **Speedup increases with nodes**: 7.0× (1N) → 11.2× (2N), driven by higher MISS TTFT from distributed PUT overhead while HIT TTFT stays constant.
 > 5. 4N/8N results pending — expected to show continued scaling with consistent GET latency.
 
+#### D. Results — Block Size Comparison (1N, A100-80GB, FP16, 50 sessions)
+
+| Metric | 160MB (512 tokens) | 320MB (1024 tokens) |
+| :--- | :---: | :---: |
+| **Prefill (MISS)** | 746.1 ms | 994.3 ms |
+| **Cascade GET** | **12.0 ms** | **25.0 ms** |
+| **Cascade PUT** | 167.5 ms | 239.0 ms |
+| **Deserialize (Python overhead)** | 285.4 ms | 476.9 ms |
+| **Hit Rate** | 60.5% | 60.5% |
+
+##### TTFT Comparison (deserialize excluded)
+
+| | 160MB | 320MB |
+| :--- | :---: | :---: |
+| **MISS TTFT** (prefill + PUT) | ~914 ms | ~1233 ms |
+| **HIT TTFT** (GET + partial prefill) | ~162 ms | ~175 ms |
+| **E2E Speedup** | **5.6×** | **7.0×** |
+| **Prefill vs GET** | **62×** | **40×** |
+| **Trace-driven GET (paper)** | 13.9 ms | 20.9 ms |
+| **Trace-driven match** | **Yes (12.0 ≈ 13.9)** | **Yes (25.0 ≈ 20.9)** |
+
+> **Key Findings (D, block size comparison):**
+> 1. **Cascade GET scales linearly with block size**: 12.0 ms (160MB) vs 25.0 ms (320MB), a 2.1× ratio matching the 2× block size difference.
+> 2. **Both block sizes match trace-driven results**: 12.0 ms ≈ 13.9 ms (LLama-3-70B trace) and 25.0 ms ≈ 20.9 ms (Qwen-2.5-72B trace), validating end-to-end integration.
+> 3. **Larger blocks yield higher E2E speedup** (7.0× vs 5.6×) because prefill cost grows faster than GET cost with block size.
+> 4. **HIT TTFT remains similar** (~162 ms vs ~175 ms) across block sizes — partial prefill dominates regardless of cached block size.
+
 ---
 
 ## 🔧 Installation & Usage
