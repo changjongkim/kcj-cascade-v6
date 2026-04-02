@@ -1075,6 +1075,34 @@ Sessions scaled proportionally: 1N=50, 2N=100, 4N=200, 8N=400 to maintain consis
 > 3. **Larger blocks yield higher E2E speedup** (7.0× vs 5.6×) because prefill cost grows faster than GET cost with block size.
 > 4. **HIT TTFT remains similar** (~162 ms vs ~175 ms) across block sizes — partial prefill dominates regardless of cached block size.
 
+#### E. Results — 160MB Scaling (512 tokens, A100-80GB, FP16, sessions scaled per node)
+
+##### Raw Measurements
+
+| Metric | 1N (50 sess) | 2N (100 sess) | 4N (200 sess) | 8N (400 sess) |
+| :--- | :---: | :---: | :---: | :---: |
+| **Requests (per rank)** | 81 | 83 | pending | pending |
+| **Hit Rate** | **60.5%** | **54.2%** | pending | pending |
+| **Prefill (MISS)** | 746.1 ms | 698.9 ms | pending | pending |
+| **Cascade GET** | **12.0 ms** | **12.6 ms** | pending | pending |
+| **Cascade PUT** | 167.5 ms | 641.2 ms | pending | pending |
+| **Deserialize (Python overhead)** | 285.4 ms | 369.2 ms | pending | pending |
+
+##### TTFT Comparison (deserialize excluded)
+
+| | 1N | 2N | 4N | 8N |
+| :--- | :---: | :---: | :---: | :---: |
+| **MISS TTFT** (prefill + PUT) | ~914 ms | ~1340 ms | pending | pending |
+| **HIT TTFT** (GET + partial prefill) | ~162 ms | ~163 ms | pending | pending |
+| **E2E Speedup** | **5.6×** | **8.2×** | pending | pending |
+| **Prefill vs GET** | **62×** | **55×** | pending | pending |
+
+> **Key Findings (E, 160MB scaling):**
+> 1. **Cascade GET stable at 12.0–12.6 ms** for 160MB blocks — exactly half of 320MB GET (21–27 ms), confirming linear scaling.
+> 2. **Consistent with trace-driven**: 12.0 ms ≈ 13.9 ms (LLama-3-70B trace-driven result).
+> 3. **HIT TTFT ~162 ms** is constant across 1–2 nodes, matching 320MB behavior (~175 ms).
+> 4. 4N/8N results pending.
+
 ---
 
 ## 🔧 Installation & Usage
