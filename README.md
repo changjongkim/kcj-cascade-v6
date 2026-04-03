@@ -1136,11 +1136,11 @@ vLLM v0.18.1 with FlashAttention v2, TP=4. Same model, workload, and hardware as
 
 ##### 320MB (1024 tokens)
 
-| | 1N OFF | 1N ON | 2N OFF | 2N ON | 4N | 8N |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **MISS TTFT** | 286.5 | 85.4 | 272.2 | 102.3 | pending | pending |
-| **HIT TTFT** | 266.5 | 99.8 | 269.9 | 102.1 | pending | pending |
-| **Speedup** | 1.1× | 0.9× | 1.0× | 1.0× | pending | pending |
+| | 1N OFF | 1N ON | 2N OFF | 2N ON | 4N OFF | 4N ON | 8N OFF | 8N ON |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **MISS TTFT** | 286.5 | 85.4 | 272.2 | 102.3 | 286.7 | 116.5 | 304.5 | 133.4 |
+| **HIT TTFT** | 266.5 | 99.8 | 269.9 | 102.1 | 251.9 | 85.6 | 256.3 | 87.7 |
+| **Speedup** | 1.1× | 0.9× | 1.0× | 1.0× | 1.1× | 1.4× | 1.2× | 1.5× |
 
 *(All values in ms.)*
 
@@ -1158,16 +1158,16 @@ vLLM v0.18.1 with FlashAttention v2, TP=4. Same model, workload, and hardware as
 | 160MB | 8N | 1.5× | **11.4×** |
 | 320MB | 1N | 0.9× | **7.0×** |
 | 320MB | 2N | 1.0× | **11.2×** |
-| 320MB | 4N | pending | **13.7×** |
-| 320MB | 8N | pending | **15.4×** |
+| 320MB | 4N | 1.4× | **13.7×** |
+| 320MB | 8N | 1.5× | **15.4×** |
 
 > **Key Findings (F, vLLM comparison):**
 > 1. **CASCADE outperforms vLLM APC in cache speedup across all configurations**: up to 15.4× (CASCADE) vs 1.6× (vLLM APC).
-> 2. **vLLM APC provides negligible speedup (0.8–1.6×)** regardless of block size — prefix caching within single-node GPU memory has limited benefit.
+> 2. **vLLM APC provides negligible speedup (0.8–1.6×)** regardless of block size — single-node GPU prefix caching has limited benefit.
 > 3. **vLLM achieves lower absolute TTFT** (85–286 ms vs CASCADE 162–959 ms) due to FlashAttention + CUDA graph optimizations — this reflects inference engine performance, not caching effectiveness.
 > 4. **CASCADE cache speedup scales with block size**: 1.8× (short) → 5.6× (160MB) → 7.0× (320MB) at 1N, while vLLM APC remains flat at 0.8–1.1×.
 > 5. **CASCADE cache speedup scales with nodes**: 7.0× (1N) → 15.4× (8N) at 320MB, while vLLM APC cannot share prefixes across nodes.
-> 6. 4N/8N 320MB vLLM results pending.
+> 6. **vLLM APC max speedup at 320MB 8N is 1.5×** vs CASCADE 15.4× — a **10× gap** in caching effectiveness.
 
 ---
 
