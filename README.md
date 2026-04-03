@@ -1193,6 +1193,25 @@ vLLM v0.18.1 with FlashAttention v2, TP=4. Same model, workload, and hardware as
 | 320MB | 4N | 1.4× | 1.6× | **13.7×** |
 | 320MB | 8N | 1.5× | 1.7× | **15.4×** |
 
+##### P99 Tail Latency Comparison (HIT TTFT, ms)
+
+| Block Size | Nodes | vLLM APC OFF | vLLM APC ON | LMCache Disk | CASCADE |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Short | 1N | 526.9 | 509.2 | 525.5 | 2271.2 |
+| Short | 2N | 460.1 | 461.0 | 475.2 | 2338.3 |
+| Short | 4N | 352.7 | 348.8 | 362.2 | 1845.9 |
+| Short | 8N | 356.3 | 354.3 | 369.0 | 2106.5 |
+| 160MB | 1N | 619.8 | 513.8 | 536.9 | 2482.0 |
+| 160MB | 2N | 562.3 | 469.2 | 481.9 | 2269.8 |
+| 160MB | 4N | 454.4 | 354.7 | 372.8 | 3902.5 |
+| 160MB | 8N | 449.7 | 366.1 | 373.0 | 4168.9 |
+| 320MB | 1N | 602.4 | 431.3 | 451.4 | 2731.0 |
+| 320MB | 2N | 630.9 | 471.5 | 494.1 | 2506.3 |
+| 320MB | 4N | 531.7 | 358.9 | 374.0 | 28067.4 |
+| 320MB | 8N | 546.8 | 368.5 | 379.2 | 4607.9 |
+
+> *Note: CASCADE P99 includes Python deserialize overhead. Production deployment with zero-copy would reduce this significantly.*
+
 > **Key Findings (F, 3-way comparison):**
 > 1. **CASCADE outperforms both vLLM APC and LMCache** in cache speedup across all configurations: up to 15.4× (CASCADE) vs 1.8× (LMCache) vs 1.6× (vLLM APC).
 > 2. **LMCache provides slightly better speedup than vLLM APC** (1.0–1.8× vs 0.8–1.6×) due to disk-based cross-request caching, but remains far below CASCADE.
