@@ -1136,12 +1136,32 @@ vLLM v0.18.1 with FlashAttention v2, TP=4. Same model, workload, and hardware as
 | **Pure Retrieval** | — | — | **0.6 ms** (GET) |
 | **APC/Cache Speedup** | 1.1× | 0.8× | **1.8×** |
 
+##### 160MB (512 tokens)
+
+| | 1N APC OFF | 1N APC ON | 2N APC OFF | 2N APC ON |
+| :--- | :---: | :---: | :---: | :---: |
+| **MISS TTFT (avg)** | 217.4 ms | 84.5 ms | 203.1 ms | 101.1 ms |
+| **HIT TTFT (avg)** | 203.9 ms | 108.7 ms | 196.9 ms | 100.9 ms |
+| **MISS TTFT (P50)** | 201.6 ms | 71.3 ms | 190.4 ms | 79.4 ms |
+| **HIT TTFT (P50)** | 149.1 ms | 49.3 ms | 170.0 ms | 66.5 ms |
+| **Hit Rate** | 60.5% | 60.5% | 54.2% | 54.2% |
+| **APC Speedup** | 1.1× | 0.8× | 1.0× | 1.0× |
+
+##### Cascade vs. vLLM Comparison (160MB, 1N)
+
+| Metric | vLLM APC OFF | vLLM APC ON | CASCADE |
+| :--- | :---: | :---: | :---: |
+| **MISS TTFT** | 217.4 ms | 84.5 ms | ~914 ms |
+| **HIT TTFT** | 203.9 ms | 108.7 ms | ~162 ms (deser excluded) |
+| **Pure Retrieval** | — | — | **12.0 ms** (GET) |
+| **APC/Cache Speedup** | 1.1× | 0.8× | **5.6×** |
+
 > **Key Findings (F, vLLM comparison):**
-> 1. **vLLM APC provides negligible speedup (0.8–1.1×) for short prefixes** — prefix is too short for caching to amortize overhead.
-> 2. **vLLM is faster in absolute TTFT** (80–117 ms vs CASCADE 536–959 ms) due to FlashAttention + CUDA graph optimizations, not caching.
-> 3. **CASCADE provides meaningful cache speedup (1.8×)** even for short prefixes, whereas vLLM APC does not.
+> 1. **vLLM APC provides negligible speedup (0.8–1.1×)** across both short and 160MB prefixes — caching overhead negates prefix reuse benefit.
+> 2. **vLLM is faster in absolute TTFT** (84–217 ms vs CASCADE 162–959 ms) due to FlashAttention + CUDA graph optimizations — this is inference engine performance, not caching.
+> 3. **CASCADE cache speedup grows with block size**: 1.8× (short) → **5.6× (160MB)**, while vLLM APC remains flat at 0.8–1.1×.
 > 4. **vLLM APC is single-node only** — cannot share cached prefixes across nodes. CASCADE enables cross-node KV sharing via RDMA.
-> 5. 160MB/320MB and multi-node results pending — expected to show larger CASCADE advantage as prefix size increases.
+> 5. 320MB and 4N/8N results pending — expected to show continued CASCADE advantage.
 
 ---
 
