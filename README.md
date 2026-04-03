@@ -1160,7 +1160,15 @@ vLLM v0.18.1 with FlashAttention v2, TP=4. Same model, workload, and hardware as
 | **HIT TTFT** | 115.7 | 106.2 | 89.1 | 91.0 |
 | **Speedup** | 1.5× | 1.2× | 1.7× | 1.8× |
 
-*(All values in ms. 320MB LMCache results pending.)*
+##### LMCache 320MB (1024 tokens)
+
+| | 1N | 2N | 4N | 8N |
+| :--- | :---: | :---: | :---: | :---: |
+| **MISS TTFT** | 121.4 | 135.9 | 149.0 | 166.3 |
+| **HIT TTFT** | 108.6 | 112.5 | 92.1 | 95.8 |
+| **Speedup** | 1.1× | 1.2× | 1.6× | 1.7× |
+
+*(All values in ms.)*
 
 ##### CASCADE vs. vLLM APC vs. LMCache — Cache Speedup Comparison
 
@@ -1174,10 +1182,10 @@ vLLM v0.18.1 with FlashAttention v2, TP=4. Same model, workload, and hardware as
 | 160MB | 2N | 1.0× | 1.2× | **8.2×** |
 | 160MB | 4N | 1.4× | 1.7× | **10.4×** |
 | 160MB | 8N | 1.5× | 1.8× | **11.4×** |
-| 320MB | 1N | 0.9× | pending | **7.0×** |
-| 320MB | 2N | 1.0× | pending | **11.2×** |
-| 320MB | 4N | 1.4× | pending | **13.7×** |
-| 320MB | 8N | 1.5× | pending | **15.4×** |
+| 320MB | 1N | 0.9× | 1.1× | **7.0×** |
+| 320MB | 2N | 1.0× | 1.2× | **11.2×** |
+| 320MB | 4N | 1.4× | 1.6× | **13.7×** |
+| 320MB | 8N | 1.5× | 1.7× | **15.4×** |
 
 > **Key Findings (F, 3-way comparison):**
 > 1. **CASCADE outperforms both vLLM APC and LMCache** in cache speedup across all configurations: up to 15.4× (CASCADE) vs 1.8× (LMCache) vs 1.6× (vLLM APC).
@@ -1185,8 +1193,8 @@ vLLM v0.18.1 with FlashAttention v2, TP=4. Same model, workload, and hardware as
 > 3. **vLLM achieves lower absolute TTFT** (85–304 ms) due to FlashAttention + CUDA graph — this reflects inference engine performance, not caching effectiveness. CASCADE's storage layer is orthogonal and can complement any optimized engine.
 > 4. **CASCADE cache speedup scales with block size**: 1.8× (short) → 5.6× (160MB) → 7.0× (320MB) at 1N, while vLLM APC and LMCache remain flat.
 > 5. **CASCADE cache speedup scales with nodes**: 7.0× (1N) → 15.4× (8N) at 320MB, via cross-node RDMA sharing — impossible for vLLM APC (GPU-only) or LMCache (local disk).
-> 6. **LMCache plateaus at 1.5–1.8×** across both short and 160MB — disk I/O limits its caching benefit regardless of block size. CASCADE's RDMA path delivers 5.6–15.4×.
-> 7. 320MB LMCache results pending.
+> 6. **LMCache plateaus at 1.0–1.8×** across all block sizes — disk I/O overhead limits caching benefit. Notably, LMCache speedup **decreases** from 160MB (1.5×) to 320MB (1.1×) at 1N as larger blocks amplify I/O cost, while CASCADE speedup **increases** (5.6× → 7.0×).
+> 7. **At 8N 320MB: CASCADE 15.4× vs LMCache 1.7× vs vLLM APC 1.5×** — CASCADE delivers 9× more caching benefit than the best alternative.
 
 ---
 
