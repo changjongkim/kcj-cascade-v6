@@ -1118,50 +1118,42 @@ vLLM v0.18.1 with FlashAttention v2, TP=4. Same model, workload, and hardware as
 
 ##### Short Prefix (~16MB)
 
-| | 1N APC OFF | 1N APC ON | 2N APC OFF | 2N APC ON | 4N | 8N |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **MISS TTFT (avg)** | 116.9 ms | 80.4 ms | 99.9 ms | 97.7 ms | pending | pending |
-| **HIT TTFT (avg)** | 104.8 ms | 101.9 ms | 95.2 ms | 94.1 ms | pending | pending |
-| **MISS TTFT (P50)** | 100.8 ms | 67.0 ms | 86.5 ms | 75.3 ms | pending | pending |
-| **HIT TTFT (P50)** | 42.2 ms | 41.1 ms | 71.3 ms | 62.7 ms | pending | pending |
-| **Hit Rate** | 60.5% | 60.5% | 54.2% | 54.2% | pending | pending |
-| **APC Speedup** | 1.1× | 0.8× | 1.0× | 1.0× | pending | pending |
+| | 1N OFF | 1N ON | 2N OFF | 2N ON | 4N OFF | 4N ON | 8N OFF | 8N ON |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **MISS TTFT** | 116.9 | 80.4 | 99.9 | 97.7 | 113.5 | 111.5 | 130.9 | 128.2 |
+| **HIT TTFT** | 104.8 | 101.9 | 95.2 | 94.1 | 82.0 | 80.7 | 84.2 | 82.5 |
+| **Speedup** | 1.1× | 0.8× | 1.0× | 1.0× | 1.4× | 1.4× | 1.6× | 1.6× |
 
-##### Cascade vs. vLLM Comparison (Short Prefix, 1N)
-
-| Metric | vLLM APC OFF | vLLM APC ON | CASCADE |
-| :--- | :---: | :---: | :---: |
-| **MISS TTFT** | 116.9 ms | 80.4 ms | 959.5 ms |
-| **HIT TTFT** | 104.8 ms | 101.9 ms | 536.7 ms (E2E) |
-| **Pure Retrieval** | — | — | **0.6 ms** (GET) |
-| **APC/Cache Speedup** | 1.1× | 0.8× | **1.8×** |
+*(All values in ms. OFF = APC disabled, ON = APC enabled.)*
 
 ##### 160MB (512 tokens)
 
-| | 1N APC OFF | 1N APC ON | 2N APC OFF | 2N APC ON |
-| :--- | :---: | :---: | :---: | :---: |
-| **MISS TTFT (avg)** | 217.4 ms | 84.5 ms | 203.1 ms | 101.1 ms |
-| **HIT TTFT (avg)** | 203.9 ms | 108.7 ms | 196.9 ms | 100.9 ms |
-| **MISS TTFT (P50)** | 201.6 ms | 71.3 ms | 190.4 ms | 79.4 ms |
-| **HIT TTFT (P50)** | 149.1 ms | 49.3 ms | 170.0 ms | 66.5 ms |
-| **Hit Rate** | 60.5% | 60.5% | 54.2% | 54.2% |
-| **APC Speedup** | 1.1× | 0.8× | 1.0× | 1.0× |
+| | 1N OFF | 1N ON | 2N OFF | 2N ON | 4N OFF | 4N ON | 8N OFF | 8N ON |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **MISS TTFT** | 217.4 | 84.5 | 203.1 | 101.1 | 215.9 | 114.3 | 233.3 | 131.5 |
+| **HIT TTFT** | 203.9 | 108.7 | 196.9 | 100.9 | 175.1 | 83.2 | 177.7 | 86.3 |
+| **Speedup** | 1.1× | 0.8× | 1.0× | 1.0× | 1.2× | 1.4× | 1.3× | 1.5× |
 
-##### Cascade vs. vLLM Comparison (160MB, 1N)
+##### CASCADE vs. vLLM APC Cache Speedup Comparison
 
-| Metric | vLLM APC OFF | vLLM APC ON | CASCADE |
+| Block Size | Nodes | vLLM APC ON | CASCADE |
 | :--- | :---: | :---: | :---: |
-| **MISS TTFT** | 217.4 ms | 84.5 ms | ~914 ms |
-| **HIT TTFT** | 203.9 ms | 108.7 ms | ~162 ms (deser excluded) |
-| **Pure Retrieval** | — | — | **12.0 ms** (GET) |
-| **APC/Cache Speedup** | 1.1× | 0.8× | **5.6×** |
+| Short (~16MB) | 1N | 0.8× | **1.8×** |
+| Short (~16MB) | 2N | 1.0× | **2.6×** |
+| Short (~16MB) | 4N | 1.4× | **3.3×** |
+| Short (~16MB) | 8N | 1.6× | **2.6×** |
+| 160MB | 1N | 0.8× | **5.6×** |
+| 160MB | 2N | 1.0× | **8.2×** |
+| 160MB | 4N | 1.4× | **10.4×** |
+| 160MB | 8N | 1.5× | **11.4×** |
 
 > **Key Findings (F, vLLM comparison):**
-> 1. **vLLM APC provides negligible speedup (0.8–1.1×)** across both short and 160MB prefixes — caching overhead negates prefix reuse benefit.
-> 2. **vLLM is faster in absolute TTFT** (84–217 ms vs CASCADE 162–959 ms) due to FlashAttention + CUDA graph optimizations — this is inference engine performance, not caching.
-> 3. **CASCADE cache speedup grows with block size**: 1.8× (short) → **5.6× (160MB)**, while vLLM APC remains flat at 0.8–1.1×.
-> 4. **vLLM APC is single-node only** — cannot share cached prefixes across nodes. CASCADE enables cross-node KV sharing via RDMA.
-> 5. 320MB and 4N/8N results pending — expected to show continued CASCADE advantage.
+> 1. **CASCADE outperforms vLLM APC in cache speedup across all configurations**: up to 11.4× (CASCADE) vs 1.5× (vLLM APC) at 8N 160MB.
+> 2. **vLLM APC provides marginal speedup (0.8–1.6×)** — prefix caching within single-node GPU memory has limited benefit.
+> 3. **vLLM achieves lower absolute TTFT** (80–233 ms vs CASCADE 162–959 ms) due to FlashAttention + CUDA graph optimizations — this reflects inference engine performance, not caching effectiveness.
+> 4. **CASCADE cache speedup scales with block size**: 1.8–3.3× (short) → 5.6–11.4× (160MB), while vLLM APC remains flat.
+> 5. **vLLM APC is single-node only** — each node caches independently with no cross-node sharing. CASCADE enables cluster-wide prefix reuse via RDMA.
+> 6. 320MB results pending.
 
 ---
 
