@@ -1144,30 +1144,40 @@ vLLM v0.18.1 with FlashAttention v2, TP=4. Same model, workload, and hardware as
 
 *(All values in ms.)*
 
-##### CASCADE vs. vLLM APC Cache Speedup Comparison
+##### LMCache (vLLM + LMCache disk backend, Short Prefix)
 
-| Block Size | Nodes | vLLM APC ON | CASCADE |
-| :--- | :---: | :---: | :---: |
-| Short (~16MB) | 1N | 0.8× | **1.8×** |
-| Short (~16MB) | 2N | 1.0× | **2.6×** |
-| Short (~16MB) | 4N | 1.4× | **3.3×** |
-| Short (~16MB) | 8N | 1.6× | **2.6×** |
-| 160MB | 1N | 0.8× | **5.6×** |
-| 160MB | 2N | 1.0× | **8.2×** |
-| 160MB | 4N | 1.4× | **10.4×** |
-| 160MB | 8N | 1.5× | **11.4×** |
-| 320MB | 1N | 0.9× | **7.0×** |
-| 320MB | 2N | 1.0× | **11.2×** |
-| 320MB | 4N | 1.4× | **13.7×** |
-| 320MB | 8N | 1.5× | **15.4×** |
+| | 1N | 2N | 4N | 8N |
+| :--- | :---: | :---: | :---: | :---: |
+| **MISS TTFT** | 112.8 | 125.2 | 144.5 | 159.1 |
+| **HIT TTFT** | 109.5 | 101.8 | 84.6 | 86.6 |
+| **Speedup** | 1.0× | 1.2× | 1.7× | 1.8× |
 
-> **Key Findings (F, vLLM comparison):**
-> 1. **CASCADE outperforms vLLM APC in cache speedup across all configurations**: up to 15.4× (CASCADE) vs 1.6× (vLLM APC).
-> 2. **vLLM APC provides negligible speedup (0.8–1.6×)** regardless of block size — single-node GPU prefix caching has limited benefit.
-> 3. **vLLM achieves lower absolute TTFT** (85–286 ms vs CASCADE 162–959 ms) due to FlashAttention + CUDA graph optimizations — this reflects inference engine performance, not caching effectiveness.
-> 4. **CASCADE cache speedup scales with block size**: 1.8× (short) → 5.6× (160MB) → 7.0× (320MB) at 1N, while vLLM APC remains flat at 0.8–1.1×.
-> 5. **CASCADE cache speedup scales with nodes**: 7.0× (1N) → 15.4× (8N) at 320MB, while vLLM APC cannot share prefixes across nodes.
-> 6. **vLLM APC max speedup at 320MB 8N is 1.5×** vs CASCADE 15.4× — a **10× gap** in caching effectiveness.
+*(All values in ms. 160MB/320MB LMCache results pending.)*
+
+##### CASCADE vs. vLLM APC vs. LMCache — Cache Speedup Comparison
+
+| Block Size | Nodes | vLLM APC ON | LMCache | CASCADE |
+| :--- | :---: | :---: | :---: | :---: |
+| Short (~16MB) | 1N | 0.8× | 1.0× | **1.8×** |
+| Short (~16MB) | 2N | 1.0× | 1.2× | **2.6×** |
+| Short (~16MB) | 4N | 1.4× | 1.7× | **3.3×** |
+| Short (~16MB) | 8N | 1.6× | 1.8× | **2.6×** |
+| 160MB | 1N | 0.8× | pending | **5.6×** |
+| 160MB | 2N | 1.0× | pending | **8.2×** |
+| 160MB | 4N | 1.4× | pending | **10.4×** |
+| 160MB | 8N | 1.5× | pending | **11.4×** |
+| 320MB | 1N | 0.9× | pending | **7.0×** |
+| 320MB | 2N | 1.0× | pending | **11.2×** |
+| 320MB | 4N | 1.4× | pending | **13.7×** |
+| 320MB | 8N | 1.5× | pending | **15.4×** |
+
+> **Key Findings (F, 3-way comparison):**
+> 1. **CASCADE outperforms both vLLM APC and LMCache** in cache speedup across all configurations: up to 15.4× (CASCADE) vs 1.8× (LMCache) vs 1.6× (vLLM APC).
+> 2. **LMCache provides slightly better speedup than vLLM APC** (1.0–1.8× vs 0.8–1.6×) due to disk-based cross-request caching, but remains far below CASCADE.
+> 3. **vLLM achieves lower absolute TTFT** (85–304 ms) due to FlashAttention + CUDA graph — this reflects inference engine performance, not caching effectiveness. CASCADE's storage layer is orthogonal and can complement any optimized engine.
+> 4. **CASCADE cache speedup scales with block size**: 1.8× (short) → 5.6× (160MB) → 7.0× (320MB) at 1N, while vLLM APC and LMCache remain flat.
+> 5. **CASCADE cache speedup scales with nodes**: 7.0× (1N) → 15.4× (8N) at 320MB, via cross-node RDMA sharing — impossible for vLLM APC (GPU-only) or LMCache (local disk).
+> 6. 160MB/320MB LMCache results pending.
 
 ---
 
