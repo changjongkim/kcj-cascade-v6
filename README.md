@@ -1174,7 +1174,16 @@ vLLM v0.18.1 with FlashAttention v2, TP=4. Same model, workload, and hardware as
 | **Hit Rate** | 60.0% | 54.2% | 61.0% | 55.3% |
 | **Speedup** | 1.1× | 1.2× | 1.6× | 1.7× |
 
-*(All values in ms.)*
+##### LMCache Redis Backend (Short Prefix)
+
+| | 1N | 2N | 4N | 8N |
+| :--- | :---: | :---: | :---: | :---: |
+| **MISS TTFT** | 115.0 | 126.5 | 143.6 | 155.8 |
+| **HIT TTFT** | 109.6 | 101.7 | 84.9 | 86.6 |
+| **Hit Rate** | 60.5% | 54.2% | 61.0% | 55.3% |
+| **Speedup** | 1.0× | 1.2× | 1.7× | 1.8× |
+
+*(All values in ms. Redis and Disk backends show identical performance for short prefixes.)*
 
 ##### CASCADE vs. vLLM APC vs. LMCache — Cache Speedup Comparison
 
