@@ -1112,6 +1112,37 @@ Sessions scaled proportionally: 1N=50, 2N=100, 4N=200, 8N=400 to maintain consis
 > 4. **Speedup scales with nodes**: 5.6× (1N) → 8.2× (2N) → 10.4× (4N), same pattern as 320MB.
 > 5. 8N results pending.
 
+#### F. vLLM Baseline Comparison (Qwen-2.5-72B, A100-80GB, ShareGPT)
+
+vLLM v0.18.1 with FlashAttention v2, TP=4. Same model, workload, and hardware as Cascade experiments. Each configuration runs APC OFF (no prefix caching) and APC ON (vLLM Automatic Prefix Caching).
+
+##### Short Prefix (~16MB)
+
+| | 1N APC OFF | 1N APC ON | 2N APC OFF | 2N APC ON | 4N | 8N |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **MISS TTFT (avg)** | 116.9 ms | 80.4 ms | 99.9 ms | 97.7 ms | pending | pending |
+| **HIT TTFT (avg)** | 104.8 ms | 101.9 ms | 95.2 ms | 94.1 ms | pending | pending |
+| **MISS TTFT (P50)** | 100.8 ms | 67.0 ms | 86.5 ms | 75.3 ms | pending | pending |
+| **HIT TTFT (P50)** | 42.2 ms | 41.1 ms | 71.3 ms | 62.7 ms | pending | pending |
+| **Hit Rate** | 60.5% | 60.5% | 54.2% | 54.2% | pending | pending |
+| **APC Speedup** | 1.1× | 0.8× | 1.0× | 1.0× | pending | pending |
+
+##### Cascade vs. vLLM Comparison (Short Prefix, 1N)
+
+| Metric | vLLM APC OFF | vLLM APC ON | CASCADE |
+| :--- | :---: | :---: | :---: |
+| **MISS TTFT** | 116.9 ms | 80.4 ms | 959.5 ms |
+| **HIT TTFT** | 104.8 ms | 101.9 ms | 536.7 ms (E2E) |
+| **Pure Retrieval** | — | — | **0.6 ms** (GET) |
+| **APC/Cache Speedup** | 1.1× | 0.8× | **1.8×** |
+
+> **Key Findings (F, vLLM comparison):**
+> 1. **vLLM APC provides negligible speedup (0.8–1.1×) for short prefixes** — prefix is too short for caching to amortize overhead.
+> 2. **vLLM is faster in absolute TTFT** (80–117 ms vs CASCADE 536–959 ms) due to FlashAttention + CUDA graph optimizations, not caching.
+> 3. **CASCADE provides meaningful cache speedup (1.8×)** even for short prefixes, whereas vLLM APC does not.
+> 4. **vLLM APC is single-node only** — cannot share cached prefixes across nodes. CASCADE enables cross-node KV sharing via RDMA.
+> 5. 160MB/320MB and multi-node results pending — expected to show larger CASCADE advantage as prefix size increases.
+
 ---
 
 ## 🔧 Installation & Usage
