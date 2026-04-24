@@ -91,6 +91,8 @@ def run_benchmark():
     parser.add_argument("--run-id", type=str, default=None, help="Unique ID for this run within a job")
     parser.add_argument("--block-size-mb", type=int, default=160,
                         help="Block size in MB (default: 160 for Llama-3-70B, use 320 for Qwen-2.5-72B)")
+    parser.add_argument("--tier-mode", choices=["hot", "warm", "cold"], default=None,
+                        help="Tier retrieval mode for Fig 8. hot=GPU HBM, warm=DRAM, cold=Lustre.")
     args = parser.parse_args()
 
     block_size_bytes = args.block_size_mb * 1024 * 1024
@@ -207,8 +209,21 @@ def run_benchmark():
 
         file_barrier(f"{name}_ready_to_read", rid)
 
-        target_rank = (rank + 1) % world
+        if args.tier_mode == "hot":
+            target_rank = rank
+        else:
+            target_rank = (rank + 1) % world
         my_read_reqs = req_keys[target_rank::world]
+
+        if args.tier_mode == "cold":
+            if hasattr(adapter, "evict_all"):
+                adapter.evict_all()
+            elif hasattr(adapter, "flush_cache"):
+                adapter.flush_cache()
+            time.sleep(5)
+        elif args.tier_mode == "warm":
+            if hasattr(adapter, "evict_gpu"):
+                adapter.evict_gpu()
 
         if "redis" in name.lower():
             target_host = all_hosts.get(target_rank, "127.0.0.1")

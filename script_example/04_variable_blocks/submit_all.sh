@@ -1,8 +1,8 @@
 #!/bin/bash
 
 echo "Submitting Variable Block Size Experiments to SLURM..."
-sbatch benchmark/scripts/variable_block_8n.slurm
+for sys in cascade hdf5 lmcache pdc redis; do
+    sbatch script_example/04_variable_blocks/${sys}_16n.slurm
+done
 
-sbatch benchmark/scripts/variable_block_32n.slurm
-
-echo " 8-Node and 32-Node Variable block experiments submitted."
+echo "Variable block experiments submitted."

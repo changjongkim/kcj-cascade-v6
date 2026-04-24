@@ -41,7 +41,7 @@ echo "" echo "=========================================="
 echo "N=1 (8 requests, 160MB blocks)"
 echo "=========================================="
 srun --overlap -N 1 -n 1 \
-  python3 vllm_integration/cascade_vllm_weak_scaling.py \
+  python3 script_example/06_e2e_inference/weak_scaling_driver.py \
   --num-requests 8 \
   --block-size-mb 160 \
   --storage-path "${STORAGE_PATH}" \
