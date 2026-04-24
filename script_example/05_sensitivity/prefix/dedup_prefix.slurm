@@ -6,9 +6,9 @@
 #SBATCH -N 8
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
-#SBATCH -J v13_dedup_cascade_prefixrep
-#SBATCH -o benchmark/logs/v13_dedup_cascade_prefixrep_%j.out
-#SBATCH -e benchmark/logs/v13_dedup_cascade_prefixrep_%j.err
+#SBATCH -J dedup_cascade_prefixrep
+#SBATCH -o benchmark/logs/dedup_cascade_prefixrep_%j.out
+#SBATCH -e benchmark/logs/dedup_cascade_prefixrep_%j.err
 
 cd ${REPO_ROOT}
 source setup_env.sh

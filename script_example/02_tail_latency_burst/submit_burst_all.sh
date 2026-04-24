@@ -11,7 +11,7 @@ mkdir -p benchmark/logs
 SYSTEMS="cascade hdf5 lmcache pdc redis"
 
 for sys in $SYSTEMS; do
-    script="benchmark/scripts/v17_bursty_${sys}_32n.slurm"
+    script="benchmark/scripts/bursty_${sys}_32n.slurm"
     if [ -f "$script"]; then
         echo "Submitting: $script"
         sbatch "$script"

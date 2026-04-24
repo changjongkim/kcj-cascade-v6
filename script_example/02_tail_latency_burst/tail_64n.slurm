@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH -A <account>
 #SBATCH -C gpu
-#SBATCH -J v16_tail_cdf_${n}n
-#SBATCH -o benchmark/logs/v16_tail_cdf_${n}n_%j.out
+#SBATCH -J tail_cdf_${n}n
+#SBATCH -o benchmark/logs/tail_cdf_${n}n_%j.out
 #SBATCH -q regular
 #SBATCH -t 01:00:00
 #SBATCH -N 64

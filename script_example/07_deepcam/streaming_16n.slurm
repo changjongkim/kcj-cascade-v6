@@ -7,7 +7,7 @@
 #SBATCH --ntasks-per-node=4
 #SBATCH --gpus-per-node=4
 #SBATCH -J dc_repro_cas_stream_16n
-#SBATCH -o benchmark/logs/v16_deepcam_repro_cas_stream_16n_%j.out
+#SBATCH -o benchmark/logs/deepcam_repro_cas_stream_16n_%j.out
 
 cd ${REPO_ROOT}
 export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"

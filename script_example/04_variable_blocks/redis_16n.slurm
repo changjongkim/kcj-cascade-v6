@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH -A <account>
 #SBATCH -C gpu
-#SBATCH -J v20_16n_redis
-#SBATCH -o benchmark/logs/v20_var_16n_redis_%j.out
+#SBATCH -J 16n_redis
+#SBATCH -o benchmark/logs/var_16n_redis_%j.out
 #SBATCH -q regular
 #SBATCH -t 00:15:00
 #SBATCH -N 16

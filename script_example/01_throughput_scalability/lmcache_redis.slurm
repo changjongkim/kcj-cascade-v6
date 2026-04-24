@@ -6,9 +6,9 @@
 #SBATCH -N 4
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
-#SBATCH -J v9_redis_32n
-#SBATCH -o benchmark/logs/v9_redis_32n_%j.out
-#SBATCH -e benchmark/logs/v9_redis_32n_%j.err
+#SBATCH -J redis_32n
+#SBATCH -o benchmark/logs/redis_32n_%j.out
+#SBATCH -e benchmark/logs/redis_32n_%j.err
 
 cd ${REPO_ROOT}
 source setup_env.sh

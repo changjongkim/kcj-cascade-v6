@@ -6,8 +6,8 @@
 #SBATCH -N 8
 #SBATCH --ntasks-per-node=4
 #SBATCH --gpus-per-node=4
-#SBATCH -J v16_deepcam_cascade
-#SBATCH -o benchmark/logs/v16_deepcam_cascade_%j.out
+#SBATCH -J deepcam_cascade
+#SBATCH -o benchmark/logs/deepcam_cascade_%j.out
 
 cd ${REPO_ROOT}
 source setup_env.sh
@@ -48,4 +48,4 @@ srun python script_example/07_deepcam/deepcam_driver.py \
        --batchnorm_group_size 1 \
        --local_batch_size 2
 
-echo "Done: v16_deepcam_cascade"
+echo "Done: deepcam_cascade"

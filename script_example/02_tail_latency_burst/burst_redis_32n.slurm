@@ -6,9 +6,9 @@
 #SBATCH -N 32
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
-#SBATCH -J v17_bursty_redis_32n
-#SBATCH -o benchmark/logs/v17_bursty_redis_32n_%j.out
-#SBATCH -e benchmark/logs/v17_bursty_redis_32n_%j.err
+#SBATCH -J bursty_redis_32n
+#SBATCH -o benchmark/logs/bursty_redis_32n_%j.out
+#SBATCH -e benchmark/logs/bursty_redis_32n_%j.err
 
 cd ${REPO_ROOT}
 source setup_env.sh

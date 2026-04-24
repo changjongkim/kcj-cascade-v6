@@ -6,9 +6,9 @@
 #SBATCH -N 8
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
-#SBATCH -J v13_pdc_weak_prefixrep
-#SBATCH -o benchmark/logs/v13_pdc_weak_prefixrep_%j.out
-#SBATCH -e benchmark/logs/v13_pdc_weak_prefixrep_%j.err
+#SBATCH -J pdc_weak_prefixrep
+#SBATCH -o benchmark/logs/pdc_weak_prefixrep_%j.out
+#SBATCH -e benchmark/logs/pdc_weak_prefixrep_%j.err
 
 cd ${REPO_ROOT}
 source setup_env.sh

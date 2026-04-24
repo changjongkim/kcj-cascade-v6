@@ -6,8 +6,8 @@
 #SBATCH -N 8
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
-#SBATCH -J v16_tail_cdf_8n
-#SBATCH -o benchmark/logs/v16_tail_cdf_8n_%j.out
+#SBATCH -J tail_cdf_8n
+#SBATCH -o benchmark/logs/tail_cdf_8n_%j.out
 
 cd ${REPO_ROOT}
 source setup_env.sh

@@ -6,8 +6,8 @@
 #SBATCH -N 8
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
-#SBATCH -J v16_dedup_sens_lmc_8n
-#SBATCH -o benchmark/logs/v16_dedup_sens_lmc_8n_%j.out
+#SBATCH -J dedup_sens_lmc_8n
+#SBATCH -o benchmark/logs/dedup_sens_lmc_8n_%j.out
 
 cd ${REPO_ROOT}
 source setup_env.sh

@@ -6,9 +6,9 @@
 #SBATCH -N 4
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
-#SBATCH -J v9_hdf5_indep_32n
-#SBATCH -o benchmark/logs/v9_hdf5_indep_32n_%j.out
-#SBATCH -e benchmark/logs/v9_hdf5_indep_32n_%j.err
+#SBATCH -J hdf5_indep_32n
+#SBATCH -o benchmark/logs/hdf5_indep_32n_%j.out
+#SBATCH -e benchmark/logs/hdf5_indep_32n_%j.err
 
 cd ${REPO_ROOT}
 source setup_env.sh
