@@ -1,59 +1,25 @@
 #!/bin/bash
 #SBATCH -A <account>
 #SBATCH -C gpu
-#SBATCH -q debug
-#SBATCH -t 00:30:00
+#SBATCH -q regular
+#SBATCH -t 01:00:00
 #SBATCH -N 4
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
-#SBATCH --cpus-per-task=32
-#SBATCH -J cascade_weak_4n
-#SBATCH -o vllm_integration/logs/weak_scaling_4n_%j.out
-#SBATCH -e vllm_integration/logs/weak_scaling_4n_%j.err
-
-echo "=========================================="
-echo "Cascade-vLLM Weak Scaling: 4 Nodes"
-echo "=========================================="
-echo "Job ID: $SLURM_JOB_ID"
-echo "Nodes: $SLURM_JOB_NUM_NODES"
-echo "==========================================" module load python/3.11
-module load cudatoolkit/12.2
-module load <mpi-module>
+#SBATCH --cpus-per-task=64
+#SBATCH -J vllm_baseline_4n
+#SBATCH -o benchmark/logs/vllm_baseline_4n_%j.out
+#SBATCH -e benchmark/logs/vllm_baseline_4n_%j.err
 
 cd ${REPO_ROOT}
+source script_example/00_setup/setup_ml_env.sh
 export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"
 
-export PYTHONPATH=${REPO_ROOT}:$PYTHONPATH
-export CASCADE_ROOT=${REPO_ROOT}
-
-STORAGE_PATH="${REPO_ROOT}/vllm_integration/cascade_store_weak_${SLURM_JOB_ID}"
-export VLLM_CASCADE_LUSTRE_PATH=$STORAGE_PATH
-
-mkdir -p $STORAGE_PATH
-mkdir -p vllm_integration/logs
-
-echo ""
-echo "Configuration:"
-echo " Storage Path: $STORAGE_PATH"
-echo " Nodes: 4"
-echo " Requests: 32 (8 per node)"
-echo "" echo "=========================================="
-echo "N=4 (32 requests, 160MB blocks)"
-echo "=========================================="
-srun --overlap -N 4 -n 4 \
-  python3 script_example/06_e2e_inference/weak_scaling_driver.py \
-  --num-requests 8 \
-  --block-size-mb 160 \
-  --storage-path "${STORAGE_PATH}" \
-  --gpu-capacity-gb 32 \
-  --shm-capacity-gb 64 \
-  --enable-dedup \
-  --enable-compression \
-  --enable-prefetch \
-  --run-id "${SLURM_JOB_ID}_N4"
-
-echo ""
-echo "=========================================="
-echo " 4-Node Test Complete"
-echo "=========================================="
-echo "Results saved to: ${STORAGE_PATH}" exit 0
+srun -N 4 -n 4 --gpus-per-node=4 python3 script_example/06_e2e_inference/vllm_baseline_driver.py \
+    --model ${REPO_ROOT}/models/Qwen2.5-72B \
+    --num-sessions 50 \
+    --turns-per-session 3 \
+    --max-new-tokens 1 \
+    --prefix-tokens 1024 \
+    --dataset ${REPO_ROOT}/benchmark/data_external/sharegpt/sharegpt_cleaned.json \
+    --results-dir benchmark/results/vllm_baseline_4n_${SLURM_JOB_ID}
