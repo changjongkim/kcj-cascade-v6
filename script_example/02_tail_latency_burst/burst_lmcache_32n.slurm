@@ -3,18 +3,18 @@
 #SBATCH -C gpu
 #SBATCH -q debug
 #SBATCH -t 00:30:00
-#SBATCH -N 8
+#SBATCH -N 32
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
-#SBATCH -J v17_bursty_hdf5_8n
-#SBATCH -o benchmark/logs/v17_bursty_hdf5_8n_%j.out
-#SBATCH -e benchmark/logs/v17_bursty_hdf5_8n_%j.err
+#SBATCH -J v17_bursty_lmc_32n
+#SBATCH -o benchmark/logs/v17_bursty_lmcache_32n_%j.out
+#SBATCH -e benchmark/logs/v17_bursty_lmcache_32n_%j.err
 
 cd ${REPO_ROOT}
 source setup_env.sh
 export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"
 
-SYSTEM="hdf5"
+SYSTEM="lmcache"
 N=8
 BLOCK_SIZE=160
 
@@ -27,7 +27,7 @@ srun -N $N -n $N --ntasks-per-node=1 \
     --block-size-mb $BLOCK_SIZE
 
 echo "Cleaning up data..."
-rm -rf benchmark/tmp/h5_bursty_${SLURM_JOB_ID}.h5
+rm -rf benchmark/lmcache_bursty_${SLURM_JOB_ID}
 rm -rf benchmark/tmp/bursty_res_${SLURM_JOB_ID}
 
 echo "Done"
