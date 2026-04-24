@@ -42,7 +42,7 @@ Each Slurm automatically prepends `${REPO_ROOT}/script_example` to
 `PYTHONPATH`, so drivers' `from benchmark.run_benchmark import
 get_adapter` resolves to the adapters shipped in this directory.
 
-## Reproduction Workflow
+## Workflow
 
 1. **Setup** ($T_1$, $T_3$): `bash 00_setup/setup_env.sh && bash 00_setup/build_cpp.sh`
 2. **Trace generation** ($T_2$): `python3 00_setup/generate_traces.py` (see the script for dataset-specific flags)
@@ -66,17 +66,12 @@ get_adapter` resolves to the adapters shipped in this directory.
 - PDC — object-centric data management
 - vLLM — APC and LMCache-backed modes (end-to-end inference only;
   invoked directly, not through the shared adapter layer)
-- CASCADE — this work
+- CASCADE
 
 ## Notes
 
 - DeepCAM requires the MLPerf HPC benchmark dataset
   (https://github.com/mlcommons/hpc/tree/main/deepcam); stage the
   512GB dataset per MLCommons instructions.
-- `03_tier_latency/{tier_gpu,tier_dram,tier_lustre}.slurm` are
-  CASCADE-only tier microbenchmarks; Figure 8 comparisons use
-  `tier_{system}_{8n,64n}.slurm` which reuse `throughput_driver.py`
-  with `--tier-mode {hot,warm,cold}`.
-- `01_throughput_scalability/*_full.slurm` cover the full 1–64 node
-  weak/strong sweep (regular queue, 1 hr). Short debug variants
-  (`*.slurm` without `_full` suffix) use 1–4 nodes.
+- To test a different node count, edit the Slurm file directly
+  (`#SBATCH -N` and any per-script node list).
