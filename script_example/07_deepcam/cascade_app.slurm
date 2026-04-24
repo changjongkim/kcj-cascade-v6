@@ -1,0 +1,61 @@
+#!/bin/bash
+#SBATCH -A m1248_g
+#SBATCH -C gpu
+#SBATCH -q regular
+#SBATCH -t 00:30:00
+#SBATCH -N 8
+#SBATCH --ntasks-per-node=4
+#SBATCH --gpus-per-node=4
+#SBATCH -J v16_deepcam_cascade
+#SBATCH -o benchmark/logs/v16_deepcam_cascade_%j.out
+
+cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
+source setup_env.sh
+
+export FI_CXI_RX_MATCH_MODE=software
+export FI_CXI_REQ_BUF_SIZE=16MB
+export FI_CXI_REQ_BUF_MIN_POSTED=8
+export FI_CXI_REQ_BUF_MAX_POSTED=16
+export FI_CXI_DEFAULT_CQ_SIZE=131072
+export FI_CXI_CQ_FILL_PERCENT=30
+export FI_CXI_OFLOW_BUF_SIZE=16MB
+export FI_CXI_OFLOW_BUF_MIN_POSTED=8
+export FI_CXI_OFLOW_BUF_MAX_POSTED=16
+
+export MPICH_SMP_SINGLE_COPY_MODE=XPMEM
+export MPICH_OFI_NIC_POLICY=NUMA
+export MPICH_GPU_SUPPORT_ENABLED=1
+
+export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
+export MASTER_PORT=29500
+
+export DATA_DIR="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/deepcam_dummy_data"
+export OUT_DIR="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/deepcam_cascade_${SLURM_JOB_ID}"
+export CASCADE_STORE_DIR="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/cascade_store_${SLURM_JOB_ID}"
+
+echo "--------------------------------------------------------"
+echo "🚀 DeepCAM V16 Benchmark (CASCADE HOT)"
+echo "--------------------------------------------------------"
+
+srun python benchmark/scripts/v16_app_deepcam_proxy.py \
+       --use_cascade \
+       --cascade_lustre_path ${CASCADE_STORE_DIR} \
+       --wireup_method "mpi" \
+       --run_tag "deepcam_cascade_8n" \
+       --data_dir_prefix ${DATA_DIR} \
+       --output_dir ${OUT_DIR} \
+       --model_prefix "segmentation" \
+       --optimizer "LAMB" \
+       --start_lr 0.0055 \
+       --lr_schedule type="multistep",milestones="800",decay_rate="0.1" \
+       --lr_warmup_steps 400 \
+       --lr_warmup_factor 1. \
+       --weight_decay 1e-2 \
+       --logging_frequency 10 \
+       --save_frequency 0 \
+       --max_epochs 1 \
+       --max_inter_threads 4 \
+       --batchnorm_group_size 1 \
+       --local_batch_size 2
+
+echo "✅ Done: v16_deepcam_cascade"
