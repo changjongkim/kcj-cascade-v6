@@ -6,9 +6,9 @@
 #SBATCH -N 64
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
-#SBATCH -J pdc_full
-#SBATCH -o benchmark/logs/pdc_full_%j.out
-#SBATCH -e benchmark/logs/pdc_full_%j.err
+#SBATCH -J pdc_32n
+#SBATCH -o benchmark/logs/pdc_32n_%j.out
+#SBATCH -e benchmark/logs/pdc_32n_%j.err
 
 cd ${REPO_ROOT}
 source setup_env.sh
@@ -18,10 +18,9 @@ SYSTEM="pdc"
 NODES_LIST=(1 2 4 8 16 32 64)
 JOB_UID=${SLURM_JOB_ID}
 
-echo "Starting PDC Scaling (1-32 nodes)"
-
+echo " Starting PDC Scaling (1-32 nodes)"
 for N in "${NODES_LIST[@]}"; do
-    echo "[Scale: $N Nodes]"
+    echo "   [Scale: $N Nodes]"
     REQS=$((8 * N))
     RUN_ID="${JOB_UID}_N${N}"
 
@@ -32,4 +31,4 @@ for N in "${NODES_LIST[@]}"; do
 
     sleep 5
 done
-echo "Finished PDC"
+echo " Finished PDC"

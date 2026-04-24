@@ -16,9 +16,7 @@ echo "Cascade-vLLM Weak Scaling: 8 Nodes"
 echo "=========================================="
 echo "Job ID: $SLURM_JOB_ID"
 echo "Nodes: $SLURM_JOB_NUM_NODES"
-echo "=========================================="
-
-module load python/3.11
+echo "==========================================" module load python/3.11
 module load cudatoolkit/12.2
 module load <mpi-module>
 
@@ -36,19 +34,17 @@ mkdir -p vllm_integration/logs
 
 echo ""
 echo "Configuration:"
-echo "Storage Path: $STORAGE_PATH"
-echo "Nodes: 8"
-echo "Requests: 64 (8 per node)"
-echo ""
-
-echo "=========================================="
+echo " Storage Path: $STORAGE_PATH"
+echo " Nodes: 8"
+echo " Requests: 64 (8 per node)"
+echo "" echo "=========================================="
 echo "N=8 (64 requests, 160MB blocks)"
 echo "=========================================="
 srun --overlap -N 8 -n 8 \
   python3 vllm_integration/cascade_vllm_weak_scaling.py \
   --num-requests 8 \
   --block-size-mb 160 \
-  --storage-path "${STORAGE_PATH}"\
+  --storage-path "${STORAGE_PATH}" \
   --gpu-capacity-gb 32 \
   --shm-capacity-gb 64 \
   --enable-dedup \
@@ -58,8 +54,6 @@ srun --overlap -N 8 -n 8 \
 
 echo ""
 echo "=========================================="
-echo "8-Node Test Complete"
+echo " 8-Node Test Complete"
 echo "=========================================="
-echo "Results saved to: ${STORAGE_PATH}"
-
-exit 0
+echo "Results saved to: ${STORAGE_PATH}" exit 0

@@ -22,9 +22,9 @@ def run_with_cascade(
 
     print(f"\n{'='*60}")
     print(f"Starting vLLM with Cascade KV connector")
-    print(f"Model: {model_name}")
-    print(f"Prompts: {len(prompts)}")
-    print(f"Storage: {storage_path}")
+    print(f"  Model: {model_name}")
+    print(f"  Prompts: {len(prompts)}")
+    print(f"  Storage: {storage_path}")
     print(f"{'='*60}\n")
 
     kv_transfer_config = KVTransferConfig(
@@ -65,8 +65,8 @@ def run_with_cascade(
         tokens = len(output.outputs[0].token_ids)
         pass1_results.append({"tokens": tokens, "text_preview": text[:80]})
 
-    print(f"Pass 1 time: {pass1_time:.2f}s")
-    print(f"Total tokens: {sum(r['tokens'] for r in pass1_results)}")
+    print(f"  Pass 1 time: {pass1_time:.2f}s")
+    print(f"  Total tokens: {sum(r['tokens'] for r in pass1_results)}")
 
     print(f"\n--- Pass 2: Reusing Cascade KV cache ---")
     start = time.time()
@@ -79,8 +79,8 @@ def run_with_cascade(
         tokens = len(output.outputs[0].token_ids)
         pass2_results.append({"tokens": tokens, "text_preview": text[:80]})
 
-    print(f"Pass 2 time: {pass2_time:.2f}s")
-    print(f"Total tokens: {sum(r['tokens'] for r in pass2_results)}")
+    print(f"  Pass 2 time: {pass2_time:.2f}s")
+    print(f"  Total tokens: {sum(r['tokens'] for r in pass2_results)}")
 
     speedup = pass1_time / pass2_time if pass2_time > 0 else 0
     print(f"\n  Speedup from cache: {speedup:.2f}x")
@@ -129,8 +129,8 @@ def run_baseline(
     baseline_time = time.time() - start
 
     total_tokens = sum(len(o.outputs[0].token_ids) for o in outputs)
-    print(f"Baseline time: {baseline_time:.2f}s")
-    print(f"Total tokens: {total_tokens}")
+    print(f"  Baseline time: {baseline_time:.2f}s")
+    print(f"  Total tokens: {total_tokens}")
 
     return {
         "baseline_time_s": baseline_time,
@@ -244,12 +244,12 @@ def main():
     print(f"\n{'='*60}")
     print("SUMMARY")
     print(f"{'='*60}")
-    if "cascade"in results:
+    if "cascade" in results:
         c = results["cascade"]
         print(f"Cascade Pass 1 (compute+store): {c['pass1_time_s']:.2f}s")
         print(f"Cascade Pass 2 (cache hit):     {c['pass2_time_s']:.2f}s")
         print(f"Cache speedup:                  {c['speedup']:.2f}x")
-    if "baseline"in results:
+    if "baseline" in results:
         b = results["baseline"]
         print(f"Baseline (no Cascade):          {b['baseline_time_s']:.2f}s")
 

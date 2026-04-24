@@ -84,7 +84,7 @@ class RedisAdapter(StorageAdapter):
             if meta is None: return None
 
             meta_str = meta.decode()
-            if ':'not in meta_str:
+            if ':' not in meta_str:
 
                 val = self.client.get(block_id)
                 if val:
@@ -120,9 +120,9 @@ class RedisAdapter(StorageAdapter):
             meta = self.client.get(f"{block_id}:meta")
             if meta:
                 meta_str = meta.decode()
-                if ':'in meta_str:
+                if ':' in meta_str:
                     _, n_chunks = meta_str.split(':')
-                    keys = [f"{block_id}:chunk:{i}"for i in range(int(n_chunks))]
+                    keys = [f"{block_id}:chunk:{i}" for i in range(int(n_chunks))]
                     keys.append(f"{block_id}:meta")
                     self.client.delete(*keys)
                 else:

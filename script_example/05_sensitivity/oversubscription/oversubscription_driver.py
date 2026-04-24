@@ -29,7 +29,7 @@ def main():
     args = parser.parse_args()
 
     block_size = args.block_size_mb * 1024 * 1024
-    model_name = "Llama-2"if args.block_size_mb == 160 else "Qwen-2.5-72B"
+    model_name = "Llama-2" if args.block_size_mb == 160 else "Qwen-2.5-72B"
 
     config = {}
     if args.system.lower() == "cascade":
@@ -39,8 +39,8 @@ def main():
             "semantic_eviction": True,
             "lustre_path": f"${REPO_ROOT}/benchmark/cascade_10x_{job_id}"
         }
-    elif "redis"in args.system.lower():
-        tmp_h_dir = REPO_ROOT / "benchmark"/ "tmp"/ f"hosts_{job_id}"
+    elif "redis" in args.system.lower():
+        tmp_h_dir = REPO_ROOT / "benchmark" / "tmp" / f"hosts_{job_id}"
         tmp_h_dir.mkdir(parents=True, exist_ok=True)
         wait_count = 0
         while not (tmp_h_dir / "redis_host").exists() and wait_count < 30:
@@ -53,7 +53,7 @@ def main():
         config = {"storage_path": f"${REPO_ROOT}/benchmark/lmcache_10x_{job_id}"}
     elif args.system.lower() == "pdc":
         config = {"storage_path": f"${REPO_ROOT}/benchmark/pdc_10x_{job_id}"}
-    elif "hdf5"in args.system.lower():
+    elif "hdf5" in args.system.lower():
         config = {"file_path": f"${REPO_ROOT}/benchmark/tmp/h5_10x_{job_id}.h5", "use_mpi": True}
 
     adapter = get_adapter(args.system, config)
@@ -72,17 +72,17 @@ def main():
     oversubscription_ratio = args.total_data_per_node_gb / gpu_hbm_gb
 
     print_rank0(f"\n{'='*70}")
-    print_rank0(f"Oversubscription 10x Test: {args.system} | N={args.node_count} | {model_name}")
+    print_rank0(f" Oversubscription 10x Test: {args.system} | N={args.node_count} | {model_name}")
     print_rank0(f"{'='*70}")
-    print_rank0(f"GPU HBM per node: {gpu_hbm_gb} GB")
-    print_rank0(f"Total data per node: {args.total_data_per_node_gb} GB")
-    print_rank0(f"Oversubscription ratio: {oversubscription_ratio:.1f}x")
-    print_rank0(f"Blocks per node: {blocks_per_node}")
-    print_rank0(f"Important blocks (10%): {num_important}")
-    print_rank0(f"Disposable blocks (90%): {num_disposable}")
+    print_rank0(f"  GPU HBM per node: {gpu_hbm_gb} GB")
+    print_rank0(f"  Total data per node: {args.total_data_per_node_gb} GB")
+    print_rank0(f"  Oversubscription ratio: {oversubscription_ratio:.1f}x")
+    print_rank0(f"  Blocks per node: {blocks_per_node}")
+    print_rank0(f"  Important blocks (10%): {num_important}")
+    print_rank0(f"  Disposable blocks (90%): {num_disposable}")
     print_rank0(f"{'='*70}\n")
 
-    prefix_keys = [f"prefix_10x_n{args.node_count}_r{rank}_b{i}"for i in range(num_important)]
+    prefix_keys = [f"prefix_10x_n{args.node_count}_r{rank}_b{i}" for i in range(num_important)]
     important_data = np.random.randint(0, 255, block_size, dtype=np.uint8).tobytes()
     ik, iv = important_data[:len(important_data)//2], important_data[len(important_data)//2:]
 
@@ -95,12 +95,12 @@ def main():
         else:
             adapter.put(key, ik, iv)
         if rank == 0 and i % 100 == 0 and i > 0:
-            print(f"[Progress] {i}/{num_important} important blocks...", flush=True)
+            print(f"  [Progress] {i}/{num_important} important blocks...", flush=True)
 
     adapter.flush()
     if hasattr(adapter, "barrier"): adapter.barrier()
     t_write_important = time.time() - t0
-    print_rank0(f"Wrote {num_important} important blocks in {t_write_important:.2f}s")
+    print_rank0(f"   Wrote {num_important} important blocks in {t_write_important:.2f}s")
 
     print_rank0(f"\nStep 2: Writing {num_disposable} disposable blocks (Trigger 10x Eviction)...")
 
@@ -114,15 +114,15 @@ def main():
             elapsed = time.time() - t0
             rate = i / elapsed if elapsed > 0 else 0
             eta = (num_disposable - i) / rate if rate > 0 else 0
-            print(f"[Progress] {i}/{num_disposable} blocks ({rate:.1f} blk/s, ETA: {eta:.1f}s)...", flush=True)
+            print(f"  [Progress] {i}/{num_disposable} blocks ({rate:.1f} blk/s, ETA: {eta:.1f}s)...", flush=True)
 
     adapter.flush()
     if hasattr(adapter, "barrier"): adapter.barrier()
     t_write_disposable = time.time() - t0
 
     write_throughput_gb_s = (num_disposable * block_size * world) / (t_write_disposable * 1024**3) if t_write_disposable > 0 else 0
-    print_rank0(f"Wrote {num_disposable} disposable blocks in {t_write_disposable:.2f}s")
-    print_rank0(f"Write Throughput: {write_throughput_gb_s:.2f} GB/s (aggregate)")
+    print_rank0(f"   Wrote {num_disposable} disposable blocks in {t_write_disposable:.2f}s")
+    print_rank0(f"  Write Throughput: {write_throughput_gb_s:.2f} GB/s (aggregate)")
 
     if hasattr(adapter, "sync_metadata"): adapter.sync_metadata()
     if hasattr(adapter, "barrier"): adapter.barrier()
@@ -147,7 +147,7 @@ def main():
     p99_ttft = np.percentile(prefix_latencies, 99) if prefix_latencies else 0
     retention_rate = (prefix_hits / num_important) * 100 if num_important > 0 else 0
 
-    res_dir = REPO_ROOT / "benchmark"/ "tmp"/ f"oversubscription_10x_res_{job_id}"
+    res_dir = REPO_ROOT / "benchmark" / "tmp" / f"oversubscription_10x_res_{job_id}"
     res_dir.mkdir(parents=True, exist_ok=True)
 
     with open(res_dir / f"rank_{rank}_n{args.node_count}.json", "w") as f:
@@ -188,25 +188,25 @@ def main():
         final_write_throughput = sum(all_write_throughputs)
 
         print_rank0(f"\n{'='*70}")
-        print_rank0(f"Result: {args.system} | N={args.node_count} | {model_name} ({args.block_size_mb}MB)")
+        print_rank0(f" Result: {args.system} | N={args.node_count} | {model_name} ({args.block_size_mb}MB)")
         print_rank0(f"{'='*70}")
-        print_rank0(f"Oversubscription: {oversubscription_ratio:.1f}x ({args.total_data_per_node_gb} GB / {gpu_hbm_gb} GB)")
-        print_rank0(f"Important Block Retention: {final_retention:.1f}%")
-        print_rank0(f"TTFT (Avg): {final_ttft_avg:.2f} ms")
-        print_rank0(f"TTFT (P95): {final_ttft_p95:.2f} ms")
-        print_rank0(f"TTFT (P99): {final_ttft_p99:.2f} ms")
-        print_rank0(f"Write Throughput: {final_write_throughput:.2f} GB/s")
+        print_rank0(f"  Oversubscription: {oversubscription_ratio:.1f}x ({args.total_data_per_node_gb} GB / {gpu_hbm_gb} GB)")
+        print_rank0(f"  Important Block Retention: {final_retention:.1f}%")
+        print_rank0(f"  TTFT (Avg): {final_ttft_avg:.2f} ms")
+        print_rank0(f"  TTFT (P95): {final_ttft_p95:.2f} ms")
+        print_rank0(f"  TTFT (P99): {final_ttft_p99:.2f} ms")
+        print_rank0(f"  Write Throughput: {final_write_throughput:.2f} GB/s")
 
         if final_retention < 50:
-            status = "CRITICAL - Low Retention"
+            status = " CRITICAL - Low Retention"
         elif final_ttft_p99 < 100:
-            status = "EXCELLENT"
+            status = " EXCELLENT"
         elif final_ttft_p99 < 200:
-            status = "ACCEPTABLE"
+            status = " ACCEPTABLE"
         else:
-            status = "DEGRADED"
+            status = " DEGRADED"
 
-        print_rank0(f"Status: {status}")
+        print_rank0(f"  Status: {status}")
         print_rank0(f"{'='*70}\n")
 
     adapter.close()

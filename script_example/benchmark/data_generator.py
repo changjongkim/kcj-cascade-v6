@@ -76,7 +76,7 @@ class KVDataGenerator:
         blocks_per_prefix = self.config.prefix_length_tokens // self.block_tokens
 
         print(f"\\nGenerating {self.config.num_unique_prefixes} prefixes...")
-        print(f"Blocks per prefix: {blocks_per_prefix}")
+        print(f"  Blocks per prefix: {blocks_per_prefix}")
 
         for prefix_id in range(self.config.num_unique_prefixes):
             for block_idx in range(blocks_per_prefix):
@@ -96,7 +96,7 @@ class KVDataGenerator:
                 prefix_metadata.append(meta)
 
             if (prefix_id + 1) % 10 == 0:
-                print(f"Generated prefix {prefix_id + 1}/{self.config.num_unique_prefixes}")
+                print(f"  Generated prefix {prefix_id + 1}/{self.config.num_unique_prefixes}")
 
         return prefix_metadata
 
@@ -110,7 +110,7 @@ class KVDataGenerator:
         num_unique_blocks = target_bytes // self.block_size_bytes
 
         print(f"\\nGenerating {num_unique_blocks:,} unique blocks...")
-        print(f"Target size: {target_bytes / 1024**3:.2f} GB")
+        print(f"  Target size: {target_bytes / 1024**3:.2f} GB")
 
         unique_metadata = []
         start_time = time.time()
@@ -138,7 +138,7 @@ class KVDataGenerator:
                 elapsed = time.time() - start_time
                 rate = (i + 1) / elapsed
                 eta = (num_unique_blocks - i - 1) / rate
-                print(f"Generated {i + 1:,}/{num_unique_blocks:,} blocks "
+                print(f"  Generated {i + 1:,}/{num_unique_blocks:,} blocks "
                       f"({rate:.1f} blocks/s, ETA: {eta/60:.1f} min)")
 
         return unique_metadata
@@ -186,9 +186,9 @@ class KVDataGenerator:
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        print("="* 60)
+        print("=" * 60)
         print("KV Cache Benchmark Data Generator")
-        print("="* 60)
+        print("=" * 60)
         print(f"Output: {output_dir}")
         print(f"Target size: {size_gb} GB")
         print(f"Model: LLaMA-70B")
@@ -223,13 +223,13 @@ class KVDataGenerator:
             }, f, indent=2)
 
         elapsed = time.time() - start_time
-        print(f"\\n{'='* 60}")
+        print(f"\\n{'=' * 60}")
         print(f"Generation complete in {elapsed/60:.1f} minutes")
         print(f"Total blocks: {len(all_metadata):,}")
         print(f"Prefix blocks: {len(prefix_metadata):,} ({len(prefix_metadata)*100/len(all_metadata):.1f}%)")
         print(f"Sessions: {len(sessions):,}")
         print(f"Output: {output_dir}")
-        print("="* 60)
+        print("=" * 60)
 
         return all_metadata, sessions
 

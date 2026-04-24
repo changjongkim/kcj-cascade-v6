@@ -21,7 +21,7 @@ from train import main as deepcam_train_main
 import data.cam_hdf5_dataset as ds
 
 def setup_distributed_env():
-    if 'SLURM_PROCID'in os.environ:
+    if 'SLURM_PROCID' in os.environ:
         os.environ['RANK'] = os.environ['SLURM_PROCID']
         os.environ['LOCAL_RANK'] = os.environ.get('SLURM_LOCALID', '0')
         os.environ['WORLD_SIZE'] = os.environ['SLURM_NTASKS']

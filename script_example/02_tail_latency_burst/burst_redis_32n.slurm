@@ -18,11 +18,10 @@ SYSTEM="redis"
 N=8
 BLOCK_SIZE=160
 
-echo "=== V17 Bursty Traffic Test: ${SYSTEM} N=${N} ==="
-
+echo "=== Bursty Traffic Test: ${SYSTEM} N=${N} ==="
 mkdir -p benchmark/tmp/hosts_$SLURM_JOB_ID
 hostname > benchmark/tmp/hosts_$SLURM_JOB_ID/redis_host
-redis-server --port 16379 --protected-mode no --save ""--appendonly no &
+redis-server --port 16379 --protected-mode no --save "" --appendonly no &
 REDIS_PID=$!
 sleep 5
 
@@ -32,9 +31,9 @@ srun -N $N -n $N --ntasks-per-node=1 \
     --node-count $N \
     --block-size-mb $BLOCK_SIZE
 
-echo "Cleaning up Redis and data..."
+echo " Cleaning up Redis and data..."
 kill $REDIS_PID
 rm -rf benchmark/tmp/hosts_$SLURM_JOB_ID
 rm -rf benchmark/tmp/bursty_res_${SLURM_JOB_ID}
 
-echo "Done"
+echo " Done"

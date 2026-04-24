@@ -18,10 +18,9 @@ SYSTEM="pdc"
 NODES_LIST=(1 2 4)
 JOB_UID=${SLURM_JOB_ID}
 
-echo "Starting PDC Scaling (1-32 nodes)"
-
+echo " Starting PDC Scaling (1-32 nodes)"
 for N in "${NODES_LIST[@]}"; do
-    echo "[Scale: $N Nodes]"
+    echo "   [Scale: $N Nodes]"
     REQS=$((8 * N))
     RUN_ID="${JOB_UID}_N${N}"
 
@@ -32,4 +31,4 @@ for N in "${NODES_LIST[@]}"; do
 
     sleep 5
 done
-echo "Finished PDC"
+echo " Finished PDC"

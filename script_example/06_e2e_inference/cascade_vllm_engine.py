@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 def install_vllm_if_needed():
     try:
         import vllm
-        print(f"vLLM {vllm.__version__} already installed")
+        print(f" vLLM {vllm.__version__} already installed")
         return True
     except ImportError:
         print("Installing vLLM...")
@@ -26,10 +26,10 @@ def install_vllm_if_needed():
             text=True
         )
         if result.returncode == 0:
-            print("vLLM installed successfully")
+            print(" vLLM installed successfully")
             return True
         else:
-            print(f"Failed to install vLLM: {result.stderr}")
+            print(f" Failed to install vLLM: {result.stderr}")
             return False
 
 class CascadeKVCacheManager:
@@ -73,7 +73,7 @@ class CascadeKVCacheManager:
             use_compression=True
         )
 
-        device = torch.device("cuda"if torch.cuda.is_available() else "cpu")
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.backend = CascadeAttentionBackend(
             self.allocator,
             attention_config,
@@ -81,9 +81,9 @@ class CascadeKVCacheManager:
         )
 
         print(f"[CascadeKVCache] Initialized with:")
-        print(f"GPU: {gpu_capacity_gb}GB ({self.allocator.num_gpu_blocks} blocks)")
-        print(f"SHM: {shm_capacity_gb}GB ({self.allocator.num_shm_blocks} blocks)")
-        print(f"Dedup: {enable_dedup}, Prefetch: {enable_prefetch}")
+        print(f"  GPU: {gpu_capacity_gb}GB ({self.allocator.num_gpu_blocks} blocks)")
+        print(f"  SHM: {shm_capacity_gb}GB ({self.allocator.num_shm_blocks} blocks)")
+        print(f"  Dedup: {enable_dedup}, Prefetch: {enable_prefetch}")
 
         self.seq_blocks = {}
 
@@ -131,8 +131,8 @@ def run_llm_with_cascade(
             "The key to successful software engineering is",
         ]
 
-    print("\n"+ "="*60)
-    print(f"LLM Inference with {'Cascade'if use_cascade else 'vLLM baseline'}")
+    print("\n" + "="*60)
+    print(f"LLM Inference with {'Cascade' if use_cascade else 'vLLM baseline'}")
     print("="*60)
     print(f"Model: {model_name}")
     print(f"Prompts: {len(prompts)}")
@@ -168,23 +168,23 @@ def run_llm_with_cascade(
             "gpu_memory_utilization": 0.9,
         }
 
-        if not Path(model_name).exists() and "meta-llama"in model_name:
-            print(f"Note: {model_name} not found locally")
-            print("Using facebook/opt-125m for testing instead")
+        if not Path(model_name).exists() and "meta-llama" in model_name:
+            print(f"  Note: {model_name} not found locally")
+            print("  Using facebook/opt-125m for testing instead")
             llm_kwargs["model"] = "facebook/opt-125m"
             model_name = "facebook/opt-125m"
 
         llm = LLM(**llm_kwargs)
         load_time = time.time() - start_load
-        print(f"Model loaded in {load_time:.2f}s")
+        print(f"   Model loaded in {load_time:.2f}s")
 
         if use_cascade and cascade_manager:
 
-            print("Cascade KV cache manager attached")
+            print("   Cascade KV cache manager attached")
 
         print("\n[2/3] Warming up...")
         warmup_output = llm.generate(["Hello"], sampling_params)
-        print("Warmup complete")
+        print("   Warmup complete")
 
         print("\n[3/3] Running inference...")
 
@@ -221,24 +221,24 @@ def run_llm_with_cascade(
 
             results.append({
                 'prompt': prompt,
-                'generated': generated_text[:100] + "..."if len(generated_text) > 100 else generated_text,
+                'generated': generated_text[:100] + "..." if len(generated_text) > 100 else generated_text,
                 'tokens': num_tokens,
                 'ttft_ms': ttft,
                 'throughput': throughput
             })
 
-            print(f"TTFT: {ttft:.2f}ms")
-            print(f"Tokens: {num_tokens}")
-            print(f"Throughput: {throughput:.2f} tokens/s")
-            print(f"Output: \"{generated_text[:50]}...\"")
+            print(f"    TTFT: {ttft:.2f}ms")
+            print(f"    Tokens: {num_tokens}")
+            print(f"    Throughput: {throughput:.2f} tokens/s")
+            print(f"    Output: \"{generated_text[:50]}...\"")
 
         cascade_stats = None
         if cascade_manager:
             cascade_stats = cascade_manager.get_stats()
             print("\n  Cascade Cache Stats:")
-            print(f"GPU blocks: {cascade_stats['allocator']['gpu_blocks']}")
-            print(f"SHM blocks: {cascade_stats['allocator']['shm_blocks']}")
-            print(f"Dedup ratio: {cascade_stats['allocator']['dedup_ratio']:.2f}x")
+            print(f"    GPU blocks: {cascade_stats['allocator']['gpu_blocks']}")
+            print(f"    SHM blocks: {cascade_stats['allocator']['shm_blocks']}")
+            print(f"    Dedup ratio: {cascade_stats['allocator']['dedup_ratio']:.2f}x")
 
             for i in range(len(prompts)):
                 cascade_manager.free_blocks(i)
@@ -319,7 +319,7 @@ def main():
             print("Failed to install vLLM")
             return
 
-    print("\n"+ "="*70)
+    print("\n" + "="*70)
     print("RUNNING WITH CASCADE BACKEND")
     print("="*70)
     cascade_results = run_llm_with_cascade(
@@ -331,7 +331,7 @@ def main():
 
     baseline_results = None
     if args.no_cascade:
-        print("\n"+ "="*70)
+        print("\n" + "="*70)
         print("RUNNING BASELINE (vLLM only)")
         print("="*70)
         baseline_results = run_llm_with_cascade(
@@ -341,28 +341,28 @@ def main():
             use_cascade=False
         )
 
-    print("\n"+ "="*70)
+    print("\n" + "="*70)
     print("RESULTS SUMMARY")
     print("="*70)
 
     print("\n With Cascade:")
     cs = cascade_results['summary']
-    print(f"Avg TTFT: {cs['avg_ttft_ms']:.2f}ms")
-    print(f"P95 TTFT: {cs.get('p95_ttft_ms', 0):.2f}ms")
-    print(f"P99 TTFT: {cs.get('p99_ttft_ms', 0):.2f}ms")
-    print(f"Throughput: {cs.get('avg_throughput', 0):.2f} tokens/s")
+    print(f"  Avg TTFT: {cs['avg_ttft_ms']:.2f}ms")
+    print(f"  P95 TTFT: {cs.get('p95_ttft_ms', 0):.2f}ms")
+    print(f"  P99 TTFT: {cs.get('p99_ttft_ms', 0):.2f}ms")
+    print(f"  Throughput: {cs.get('avg_throughput', 0):.2f} tokens/s")
 
     if baseline_results:
         print("\n Baseline (vLLM only):")
         bs = baseline_results['summary']
-        print(f"Avg TTFT: {bs['avg_ttft_ms']:.2f}ms")
-        print(f"P95 TTFT: {bs.get('p95_ttft_ms', 0):.2f}ms")
-        print(f"P99 TTFT: {bs.get('p99_ttft_ms', 0):.2f}ms")
-        print(f"Throughput: {bs.get('avg_throughput', 0):.2f} tokens/s")
+        print(f"  Avg TTFT: {bs['avg_ttft_ms']:.2f}ms")
+        print(f"  P95 TTFT: {bs.get('p95_ttft_ms', 0):.2f}ms")
+        print(f"  P99 TTFT: {bs.get('p99_ttft_ms', 0):.2f}ms")
+        print(f"  Throughput: {bs.get('avg_throughput', 0):.2f} tokens/s")
 
         print("\n Improvement:")
         ttft_improvement = (bs['avg_ttft_ms'] - cs['avg_ttft_ms']) / bs['avg_ttft_ms'] * 100
-        print(f"TTFT: {ttft_improvement:+.1f}%")
+        print(f"  TTFT: {ttft_improvement:+.1f}%")
 
     output_file = f"cascade_vllm_results_{int(time.time())}.json"
     with open(output_file, 'w') as f:

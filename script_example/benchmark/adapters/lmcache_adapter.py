@@ -27,7 +27,7 @@ class LMCacheAdapter(StorageAdapter):
             self._initialized = True
             return True
         except Exception as e:
-            if 'File exists'in str(e):
+            if 'File exists' in str(e):
                 self._initialized = True
                 return True
             print(f"[LMCacheAdapter] Init error: {e}")

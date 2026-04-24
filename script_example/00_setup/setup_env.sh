@@ -10,7 +10,7 @@ conda activate cascade_env
 module load <prgenv-module>
 module load gcc-native/12.3
 module load <mpi-module>
-module load cuda/12.4
+module load cudatoolkit/12.4
 module load <gpu-accel-module>
 module load cmake
 
@@ -27,7 +27,7 @@ export PYTHONPATH=$REPO_ROOT/cascade_Code/cpp/build_cascade_cpp:$PYTHONPATH
 export PYTHONPATH=$REPO_ROOT:$PYTHONPATH
 
 echo "--------------------------------------------------------"
-echo "CASCADE GPU-Aware MPI Environment Loaded"
+echo "Cascade GPU-Aware MPI Environment Loaded"
 echo "--------------------------------------------------------"
 echo "Python: $(which python3)"
 echo "C++: $(which g++) ($(g++ --version | head -n 1))"

@@ -80,7 +80,7 @@ class MLPerfDatasetLoader:
 
             print(f"Loading {name} from HuggingFace...")
 
-            if "hf_config"in config:
+            if "hf_config" in config:
                 ds = load_dataset(
                     config["hf_path"],
                     config["hf_config"],
@@ -315,7 +315,7 @@ class RealKVCacheExtractor:
             is_duplicate = block_id in prefix_to_blocks
 
             if not is_duplicate:
-                block_path = output_dir / "blocks"/ f"{block_id}.npz"
+                block_path = output_dir / "blocks" / f"{block_id}.npz"
                 block_path.parent.mkdir(exist_ok=True)
                 np.savez_compressed(block_path, key=key_data, value=value_data)
 
@@ -438,9 +438,9 @@ class RealDataGenerator:
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        print("="* 60)
+        print("=" * 60)
         print("Real KV Cache Data Generator")
-        print("="* 60)
+        print("=" * 60)
         print(f"Model: {self.kv_extractor.model_name}")
         print(f"Datasets: {datasets}")
         print(f"Total samples: {total_samples}")
@@ -474,9 +474,9 @@ class RealDataGenerator:
         print("\\n[4/4] Extracting KV cache...")
         stats = self.kv_extractor.extract_kv_cache(all_samples, output_dir)
 
-        print("\\n"+ "="* 60)
+        print("\\n" + "=" * 60)
         print("Generation Complete!")
-        print("="* 60)
+        print("=" * 60)
         print(f"Total blocks: {stats['total_blocks']:,}")
         print(f"Unique blocks: {stats['unique_blocks']:,}")
         print(f"Dedup ratio: {stats['dedup_ratio']:.1%}")

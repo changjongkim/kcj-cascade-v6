@@ -20,7 +20,6 @@ echo "Job ID: $SLURM_JOB_ID"
 echo "Node: $SLURM_NODELIST"
 echo "Started: $(date)"
 echo "========================================"
-
 srun python3 script_example/03_tier_latency/tier_driver.py \
     --tier dram \
     --block-size-mb 320 \

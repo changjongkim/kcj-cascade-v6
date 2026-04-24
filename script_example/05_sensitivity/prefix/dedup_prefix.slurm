@@ -18,14 +18,13 @@ SYSTEM="cascade"
 BLOCK_MB=160
 PREFIX_BLOCKS=64
 
-echo "=== v13: Global Prefix Sharing (prefix_replication=ON) ==="
+echo "=== Global Prefix Sharing (prefix_replication=ON) ==="
 echo "System: ${SYSTEM}, ${PREFIX_BLOCKS} blocks x ${BLOCK_MB}MB"
 echo "Feature: broadcast_prefix_data() — all nodes get local copies"
 echo ""
-
 for i in 1 2 4 8; do
     echo ""
-    echo "SCALE: N=${i} nodes"
+    echo " SCALE: N=${i} nodes"
     srun --overlap -N $i -n $i --ntasks-per-node=1 \
         python3 script_example/05_sensitivity/prefix/dedup_prefix_driver.py \
         --system $SYSTEM \
@@ -35,4 +34,4 @@ for i in 1 2 4 8; do
     sleep 5
 done
 
-echo "Done: v13 Dedup Prefix Sharing (prefix_replication)"
+echo " Done: Dedup Prefix Sharing (prefix_replication)"

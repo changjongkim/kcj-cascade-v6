@@ -17,9 +17,7 @@ echo "=========================================="
 echo "Job ID: $SLURM_JOB_ID"
 echo "Nodes: $SLURM_JOB_NUM_NODES"
 echo "Date: $(date)"
-echo "=========================================="
-
-module load python/3.11
+echo "==========================================" module load python/3.11
 module load cudatoolkit/12.2
 module load <mpi-module>
 
@@ -35,13 +33,12 @@ mkdir -p vllm_integration/logs
 
 echo ""
 echo "Configuration:"
-echo "Model: Llama-2 (160MB blocks)"
-echo "Nodes: 1"
-echo "Requests per node: 8"
-echo "Total requests: 8"
-echo "Storage: $STORAGE_PATH"
+echo " Model: Llama-2 (160MB blocks)"
+echo " Nodes: 1"
+echo " Requests per node: 8"
+echo " Total requests: 8"
+echo " Storage: $STORAGE_PATH"
 echo ""
-
 srun --overlap python3 -c "
 import os
 import sys
@@ -88,7 +85,7 @@ print(f'Rank {rank}: Processing {len(prompts)} prompts with Llama-160MB blocks')
 for i, prompt in enumerate(prompts):
     key = f'llama_rank{rank}_prompt{i}'
 
-    block_data = b'x'* (160 * 1024 * 1024)
+    block_data = b'x' * (160 * 1024 * 1024)
 
     start = time.time()
 
@@ -111,7 +108,7 @@ for i, prompt in enumerate(prompts):
     throughputs.append(throughput_gbps)
 
     if i < 3:
-        print(f'Prompt {i+1}: TTFT={latency:.2f}ms, Throughput={throughput_gbps:.1f}GB/s')
+        print(f'  Prompt {i+1}: TTFT={latency:.2f}ms, Throughput={throughput_gbps:.1f}GB/s')
 
 avg_latency = np.mean(latencies)
 p50_latency = np.percentile(latencies, 50)
@@ -121,11 +118,11 @@ avg_throughput = np.mean(throughputs)
 
 print(f'')
 print(f'Rank {rank} Results:')
-print(f'Average TTFT: {avg_latency:.2f}ms')
-print(f'P50 TTFT: {p50_latency:.2f}ms')
-print(f'P95 TTFT: {p95_latency:.2f}ms')
-print(f'P99 TTFT: {p99_latency:.2f}ms')
-print(f'Avg Throughput: {avg_throughput:.1f}GB/s')
+print(f'  Average TTFT: {avg_latency:.2f}ms')
+print(f'  P50 TTFT: {p50_latency:.2f}ms')
+print(f'  P95 TTFT: {p95_latency:.2f}ms')
+print(f'  P99 TTFT: {p99_latency:.2f}ms')
+print(f'  Avg Throughput: {avg_throughput:.1f}GB/s')
 
 results = {
     'rank': rank,
@@ -153,7 +150,6 @@ echo ""
 echo "=========================================="
 echo "Aggregating Results"
 echo "=========================================="
-
 python3 << EOF
 import json
 import numpy as np
@@ -203,10 +199,9 @@ EOF
 
 echo ""
 echo "=========================================="
-echo "1-Node Weak Scaling Test Complete"
+echo " 1-Node Weak Scaling Test Complete"
 echo "=========================================="
 echo "Job completed at: $(date)"
-
 rm -rf /dev/shm/cascade_vllm_*
 
 exit 0

@@ -24,20 +24,19 @@ export OUT_DIR="${REPO_ROOT}/benchmark/results/deepcam_cascade_${SLURM_JOB_ID}"
 export CASCADE_STORE_DIR="${REPO_ROOT}/benchmark/tmp/cascade_store_${SLURM_JOB_ID}"
 
 echo "--------------------------------------------------------"
-echo "DeepCAM V16 Benchmark (CASCADE HOT)"
+echo " DeepCAM Benchmark (CASCADE HOT)"
 echo "--------------------------------------------------------"
-
 srun python script_example/07_deepcam/deepcam_driver.py \
        --use_cascade \
        --cascade_lustre_path ${CASCADE_STORE_DIR} \
-       --wireup_method "mpi"\
-       --run_tag "deepcam_cascade_8n"\
+       --wireup_method "mpi" \
+       --run_tag "deepcam_cascade_8n" \
        --data_dir_prefix ${DATA_DIR} \
        --output_dir ${OUT_DIR} \
-       --model_prefix "segmentation"\
-       --optimizer "LAMB"\
+       --model_prefix "segmentation" \
+       --optimizer "LAMB" \
        --start_lr 0.0055 \
-       --lr_schedule type="multistep",milestones="800",decay_rate="0.1"\
+       --lr_schedule type="multistep",milestones="800",decay_rate="0.1" \
        --lr_warmup_steps 400 \
        --lr_warmup_factor 1. \
        --weight_decay 1e-2 \
@@ -48,4 +47,4 @@ srun python script_example/07_deepcam/deepcam_driver.py \
        --batchnorm_group_size 1 \
        --local_batch_size 2
 
-echo "Done: deepcam_cascade"
+echo " Done: deepcam_cascade"

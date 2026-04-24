@@ -60,11 +60,11 @@ def load_test_data(data_path: Path, num_blocks: int = 1000) -> List[Dict]:
         if is_prefix:
             prefix_id = meta["prefix_id"]
             block_idx = meta["block_index"] % (BENCHMARK_CONFIG.prefix_length_tokens // BENCHMARK_CONFIG.block_size_tokens)
-            path = data_path / "prefixes"/ f"prefix_{prefix_id:03d}_block_{block_idx:03d}.npz"
+            path = data_path / "prefixes" / f"prefix_{prefix_id:03d}_block_{block_idx:03d}.npz"
         else:
             unique_idx = meta["block_index"] - len([b for b in block_meta if b["is_prefix"]])
             shard = unique_idx // 1000
-            path = data_path / "unique"/ f"shard_{shard:05d}"/ f"block_{unique_idx:08d}.npz"
+            path = data_path / "unique" / f"shard_{shard:05d}" / f"block_{unique_idx:08d}.npz"
 
         if path.exists():
             data = np.load(path)
@@ -147,9 +147,9 @@ def run_throughput_benchmark(
     write_stats.duration_seconds = time.perf_counter() - start_time
     results["write"] = write_stats
 
-    print(f"Ops/s: {write_stats.ops_per_second:,.0f}")
-    print(f"Throughput: {write_stats.throughput_gbps:.2f} GB/s")
-    print(f"Avg latency: {write_stats.avg_latency_ms:.2f} ms")
+    print(f"    Ops/s: {write_stats.ops_per_second:,.0f}")
+    print(f"    Throughput: {write_stats.throughput_gbps:.2f} GB/s")
+    print(f"    Avg latency: {write_stats.avg_latency_ms:.2f} ms")
 
     print(f"\\n  [READ] {adapter.name}...")
     read_stats = BenchmarkStats(system_name=adapter.name, operation="read")
@@ -178,10 +178,10 @@ def run_throughput_benchmark(
     read_stats.duration_seconds = time.perf_counter() - start_time
     results["read"] = read_stats
 
-    print(f"Ops/s: {read_stats.ops_per_second:,.0f}")
-    print(f"Throughput: {read_stats.throughput_gbps:.2f} GB/s")
-    print(f"Hit rate: {read_stats.hit_rate:.1%}")
-    print(f"Avg latency: {read_stats.avg_latency_ms:.2f} ms")
+    print(f"    Ops/s: {read_stats.ops_per_second:,.0f}")
+    print(f"    Throughput: {read_stats.throughput_gbps:.2f} GB/s")
+    print(f"    Hit rate: {read_stats.hit_rate:.1%}")
+    print(f"    Avg latency: {read_stats.avg_latency_ms:.2f} ms")
 
     return results
 
@@ -232,10 +232,10 @@ def run_shared_prefix_benchmark(
 
     system_stats = adapter.get_stats()
 
-    print(f"Sessions: {num_sessions}")
-    print(f"Total ops: {stats.total_ops:,}")
-    print(f"Ops/s: {stats.ops_per_second:,.0f}")
-    print(f"System stats: {system_stats}")
+    print(f"    Sessions: {num_sessions}")
+    print(f"    Total ops: {stats.total_ops:,}")
+    print(f"    Ops/s: {stats.ops_per_second:,.0f}")
+    print(f"    System stats: {system_stats}")
 
     return stats
 
@@ -256,7 +256,7 @@ def main():
                         help="Output directory for results")
     args = parser.parse_args()
 
-    systems = args.systems.split(",") if args.systems != "all"else [
+    systems = args.systems.split(",") if args.systems != "all" else [
         "cascade", "hdf5-independent", "hdf5-collective", "lmcache", "lmcache-redis", "pdc"
     ]
 
@@ -264,9 +264,9 @@ def main():
     output_path = Path(args.output)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    print("="* 60)
+    print("=" * 60)
     print("KV Cache Benchmark")
-    print("="* 60)
+    print("=" * 60)
     print(f"Systems: {systems}")
     print(f"Workload: {args.workload}")
     print(f"Blocks: {args.num_blocks}")
@@ -281,15 +281,15 @@ def main():
     all_results = {}
 
     for system_name in systems:
-        print(f"\\n{'='* 40}")
+        print(f"\\n{'=' * 40}")
         print(f"Benchmarking: {system_name.upper()}")
-        print("="* 40)
+        print("=" * 40)
 
         try:
             adapter = get_adapter(system_name)
 
             if not adapter.initialize():
-                print(f"SKIP: {system_name} failed to initialize")
+                print(f"  SKIP: {system_name} failed to initialize")
                 continue
 
             if args.workload in ["throughput", "all"]:
@@ -304,7 +304,7 @@ def main():
             adapter.close()
 
         except Exception as e:
-            print(f"ERROR: {e}")
+            print(f"  ERROR: {e}")
             import traceback
             traceback.print_exc()
 
@@ -314,11 +314,11 @@ def main():
     with open(results_file, 'w') as f:
         json.dump(all_results, f, indent=2)
 
-    print(f"\\n{'='* 60}")
+    print(f"\\n{'=' * 60}")
     print("SUMMARY")
-    print("="* 60)
+    print("=" * 60)
     print(f"\\n{'System':12} {'GB/s':>10} {'Latency(ms)':>12}")
-    print("-"* 64)
+    print("-" * 64)
 
     for key, stats in all_results.items():
         print(f"{stats['system']:12s} {stats['throughput_gbps']:>10.2f} "

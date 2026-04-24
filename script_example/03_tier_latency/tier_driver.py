@@ -39,9 +39,9 @@ def measure_tier_latency(store, block_size_mb, num_iterations=100, tier_name="un
             read_times.append(read_time)
 
         if (i + 1) % 10 == 0:
-            print(f"Progress: {i+1}/{num_iterations}", end='\r', flush=True)
+            print(f"    Progress: {i+1}/{num_iterations}", end='\r', flush=True)
 
-    print(f"Progress: {num_iterations}/{num_iterations} ")
+    print(f"    Progress: {num_iterations}/{num_iterations} ")
 
     results = {
         'tier': tier_name,
@@ -63,8 +63,8 @@ def measure_tier_latency(store, block_size_mb, num_iterations=100, tier_name="un
         }
     }
 
-    print(f"Write: {results['write']['mean_ms']:.2f} ms (P95: {results['write']['p95_ms']:.2f} ms)")
-    print(f"Read:  {results['read']['mean_ms']:.2f} ms (P95: {results['read']['p95_ms']:.2f} ms)")
+    print(f"    Write: {results['write']['mean_ms']:.2f} ms (P95: {results['write']['p95_ms']:.2f} ms)")
+    print(f"    Read:  {results['read']['mean_ms']:.2f} ms (P95: {results['read']['p95_ms']:.2f} ms)")
 
     return results
 

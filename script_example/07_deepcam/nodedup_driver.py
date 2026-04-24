@@ -18,7 +18,7 @@ from train import main as deepcam_train_main
 import data.cam_hdf5_dataset as ds
 
 def setup_distributed_env():
-    if 'SLURM_PROCID'in os.environ:
+    if 'SLURM_PROCID' in os.environ:
         os.environ['RANK'] = os.environ['SLURM_PROCID']
         os.environ['LOCAL_RANK'] = os.environ.get('SLURM_LOCALID', '0')
         os.environ['WORLD_SIZE'] = os.environ['SLURM_NTASKS']
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     elif args.system == 'lmcache_disk':
         from adapters.lmcache_adapter import LMCacheAdapter
         adapter = LMCacheAdapter({"storage_path": args.storage_path})
-    elif args.system == 'lmcache_redis'or args.system == 'redis':
+    elif args.system == 'lmcache_redis' or args.system == 'redis':
         from adapters.redis_adapter import RedisAdapter
         adapter = RedisAdapter({"host": args.redis_host, "port": args.redis_port})
     elif args.system == 'pdc':

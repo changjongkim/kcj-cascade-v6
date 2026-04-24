@@ -18,16 +18,15 @@ SYSTEM="pdc"
 N=8
 BLOCK_SIZE=160
 
-echo "=== V17 Bursty Traffic Test: ${SYSTEM} N=${N} ==="
-
+echo "=== Bursty Traffic Test: ${SYSTEM} N=${N} ==="
 srun -N $N -n $N --ntasks-per-node=1 \
     python3 script_example/02_tail_latency_burst/burst_driver.py \
     --system $SYSTEM \
     --node-count $N \
     --block-size-mb $BLOCK_SIZE
 
-echo "Cleaning up data..."
+echo " Cleaning up data..."
 rm -rf benchmark/pdc_bursty_${SLURM_JOB_ID}
 rm -rf benchmark/tmp/bursty_res_${SLURM_JOB_ID}
 
-echo "Done"
+echo " Done"

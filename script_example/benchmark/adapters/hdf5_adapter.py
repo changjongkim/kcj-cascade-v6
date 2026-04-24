@@ -56,9 +56,9 @@ class HDF5Adapter(StorageAdapter):
 
                     self.h5file = h5py.File(self.file_path, 'a', driver='mpio', comm=MPI.COMM_WORLD)
 
-                    if 'keys'not in self.h5file:
+                    if 'keys' not in self.h5file:
                         self.h5file.create_group('keys')
-                    if 'values'not in self.h5file:
+                    if 'values' not in self.h5file:
                         self.h5file.create_group('values')
 
                     self._initialized = True
@@ -71,9 +71,9 @@ class HDF5Adapter(StorageAdapter):
                 self.h5file = h5py.File(self.file_path, 'a', libver='latest')
                 print(f"[{self.name}] Initialized Rank {self.rank}/{self.world_size}, file: {self.file_path}", flush=True)
 
-                if 'keys'not in self.h5file:
+                if 'keys' not in self.h5file:
                     self.h5file.create_group('keys')
-                if 'values'not in self.h5file:
+                if 'values' not in self.h5file:
                     self.h5file.create_group('values')
 
                 self._initialized = True
@@ -154,7 +154,7 @@ class HDF5Adapter(StorageAdapter):
 
                             import h5py
                             with h5py.File(other_path, 'r', libver='latest', swmr=True) as f:
-                                if 'keys'in f and dataset_name in f['keys']:
+                                if 'keys' in f and dataset_name in f['keys']:
                                     key_arr = f['keys'][dataset_name][:]
                                     val_arr = f['values'][dataset_name][:]
                                     self._reads += 1
@@ -227,7 +227,7 @@ class HDF5Adapter(StorageAdapter):
             "reads": self._reads,
             "writes": self._writes,
             "file_size_mb": os.path.getsize(self.file_path) / 1024**2 if os.path.exists(self.file_path) else 0,
-            "mode": "collective"if self.use_mpi else "independent"
+            "mode": "collective" if self.use_mpi else "independent"
         }
 
     def close(self) -> None:

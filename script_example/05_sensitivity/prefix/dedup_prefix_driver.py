@@ -23,7 +23,7 @@ def print_rank0(*args):
 
 def file_barrier(name, run_id=None):
     rid = run_id or job_id
-    bar_dir = REPO_ROOT / "benchmark"/ "tmp"/ f"bar_{rid}_{name}"
+    bar_dir = REPO_ROOT / "benchmark" / "tmp" / f"bar_{rid}_{name}"
     bar_dir.mkdir(parents=True, exist_ok=True)
     (bar_dir / f"rank_{rank}").touch()
     while True:
@@ -67,18 +67,18 @@ def run_dedup_benchmark():
     name = args.system
     rid = args.run_id or job_id
 
-    print_rank0(f"\n"+ "="*60)
-    print_rank0(f"Global Dedup & Prefix Sharing: {name} | {args.block_size_mb}MB blocks")
+    print_rank0(f"\n" + "="*60)
+    print_rank0(f" Global Dedup & Prefix Sharing: {name} | {args.block_size_mb}MB blocks")
     print_rank0(f"Ranks: {world}, Prefix Size: {args.prefix_blocks} blocks")
     print_rank0("="*60)
 
     config = {}
     if name.lower() == "cascade":
         config = {"gpu_capacity_gb": 30.0, "shm_capacity_gb": 140.0, "use_gpu": True}
-    elif "redis"in name.lower():
+    elif "redis" in name.lower():
         r_port = int(os.environ.get("REDIS_PORT", 16379))
 
-        tmp_h_dir = REPO_ROOT / "benchmark"/ "tmp"/ f"hosts_{job_id}"
+        tmp_h_dir = REPO_ROOT / "benchmark" / "tmp" / f"hosts_{job_id}"
         tmp_h_dir.mkdir(parents=True, exist_ok=True)
 
         wait_count = 0
@@ -93,19 +93,19 @@ def run_dedup_benchmark():
         config = {"storage_path": f"${REPO_ROOT}/benchmark/lmcache_store_dedup_{rid}"}
     elif name.lower() == "pdc":
         config = {"storage_path": f"${REPO_ROOT}/benchmark/pdc_store_dedup_{rid}"}
-    elif "hdf5"in name.lower():
+    elif "hdf5" in name.lower():
         config = {"file_path": f"${REPO_ROOT}/benchmark/tmp/h5_dedup_{rid}.h5", "use_mpi": True}
 
     adapter = get_adapter(name, config)
     if not adapter.initialize():
-        print_rank0(f"[{name}] Failed")
+        print_rank0(f" [{name}] Failed")
         return
 
     try:
         adapter.clear()
         file_barrier("cleared", rid)
 
-        prefix_keys = [f"shared_prefix_b{i}"for i in range(args.prefix_blocks)]
+        prefix_keys = [f"shared_prefix_b{i}" for i in range(args.prefix_blocks)]
 
         if rank == 0:
             print(f"[{name}] Rank 0 writing shared prefix...", flush=True)
@@ -123,7 +123,7 @@ def run_dedup_benchmark():
 
         file_barrier("prefix_written", rid)
 
-        if name.lower() != "cascade"and "redis"not in name.lower():
+        if name.lower() != "cascade" and "redis" not in name.lower():
             time.sleep(10)
             force_lustre_sync(config.get("storage_path", "/tmp"))
 
@@ -144,7 +144,7 @@ def run_dedup_benchmark():
         local_duration = time.time() - f0
         local_throughput = len(read_latencies) / local_duration if local_duration > 0 else 0
 
-        stats_dir = REPO_ROOT / "benchmark"/ "tmp"/ f"stats_dedup_{rid}"
+        stats_dir = REPO_ROOT / "benchmark" / "tmp" / f"stats_dedup_{rid}"
         stats_dir.mkdir(parents=True, exist_ok=True)
         with open(stats_dir / f"rank_{rank}.json", 'w') as f:
             json.dump({"ttft": local_avg_ttft, "thru": local_throughput, "total": len(read_latencies)}, f)

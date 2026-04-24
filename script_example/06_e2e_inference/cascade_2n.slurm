@@ -19,7 +19,6 @@ echo "Job ID: $SLURM_JOB_ID"
 echo "Nodes: $SLURM_JOB_NUM_NODES"
 echo "Date: $(date)"
 echo "=========================================="
-
 cd ${REPO_ROOT}
 export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"
 
@@ -32,13 +31,12 @@ mkdir -p vllm_integration/logs
 
 echo ""
 echo "Configuration:"
-echo "Model: Llama-2 (160MB blocks)"
-echo "Nodes: 2"
-echo "Requests per node: 8"
-echo "Total requests: 16"
-echo "Storage: $STORAGE_PATH"
+echo " Model: Llama-2 (160MB blocks)"
+echo " Nodes: 2"
+echo " Requests per node: 8"
+echo " Total requests: 16"
+echo " Storage: $STORAGE_PATH"
 echo ""
-
 srun --overlap shifter python3 -c "
 import os
 import sys
@@ -128,7 +126,7 @@ for i, prompt in enumerate(prompts):
     store.free_blocks([block_id])
 
     if i < 3:
-        print(f'Prompt {i+1}: TTFT={latency:.2f}ms, Throughput={throughput_gbps:.1f}Gb/s')
+        print(f'  Prompt {i+1}: TTFT={latency:.2f}ms, Throughput={throughput_gbps:.1f}Gb/s')
 
 avg_latency = np.mean(latencies)
 p50_latency = np.percentile(latencies, 50)
@@ -139,15 +137,15 @@ avg_throughput = np.mean(throughputs)
 print(f'')
 print(f'')
 print(f'Rank {rank} Results:')
-print(f'Average TTFT: {avg_latency:.2f}ms')
-print(f'P50 TTFT: {p50_latency:.2f}ms')
-print(f'P95 TTFT: {p95_latency:.2f}ms')
-print(f'P99 TTFT: {p99_latency:.2f}ms')
-print(f'Avg Throughput: {avg_throughput:.1f}Gb/s')
+print(f'  Average TTFT: {avg_latency:.2f}ms')
+print(f'  P50 TTFT: {p50_latency:.2f}ms')
+print(f'  P95 TTFT: {p95_latency:.2f}ms')
+print(f'  P99 TTFT: {p99_latency:.2f}ms')
+print(f'  Avg Throughput: {avg_throughput:.1f}Gb/s')
 
 cascade_stats = store.get_stats()
-print(f'Cache hit rate: {cascade_stats[\"hit_rate\"]:.2%}')
-print(f'Deduplicated blocks: {cascade_stats[\"deduplicated\"]}')
+print(f'  Cache hit rate: {cascade_stats[\"hit_rate\"]:.2%}')
+print(f'  Deduplicated blocks: {cascade_stats[\"deduplicated\"]}')
 
 results = {
     'rank': rank,
@@ -176,7 +174,6 @@ echo ""
 echo "=========================================="
 echo "Aggregating Results"
 echo "=========================================="
-
 python3 << EOF
 import json
 import numpy as np
@@ -226,10 +223,9 @@ EOF
 
 echo ""
 echo "=========================================="
-echo "2-Node Weak Scaling Test Complete"
+echo " 2-Node Weak Scaling Test Complete"
 echo "=========================================="
 echo "Job completed at: $(date)"
-
 rm -rf /dev/shm/cascade_vllm_*
 
 exit 0

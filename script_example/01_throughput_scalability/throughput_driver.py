@@ -35,7 +35,7 @@ def force_lustre_sync(path):
 def get_all_hosts(run_id=None):
     rid = run_id or job_id
     my_host = socket.gethostname()
-    tmp_dir = REPO_ROOT / "benchmark"/ "tmp"/ f"hosts_{rid}"
+    tmp_dir = REPO_ROOT / "benchmark" / "tmp" / f"hosts_{rid}"
     tmp_dir.mkdir(parents=True, exist_ok=True)
     with open(tmp_dir / f"rank_{rank}", 'w') as f:
         f.write(my_host)
@@ -58,7 +58,7 @@ def get_all_hosts(run_id=None):
 
 def file_barrier(name, run_id=None):
     rid = run_id or job_id
-    bar_dir = REPO_ROOT / "benchmark"/ "tmp"/ f"bar_{rid}_{name}"
+    bar_dir = REPO_ROOT / "benchmark" / "tmp" / f"bar_{rid}_{name}"
     bar_dir.mkdir(parents=True, exist_ok=True)
     (bar_dir / f"rank_{rank}").touch()
     while True:
@@ -71,7 +71,7 @@ def file_barrier(name, run_id=None):
 class SyntheticKVLoader:
     def __init__(self, block_size_bytes: int, num_blocks: int = 3200):
         self.block_size = block_size_bytes
-        self.block_ids = [f"synth_b{i}"for i in range(num_blocks)]
+        self.block_ids = [f"synth_b{i}" for i in range(num_blocks)]
         print_rank0(f"Synthetic loader: {num_blocks} blocks x {block_size_bytes/1024/1024:.0f} MB")
 
     def load(self, block_id: str):
@@ -91,10 +91,6 @@ def run_benchmark():
     parser.add_argument("--run-id", type=str, default=None, help="Unique ID for this run within a job")
     parser.add_argument("--block-size-mb", type=int, default=160,
                         help="Block size in MB (default: 160 for Llama-3-70B, use 320 for Qwen-2.5-72B)")
-    parser.add_argument("--tier-mode", choices=["hot", "warm", "cold"], default=None,
-                        help="Tier retrieval mode for Fig 8 (hot=GPU HBM, warm=DRAM, cold=Lustre). "
-                             "hot reads same-rank blocks immediately; warm clears GPU-resident state; "
-                             "cold forces eviction and Lustre read. Default: warm (standard cross-rank read).")
     args = parser.parse_args()
 
     block_size_bytes = args.block_size_mb * 1024 * 1024
@@ -139,8 +135,8 @@ def run_benchmark():
 
     name = args.system
     rid = args.run_id or job_id
-    print_rank0(f"\n"+ "="*60)
-    print_rank0(f"Standalone Benchmark: {name} | {args.block_size_mb}MB blocks (Rank {rank}/{world}, RunID: {rid})")
+    print_rank0(f"\n" + "="*60)
+    print_rank0(f" Standalone Benchmark: {name} | {args.block_size_mb}MB blocks (Rank {rank}/{world}, RunID: {rid})")
     print_rank0("="*60)
 
     config = {}
@@ -151,7 +147,7 @@ def run_benchmark():
 
     if name.lower() == "cascade":
         config = {"gpu_capacity_gb": 30.0, "shm_capacity_gb": 140.0, "use_gpu": True}
-    elif "redis"in name.lower():
+    elif "redis" in name.lower():
         r_port = int(os.environ.get("REDIS_PORT", 16379))
 
         config = {"host": my_host, "port": r_port}
@@ -161,7 +157,7 @@ def run_benchmark():
         config = {"storage_path": f"${REPO_ROOT}/benchmark/lmcache_store_{rid}"}
     elif name.lower() == "pdc":
         config = {"storage_path": f"${REPO_ROOT}/benchmark/pdc_store_{rid}"}
-    elif "hdf5"in name.lower():
+    elif "hdf5" in name.lower():
         config = {
             "file_path": f"${REPO_ROOT}/benchmark/tmp/h5_store_{rid}.h5",
             "use_mpi": args.use_mpi_io
@@ -177,7 +173,7 @@ def run_benchmark():
 
     adapter = get_adapter(name, config)
     if not adapter.initialize():
-        print_rank0(f"[{name}] Failed to initialize adapter")
+        print_rank0(f" [{name}] Failed to initialize adapter")
         return
 
     try:
@@ -202,32 +198,19 @@ def run_benchmark():
 
         if name.lower() == "cascade":
             time.sleep(10)
-        elif "redis"not in name.lower():
+        elif "redis" not in name.lower():
             print_rank0(f"[{name}] Waiting for Lustre/FS stabilization...")
             time.sleep(20)
             store_type = name.lower().split('-')[0]
-            force_lustre_sync(REPO_ROOT / "benchmark"/ f"{store_type}_store")
-            force_lustre_sync(REPO_ROOT / "benchmark"/ "tmp")
+            force_lustre_sync(REPO_ROOT / "benchmark" / f"{store_type}_store")
+            force_lustre_sync(REPO_ROOT / "benchmark" / "tmp")
 
         file_barrier(f"{name}_ready_to_read", rid)
 
-        if args.tier_mode == "hot":
-            target_rank = rank
-        else:
-            target_rank = (rank + 1) % world
+        target_rank = (rank + 1) % world
         my_read_reqs = req_keys[target_rank::world]
 
-        if args.tier_mode == "cold":
-            if hasattr(adapter, "evict_all"):
-                adapter.evict_all()
-            elif hasattr(adapter, "flush_cache"):
-                adapter.flush_cache()
-            time.sleep(5)
-        elif args.tier_mode == "warm":
-            if hasattr(adapter, "evict_gpu"):
-                adapter.evict_gpu()
-
-        if "redis"in name.lower():
+        if "redis" in name.lower():
             target_host = all_hosts.get(target_rank, "127.0.0.1")
             adapter.close()
             adapter.host = target_host
@@ -241,18 +224,18 @@ def run_benchmark():
         for rk in my_read_reqs:
             t_req = time.time()
             res = None
-            max_attempts = 3 if name.lower() == "cascade"else 30
+            max_attempts = 3 if name.lower() == "cascade" else 30
             for attempt in range(max_attempts):
                 res = adapter.get(rk)
                 if res: break
-                if name.lower() == "cascade"and not synced_once:
+                if name.lower() == "cascade" and not synced_once:
 
                     if hasattr(adapter, "sync_metadata"):
                         adapter.sync_metadata()
                     synced_once = True
-                elif "redis"not in name.lower() and name.lower() != "cascade":
+                elif "redis" not in name.lower() and name.lower() != "cascade":
                     store_type = name.lower().split('-')[0]
-                    force_lustre_sync(REPO_ROOT / "benchmark"/ f"{store_type}_store"/ f"{rk}.kv")
+                    force_lustre_sync(REPO_ROOT / "benchmark" / f"{store_type}_store" / f"{rk}.kv")
                 time.sleep(0.5)
 
             if res:
@@ -265,7 +248,7 @@ def run_benchmark():
             local_duration = time.time() - f0
             local_throughput = len(read_latencies) / local_duration
 
-            stats_dir = REPO_ROOT / "benchmark"/ "tmp"/ f"stats_{rid}"
+            stats_dir = REPO_ROOT / "benchmark" / "tmp" / f"stats_{rid}"
             if rank == 0:
                 if stats_dir.exists():
                     import shutil
@@ -304,7 +287,7 @@ def run_benchmark():
             print(f"[Rank {rank}]  [{name}] All read requests failed.")
 
     except Exception as e:
-        print_rank0(f"[{name}] Crash: {e}")
+        print_rank0(f" [{name}] Crash: {e}")
     finally:
         adapter.close()
 

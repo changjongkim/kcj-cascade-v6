@@ -216,15 +216,15 @@ def verify_data_integrity(data_dir: str = None, sample_size: int = 100):
         computed_hash = hasher.hexdigest()[:32]
 
         if computed_hash != block_id:
-            print(f"ERROR: Block {i} hash mismatch! Expected {block_id}, got {computed_hash}")
+            print(f"  ERROR: Block {i} hash mismatch! Expected {block_id}, got {computed_hash}")
             errors += 1
 
     reader.close()
 
     if errors == 0:
-        print(f"All {sample_size} blocks verified successfully!")
+        print(f" All {sample_size} blocks verified successfully!")
     else:
-        print(f"{errors} blocks failed verification!")
+        print(f" {errors} blocks failed verification!")
 
     return errors == 0
 
@@ -240,7 +240,7 @@ if __name__ == "__main__":
 
     print("\nSample blocks:")
     for i, (block_id, key, val) in enumerate(reader.iter_blocks(limit=3)):
-        print(f"Block {i}: id={block_id[:16]}..., key_shape={key.shape}, val_shape={val.shape}")
+        print(f"  Block {i}: id={block_id[:16]}..., key_shape={key.shape}, val_shape={val.shape}")
 
     verify_data_integrity(data_dir, sample_size=10)
 
