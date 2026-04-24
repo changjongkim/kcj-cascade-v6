@@ -8,7 +8,7 @@ and paper figure/table.
 
 | Directory | Task | Paper |
 |---|---|---|
-| `00_setup/` | $T_1$, $T_2$, $T_3$ | — |
+| `00_setup/` | $T_1$, $T_3$ | — |
 | `01_throughput_scalability/` | $T_4$ | Fig 6 |
 | `02_tail_latency_burst/` | $T_5$ | Fig 7, Table 2 |
 | `03_tier_latency/` | $T_6$ | Fig 8 |
@@ -45,7 +45,7 @@ get_adapter` resolves to the adapters shipped in this directory.
 ## Workflow
 
 1. **Setup** ($T_1$, $T_3$): `bash 00_setup/setup_env.sh && bash 00_setup/build_cpp.sh`
-2. **Trace generation** ($T_2$): `python3 00_setup/generate_traces.py` (see the script for dataset-specific flags)
+2. **Data preparation** ($T_2$): Download ShareGPT and place it at `${REPO_ROOT}/benchmark/data_external/sharegpt/sharegpt_cleaned.json`. Trace-driven drivers auto-fall back to an in-memory synthetic workload if no pre-extracted KV cache is present at `${SCRATCH}/cascade_kv_cache/`. For the paper's exact setup, extract real KV cache by running `06_e2e_inference/cascade_driver.py` with `--max-new-tokens 1` against ShareGPT, then stage the outputs under `${SCRATCH}/cascade_kv_cache/`.
 3. **Per-figure reproduction**:
    - Fig 6: `sbatch 01_throughput_scalability/cascade_full.slurm` (and baselines)
    - Fig 7: `sbatch 02_tail_latency_burst/tail_{1,8,32,64}n.slurm`
@@ -71,6 +71,15 @@ get_adapter` resolves to the adapters shipped in this directory.
 
 ## Notes
 
+- Model weights are not bundled. Download Llama-3-70B and Qwen-2.5-72B
+  from HuggingFace before submission. Both models are used across
+  trace-driven and end-to-end experiments and are expected under
+  `${REPO_ROOT}/models/`.
+  ```
+  huggingface-cli login
+  python -c "from huggingface_hub import snapshot_download; snapshot_download('meta-llama/Meta-Llama-3-70B', local_dir='models/Llama-3-70B')"
+  python -c "from huggingface_hub import snapshot_download; snapshot_download('Qwen/Qwen2.5-72B', local_dir='models/Qwen2.5-72B')"
+  ```
 - DeepCAM ($T_{10}$) requires the MLPerf HPC benchmark source and
   dataset (https://github.com/mlcommons/hpc/tree/main/deepcam).
   Clone the repo and export `DEEPCAM_SRC=/path/to/mlcommons_hpc/deepcam/src/deepCam`
