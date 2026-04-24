@@ -28,7 +28,7 @@ for N in "${NODES_LIST[@]}"; do
     REQS=$((8 * N))
     RUN_ID="${JOB_UID}_N${N}"
 
-    srun --overlap -N $N -n $N --ntasks-per-node=1 python3 benchmark/scripts/v9_serv_metrics_standalone.py \
+    srun --overlap -N $N -n $N --ntasks-per-node=1 python3 script_example/01_throughput_scalability/throughput_driver.py \
         --system $SYSTEM \
         --num-requests $REQS \
         --run-id $RUN_ID

@@ -64,7 +64,7 @@ echo ""
 mkdir -p "$STORAGE_PATH" "$OUTPUT_DIR" "$REPO_ROOT/vllm_integration/logs"
 
 echo "Running Cascade+vLLM E2E test..."
-srun python3 "$REPO_ROOT/vllm_integration/run_cascade_e2e.py" \
+srun python3 "$REPO_ROOT/script_example/06_e2e_inference/cascade_e2e_driver.py" \
     --model "$MODEL" \
     --num-prompts "$NUM_PROMPTS" \
     --max-tokens "$MAX_TOKENS" \

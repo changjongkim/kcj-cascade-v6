@@ -34,7 +34,7 @@ for i in 1 2 4 8; do
     echo ""
     echo "▶ SCALE: N=${i} nodes"
     srun --overlap -N $i -n $i --ntasks-per-node=1 \
-        python3 benchmark/scripts/v12_dedup_prefix_bench.py \
+        python3 script_example/05_sensitivity/prefix/dedup_prefix_driver.py \
         --system $SYSTEM \
         --block-size-mb $BLOCK_MB \
         --prefix-blocks $PREFIX_BLOCKS \

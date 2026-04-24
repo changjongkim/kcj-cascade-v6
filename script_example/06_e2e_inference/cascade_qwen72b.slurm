@@ -49,7 +49,7 @@ echo ""
 
 mkdir -p "$STORAGE_PATH" "$OUTPUT_DIR" "$REPO_ROOT/vllm_integration/logs"
 
-srun python3 "$REPO_ROOT/vllm_integration/run_cascade_strong.py" \
+srun python3 "$REPO_ROOT/script_example/06_e2e_inference/cascade_strong_driver.py" \
     --model "$MODEL" \
     --max-tokens 64 \
     --tensor-parallel-size 4 \

@@ -1,44 +1,47 @@
 # CASCADE — Example Scripts
 
-This directory contains representative Slurm scripts and Python drivers used
-to produce the results in the CASCADE paper. Each subdirectory maps to a
-specific AD task ($T_i$) and paper figure/table.
+Self-contained Slurm scripts and Python drivers for reproducing the
+CASCADE paper results. Each subdirectory maps to an AD task ($T_i$)
+and paper figure/table.
 
 ## Layout
 
-| Directory | AD Task | Paper Element | Purpose |
+| Directory | Task | Paper | Contents |
 |---|---|---|---|
-| `00_setup/` | $T_1$, $T_3$ | — | Conda environment + C++/CUDA backend build |
-| `01_throughput_scalability/` | $T_4$ | Figure 6 | Weak & strong scaling (1–64 nodes) for CASCADE vs 5 baselines |
-| `02_tail_latency_burst/` | $T_5$ | Figure 7, Table 2 | P99.9 tail latency CDF + bursty traffic resilience |
-| `03_tier_latency/` | $T_6$ | Figure 8 | Retrieval latency across GPU HBM / DRAM / Lustre tiers |
-| `04_variable_blocks/` | $T_7$ | Figure 9 | Stability under non-uniform block sizes (log-normal) |
-| `05_sensitivity/` | $T_8$ | Figures 10, 11, 12 | Prefix sharing, memory over-subscription, deduplication |
-| `06_e2e_inference/` | $T_9$ | Figure 13 | End-to-end inference with CASCADE vs vLLM variants |
-| `07_deepcam/` | $T_{10}$ | Figure 14 | MLPerf HPC DeepCAM reconfigurability (Original / No-Dedup / Streaming) |
+| `00_setup/` | $T_1$, $T_3$ | — | `setup_env.sh`, `build_cpp.sh` |
+| `01_throughput_scalability/` | $T_4$ | Fig 6 | 6 Slurm (CASCADE + 5 baselines) + `throughput_driver.py` |
+| `02_tail_latency_burst/` | $T_5$ | Fig 7, Table 2 | 7 Slurm (tail + burst) + `tail_driver.py`, `burst_driver.py` |
+| `03_tier_latency/` | $T_6$ | Fig 8 | GPU/DRAM tier Slurm + `tier_driver.py` |
+| `04_variable_blocks/` | $T_7$ | Fig 9 | 5 Slurm + `variable_block_driver.py` |
+| `05_sensitivity/prefix/` | $T_8$ | Fig 10 | Prefix Slurm + `throughput_driver.py`, `dedup_prefix_driver.py` |
+| `05_sensitivity/oversubscription/` | $T_8$ | Fig 11 | `oversubscription_driver.py` |
+| `05_sensitivity/dedup/` | $T_8$ | Fig 12 | 6 Slurm + `dedup_driver.py` |
+| `06_e2e_inference/` | $T_9$ | Fig 13 | 5 Slurm + `cascade_e2e_driver.py`, `cascade_strong_driver.py`, `vllm_baseline_driver.py`, `cascade_vllm_engine.py` |
+| `07_deepcam/` | $T_{10}$ | Fig 14 | 8 Slurm + `original_driver.py`, `nodedup_driver.py`, `streaming_driver.py`, `deepcam_driver.py` |
 
 ## Usage
 
-1. Adapt Slurm directives (`#SBATCH --account`, `--constraint`, `--qos`) to your cluster.
-2. Source `00_setup/setup_env.sh`, then run `00_setup/build_cpp.sh`.
-3. Generate benchmark traces (see the paper's inference_benchmark/workload.py).
-4. Submit experiments via `sbatch <script>` or the provided `submit_*.sh`.
+1. Adapt the Slurm header (`#SBATCH --account`, `-C`, `-q`) to your cluster.
+2. Run `source 00_setup/setup_env.sh` then `bash 00_setup/build_cpp.sh`.
+3. Submit each experiment with `sbatch <script>.slurm` or the provided
+   `submit_*.sh` wrappers in the corresponding directory.
 
-## Baselines covered
+## Baselines
 
-- **LMCache** — Disk backend (Lustre) and Redis backend (128GB centralized)
-- **HDF5** — Independent I/O
-- **PDC** — Object-centric data management
-- **vLLM** — APC / LMCache-backed modes
-- **CASCADE** — Our system
+- **LMCache** — Disk (Lustre) and Redis (centralized 128GB) backends
+- **HDF5** — parallel I/O with independent mode
+- **PDC** — object-centric data management
+- **vLLM** — APC and LMCache-backed modes
+- **CASCADE** — this work
 
 ## Notes
 
-- Scripts in this directory are representative subsets. The full per-node
-  sweep (1/2/4/8/16/32/64 nodes) lives in `benchmark/scripts/` and
-  `benchmark/slurm/Nn/` of the CASCADE repository.
-- Output parsing and figure generation live in `paper/scripts/` and
-  `cascade_paper/Figures/` of the CASCADE repository.
-- DeepCAM uses the MLPerf HPC benchmark suite
-  (https://github.com/mlcommons/hpc/tree/main/deepcam); the 512GB dataset
-  must be staged separately per MLCommons instructions.
+- Each Slurm `cd`s to the CASCADE repository root, then invokes the
+  driver via `script_example/<task>/<driver>.py`. Imports resolve via
+  `PYTHONPATH` set in `setup_env.sh`.
+- Subsets shown here are representative (e.g., 8n/16n/64n). Full
+  per-node sweeps are available under `benchmark/scripts/` and
+  `benchmark/slurm/` of the main repository.
+- DeepCAM requires the MLPerf HPC benchmark dataset
+  (https://github.com/mlcommons/hpc/tree/main/deepcam); stage the
+  512GB dataset per MLCommons instructions.

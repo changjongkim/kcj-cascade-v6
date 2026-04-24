@@ -98,7 +98,7 @@ PROMPTS=(
 
 echo "Running with 8 prompts on 1 node..."
 srun --overlap -N 1 -n 1 \
-  python3 vllm_integration/cascade_vllm_engine.py \
+  python3 script_example/06_e2e_inference/cascade_vllm_engine.py \
   --model "facebook/opt-125m" \
   --prompts "${PROMPTS[@]:0:8}" \
   --max-tokens 64 \

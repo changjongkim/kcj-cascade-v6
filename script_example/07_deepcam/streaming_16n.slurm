@@ -23,7 +23,7 @@ echo "--------------------------------------------------------"
 echo "🚀 DeepCAM V16 16-Node Benchmark: CAS_STREAM"
 echo "--------------------------------------------------------"
 
-srun python ml_workspace/scripts/v16_app_deepcam_proxy_stream.py \
+srun python script_example/07_deepcam/streaming_driver.py \
        --system cascade \
        --wireup_method "mpi" \
        --run_tag "dc_repro_cas_stream_16n" \

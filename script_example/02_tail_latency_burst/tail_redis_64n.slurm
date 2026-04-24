@@ -35,7 +35,7 @@ for sys in $SYSTEMS; do
         model_name="Llama"
         if [ "$bs" -eq "320" ]; then model_name="Qwen"; fi
         echo "▶ Testing $sys with $model_name ($bs MB blocks)"
-        srun -N 64 -n 64 python3 benchmark/scripts/v12_tail_latency_bench.py \
+        srun -N 64 -n 64 python3 script_example/02_tail_latency_burst/tail_driver.py \
             --system $sys --block-size-mb $bs --num-write-blocks 30 --num-read-ops 300
         sleep 10
     done

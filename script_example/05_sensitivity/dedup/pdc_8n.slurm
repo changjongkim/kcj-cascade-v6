@@ -19,7 +19,7 @@ NUM_BLOCKS=64
 
 for rate in $RATES; do
     echo ">>>> Running $SYSTEM with Sharing Rate: $rate <<<<"
-    srun -N 8 -n 8 python3 benchmark/scripts/v16_dedup_sensitivity_bench.py \
+    srun -N 8 -n 8 python3 script_example/05_sensitivity/dedup/dedup_driver.py \
         --system $SYSTEM \
         --sharing-rate $rate \
         --num-blocks $NUM_BLOCKS \

@@ -22,7 +22,7 @@ if [ "hdf5" == "redis" ]; then
     sleep 30
 fi
 
-srun -N 16 -n 16 python3 benchmark/scripts/v20_variable_block_bench.py \
+srun -N 16 -n 16 python3 script_example/04_variable_blocks/variable_block_driver.py \
     --system hdf5 \
     --block-size-mb 160 --num-write-blocks 50 --num-read-ops 200 --sigma 0.8 \
     --redis-port 16379

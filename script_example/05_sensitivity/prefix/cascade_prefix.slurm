@@ -35,7 +35,7 @@ for N in 1 2 4 8; do
     RUN_ID="${JOB_UID}_WEAK_N${N}"
 
     srun --overlap -N $N -n $N --ntasks-per-node=1 \
-        python3 benchmark/scripts/v9_serv_metrics_standalone.py \
+        python3 script_example/05_sensitivity/prefix/throughput_driver.py \
         --system $SYSTEM \
         --num-requests $REQS \
         --run-id $RUN_ID

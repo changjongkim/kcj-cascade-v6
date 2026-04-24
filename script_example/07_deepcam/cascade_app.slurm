@@ -37,7 +37,7 @@ echo "--------------------------------------------------------"
 echo "🚀 DeepCAM V16 Benchmark (CASCADE HOT)"
 echo "--------------------------------------------------------"
 
-srun python benchmark/scripts/v16_app_deepcam_proxy.py \
+srun python script_example/07_deepcam/deepcam_driver.py \
        --use_cascade \
        --cascade_lustre_path ${CASCADE_STORE_DIR} \
        --wireup_method "mpi" \

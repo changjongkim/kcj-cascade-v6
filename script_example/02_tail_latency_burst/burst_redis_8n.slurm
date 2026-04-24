@@ -26,7 +26,7 @@ REDIS_PID=$!
 sleep 5
 
 srun -N $N -n $N --ntasks-per-node=1 \
-    python3 benchmark/scripts/v17_bursty_traffic_bench.py \
+    python3 script_example/02_tail_latency_burst/burst_driver.py \
     --system $SYSTEM \
     --node-count $N \
     --block-size-mb $BLOCK_SIZE

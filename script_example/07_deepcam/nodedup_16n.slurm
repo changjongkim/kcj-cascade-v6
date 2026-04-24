@@ -23,7 +23,7 @@ echo "--------------------------------------------------------"
 echo "🚀 DeepCAM V16 16-Node Benchmark: CAS_OPT"
 echo "--------------------------------------------------------"
 
-srun python ml_workspace/scripts/v16_app_deepcam_proxy_opt.py \
+srun python script_example/07_deepcam/nodedup_driver.py \
        --system cascade \
        --wireup_method "mpi" \
        --run_tag "dc_repro_cas_opt_16n" \

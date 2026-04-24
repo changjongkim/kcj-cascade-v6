@@ -22,7 +22,7 @@ echo "--------------------------------------------------------"
 echo "🚀 DeepCAM V16 Benchmark (HDF5 BASELINE)"
 echo "--------------------------------------------------------"
 
-srun python benchmark/scripts/v16_app_deepcam_proxy.py \
+srun python script_example/07_deepcam/deepcam_driver.py \
        --wireup_method "mpi" \
        --run_tag "deepcam_hdf5_8n" \
        --data_dir_prefix ${DATA_DIR} \
