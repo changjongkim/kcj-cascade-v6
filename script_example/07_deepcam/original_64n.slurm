@@ -11,7 +11,7 @@
 
 cd ${REPO_ROOT}
 export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"
-source ml_workspace/setup_ml_isolated.sh
+source script_example/00_setup/setup_ml_env.sh
 
 export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
 export MASTER_PORT=$(expr 10000 + $RANDOM % 20000)

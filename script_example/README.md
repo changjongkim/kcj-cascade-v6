@@ -70,8 +70,9 @@ get_adapter` resolves to the adapters shipped in this directory.
 
 ## Notes
 
-- DeepCAM requires the MLPerf HPC benchmark dataset
-  (https://github.com/mlcommons/hpc/tree/main/deepcam); stage the
-  512GB dataset per MLCommons instructions.
+- DeepCAM ($T_{10}$) requires the MLPerf HPC benchmark source and
+  dataset (https://github.com/mlcommons/hpc/tree/main/deepcam).
+  Clone the repo and export `DEEPCAM_SRC=/path/to/mlcommons_hpc/deepcam/src/deepCam`
+  before submission; stage the 512GB dataset per MLCommons instructions.
 - To test a different node count, edit the Slurm file directly
   (`#SBATCH -N` and any per-script node list).

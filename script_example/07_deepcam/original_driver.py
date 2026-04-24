@@ -10,7 +10,7 @@ import torch
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(repo_root, "benchmark"))
 
-deepcam_dir = os.path.join(repo_root, "ml_workspace", "mlperf_hpc", "deepcam", "src", "deepCam")
+deepcam_dir = os.environ.get("DEEPCAM_SRC", "./mlcommons_hpc/deepcam/src/deepCam")
 sys.path.insert(0, deepcam_dir)
 
 from utils import parser as deepcam_parser
