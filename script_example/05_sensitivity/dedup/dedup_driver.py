@@ -18,7 +18,7 @@ world = int(os.environ.get('SLURM_NTASKS', 1))
 job_id = os.environ.get('SLURM_JOB_ID', 'local')
 
 def print_rank0(*args):
-    if rank == 0: 
+    if rank == 0:
         print(*args, flush=True)
 
 def get_dir_size(path):
@@ -84,7 +84,7 @@ def run_sensitivity():
     store_path = None
     config = {}
     if name.lower() == "cascade":
-        config = {"gpu_capacity_gb": 38.0, "shm_capacity_gb": 128.0, "use_gpu": True, 
+        config = {"gpu_capacity_gb": 38.0, "shm_capacity_gb": 128.0, "use_gpu": True,
                   "lustre_path": f"${REPO_ROOT}/benchmark/tmp/cas_dedup_{rid}"}
         store_path = config["lustre_path"]
     elif name.lower() == "lmcache":
@@ -93,13 +93,13 @@ def run_sensitivity():
     elif name.lower() == "pdc":
         store_path = f"${REPO_ROOT}/benchmark/tmp/pdc_dedup_{rid}"
         config = {"storage_path": store_path}
-    elif "hdf5" in name.lower():
+    elif "hdf5"in name.lower():
         store_path = f"${REPO_ROOT}/benchmark/tmp/hdf5_dedup_{rid}.h5"
         config = {"file_path": store_path, "use_mpi": True}
 
     adapter = get_adapter(name, config)
     if not adapter.initialize():
-        print_rank0(f"❌ [{name}] Failed")
+        print_rank0(f"[{name}] Failed")
         return
 
     try:
@@ -110,7 +110,7 @@ def run_sensitivity():
 
             pass
 
-        print_rank0(f"\n--- 🧪 Dedup Sensitivity: {name} (Rate: {args.sharing_rate}, Nodes: {world}) ---")
+        print_rank0(f"\n---  Dedup Sensitivity: {name} (Rate: {args.sharing_rate}, Nodes: {world}) ---")
         print_rank0(f"Logical Data: {num_logical_bytes / 1024**3:.2f} GB ({total_blocks_cluster} blocks)")
 
         t0 = time.time()
@@ -151,7 +151,7 @@ def run_sensitivity():
             stats = adapter.get_stats()
 
         if rank == 0:
-            print_rank0(f"--- 📊 Measuring Physical Occupancy (Path: {store_path}) ---")
+            print_rank0(f"---  Measuring Physical Occupancy (Path: {store_path}) ---")
 
             if name.lower() == "cascade":
 
@@ -176,9 +176,9 @@ def run_sensitivity():
                         else:
                             physical_bytes = get_file_size(store_path)
                     else:
-                        print(f"⚠️ Warning: store_path {store_path} does not exist for measurement!")
+                        print(f"Warning: store_path {store_path} does not exist for measurement!")
 
-                        physical_bytes = num_logical_bytes                                      
+                        physical_bytes = num_logical_bytes
 
                 dedup_saved_bytes = max(0, num_logical_bytes - physical_bytes)
 
@@ -200,7 +200,7 @@ def run_sensitivity():
                 "savings_pct": saving_ratio,
                 "ratio": phys_logical_ratio
             }
-            log_dir = REPO_ROOT / "benchmark" / "results" / "dedup_sens"
+            log_dir = REPO_ROOT / "benchmark"/ "results"/ "dedup_sens"
             log_dir.mkdir(parents=True, exist_ok=True)
             with open(log_dir / f"{name}_n{world}_r{args.sharing_rate}.json", 'w') as f:
                 json.dump(res, f)

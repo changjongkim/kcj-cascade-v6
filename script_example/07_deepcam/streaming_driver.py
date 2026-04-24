@@ -21,7 +21,7 @@ from train import main as deepcam_train_main
 import data.cam_hdf5_dataset as ds
 
 def setup_distributed_env():
-    if 'SLURM_PROCID' in os.environ:
+    if 'SLURM_PROCID'in os.environ:
         os.environ['RANK'] = os.environ['SLURM_PROCID']
         os.environ['LOCAL_RANK'] = os.environ.get('SLURM_LOCALID', '0')
         os.environ['WORLD_SIZE'] = os.environ['SLURM_NTASKS']
@@ -96,7 +96,7 @@ if __name__ == "__main__":
             cfg.gpu_capacity_per_device = 0
             cfg.dram_capacity = 32 * 1024**3
             cfg.num_gpus_per_node = 4
-            cfg.dedup_enabled = False               
+            cfg.dedup_enabled = False
             cfg.lustre_path = self.lustre_path
             self.store = cascade_cpp.DistributedStore(cfg)
             return True

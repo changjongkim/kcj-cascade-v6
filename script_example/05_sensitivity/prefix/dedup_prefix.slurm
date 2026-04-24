@@ -32,7 +32,7 @@ echo ""
 
 for i in 1 2 4 8; do
     echo ""
-    echo "▶ SCALE: N=${i} nodes"
+    echo "SCALE: N=${i} nodes"
     srun --overlap -N $i -n $i --ntasks-per-node=1 \
         python3 script_example/05_sensitivity/prefix/dedup_prefix_driver.py \
         --system $SYSTEM \
@@ -42,4 +42,4 @@ for i in 1 2 4 8; do
     sleep 5
 done
 
-echo "✅ Done: v13 Dedup Prefix Sharing (prefix_replication)"
+echo "Done: v13 Dedup Prefix Sharing (prefix_replication)"

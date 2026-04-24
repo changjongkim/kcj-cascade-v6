@@ -20,19 +20,19 @@ export OUT_DIR="${REPO_ROOT}/benchmark/results/64n/cas_opt_${SLURM_JOB_ID}"
 mkdir -p $OUT_DIR
 
 echo "--------------------------------------------------------"
-echo "🚀 DeepCAM V16 64-Node Benchmark: CAS_OPT"
+echo "DeepCAM V16 64-Node Benchmark: CAS_OPT"
 echo "--------------------------------------------------------"
 
 srun python script_example/07_deepcam/nodedup_driver.py \
        --system cascade \
-       --wireup_method "mpi" \
-       --run_tag "dc_repro_cas_opt_64n" \
+       --wireup_method "mpi"\
+       --run_tag "dc_repro_cas_opt_64n"\
        --data_dir_prefix ${DATA_DIR} \
        --output_dir ${OUT_DIR} \
-       --model_prefix "segmentation" \
-       --optimizer "Adam" \
+       --model_prefix "segmentation"\
+       --optimizer "Adam"\
        --start_lr 0.0055 \
-       --lr_schedule type="multistep",milestones="800",decay_rate="0.1" \
+       --lr_schedule type="multistep",milestones="800",decay_rate="0.1"\
        --lr_warmup_steps 400 \
        --lr_warmup_factor 1. \
        --weight_decay 1e-2 \
@@ -43,4 +43,4 @@ srun python script_example/07_deepcam/nodedup_driver.py \
        --batchnorm_group_size 1 \
        --local_batch_size 2
 
-echo "✅ Done: dc_repro_cas_opt_64n"
+echo "Done: dc_repro_cas_opt_64n"

@@ -18,7 +18,7 @@ from train import main as deepcam_train_main
 import data.cam_hdf5_dataset as ds
 
 def setup_distributed_env():
-    if 'SLURM_PROCID' in os.environ:
+    if 'SLURM_PROCID'in os.environ:
         os.environ['RANK'] = os.environ['SLURM_PROCID']
         os.environ['LOCAL_RANK'] = os.environ.get('SLURM_LOCALID', '0')
         os.environ['WORLD_SIZE'] = os.environ['SLURM_NTASKS']
@@ -78,7 +78,7 @@ def patch_dataset(system, adapter):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(conflict_handler='resolve')
-    parser.add_argument('--system', type=str, default='hdf5', 
+    parser.add_argument('--system', type=str, default='hdf5',
                         choices=['hdf5', 'cascade', 'llm_gpu', 'lmcache_disk', 'lmcache_redis', 'pdc', 'redis'])
     parser.add_argument('--use_cascade', action='store_true', help="Use Cascade cache")
     parser.add_argument('--cascade_lustre_path', type=str, default='')
@@ -108,7 +108,7 @@ if __name__ == "__main__":
                 cfg.locality_aware = True
                 cfg.prefix_replication = False
                 cfg.aggregated_lustre = False
-                cfg.dedup_enabled = False               
+                cfg.dedup_enabled = False
                 cfg.lustre_path = self.lustre_path
                 self.store = cascade_cpp.DistributedStore(cfg)
                 return True
@@ -119,7 +119,7 @@ if __name__ == "__main__":
     elif args.system == 'lmcache_disk':
         from adapters.lmcache_adapter import LMCacheAdapter
         adapter = LMCacheAdapter({"storage_path": args.storage_path})
-    elif args.system == 'lmcache_redis' or args.system == 'redis':
+    elif args.system == 'lmcache_redis'or args.system == 'redis':
         from adapters.redis_adapter import RedisAdapter
         adapter = RedisAdapter({"host": args.redis_host, "port": args.redis_port})
     elif args.system == 'pdc':

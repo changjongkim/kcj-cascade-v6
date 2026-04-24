@@ -29,17 +29,17 @@ export HF_HOME=${SCRATCH}/hf_cache
 
 echo ""
 echo "Environment:"
-echo "  Python: $(which python3)"
-python3 -c "import torch; print(f'  PyTorch: {torch.__version__} CUDA={torch.cuda.is_available()}')"
+echo "Python: $(which python3)"
+python3 -c "import torch; print(f'PyTorch: {torch.__version__} CUDA={torch.cuda.is_available()}')"
 
-python3 -c "import vllm" 2>/dev/null
+python3 -c "import vllm"2>/dev/null
 if [ $? -ne 0 ]; then
     echo ""
     echo "Installing vLLM..."
     pip install vllm 2>&1 | tail -3
     echo ""
 fi
-python3 -c "import vllm; print(f'  vLLM: {vllm.__version__}')" 2>/dev/null || {
+python3 -c "import vllm; print(f'vLLM: {vllm.__version__}')"2>/dev/null || {
     echo "ERROR: vLLM installation failed"
     exit 1
 }
@@ -54,22 +54,22 @@ OUTPUT_DIR="$REPO_ROOT/vllm_integration/cascade_results_$SLURM_JOB_ID"
 
 echo ""
 echo "Configuration:"
-echo "  Model: $MODEL"
-echo "  Prompts: $NUM_PROMPTS"
-echo "  Max tokens: $MAX_TOKENS"
-echo "  Storage: $STORAGE_PATH"
-echo "  Output: $OUTPUT_DIR"
+echo "Model: $MODEL"
+echo "Prompts: $NUM_PROMPTS"
+echo "Max tokens: $MAX_TOKENS"
+echo "Storage: $STORAGE_PATH"
+echo "Output: $OUTPUT_DIR"
 echo ""
 
-mkdir -p "$STORAGE_PATH" "$OUTPUT_DIR" "$REPO_ROOT/vllm_integration/logs"
+mkdir -p "$STORAGE_PATH""$OUTPUT_DIR""$REPO_ROOT/vllm_integration/logs"
 
 echo "Running Cascade+vLLM E2E test..."
-srun python3 "$REPO_ROOT/script_example/06_e2e_inference/cascade_e2e_driver.py" \
-    --model "$MODEL" \
-    --num-prompts "$NUM_PROMPTS" \
-    --max-tokens "$MAX_TOKENS" \
-    --storage-path "$STORAGE_PATH" \
-    --output-dir "$OUTPUT_DIR" \
+srun python3 "$REPO_ROOT/script_example/06_e2e_inference/cascade_e2e_driver.py"\
+    --model "$MODEL"\
+    --num-prompts "$NUM_PROMPTS"\
+    --max-tokens "$MAX_TOKENS"\
+    --storage-path "$STORAGE_PATH"\
+    --output-dir "$OUTPUT_DIR"\
     --skip-baseline
 
 EXIT_CODE=$?

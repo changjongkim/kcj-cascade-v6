@@ -77,7 +77,7 @@ def run_cascade_with_simulated_llm(rank: int, world_size: int):
     total_ttfts = []
 
     print(f"\nRank {rank}/{world_size}: Processing {len(prompts)} prompts")
-    print("-" * 50)
+    print("-"* 50)
 
     try:
         from cascade_vllm_weak_scaling import CascadeKVStore
@@ -100,7 +100,7 @@ def run_cascade_with_simulated_llm(rank: int, world_size: int):
     for i, prompt in enumerate(prompts):
         if cascade_available and store:
             key = f"prompt_{rank}_{i}"
-            dummy_data = b"x" * (160 * 1024 * 1024)
+            dummy_data = b"x"* (160 * 1024 * 1024)
 
             start_cascade = time.time()
             store.put(key, dummy_data)
@@ -131,9 +131,9 @@ def run_cascade_with_simulated_llm(rank: int, world_size: int):
         })
 
         if i < 3:
-            print(f"  Prompt {i+1}: TTFT={total_ttft_ms:.2f}ms")
-            print(f"    Cascade: {cascade_latency_ms:.2f}ms")
-            print(f"    LLM: {llm_overhead_ms:.2f}ms")
+            print(f"Prompt {i+1}: TTFT={total_ttft_ms:.2f}ms")
+            print(f"Cascade: {cascade_latency_ms:.2f}ms")
+            print(f"LLM: {llm_overhead_ms:.2f}ms")
 
     if cascade_available and store:
         store.cleanup()
@@ -156,9 +156,9 @@ def run_cascade_with_simulated_llm(rank: int, world_size: int):
         json.dump(summary, f, indent=2)
 
     print(f"\nRank {rank} Summary:")
-    print(f"  Avg Cascade: {summary['avg_cascade_ms']:.2f}ms")
-    print(f"  Avg LLM: {summary['avg_llm_ms']:.2f}ms")
-    print(f"  Avg Total TTFT: {summary['avg_ttft_ms']:.2f}ms")
+    print(f"Avg Cascade: {summary['avg_cascade_ms']:.2f}ms")
+    print(f"Avg LLM: {summary['avg_llm_ms']:.2f}ms")
+    print(f"Avg Total TTFT: {summary['avg_ttft_ms']:.2f}ms")
 
     return summary
 
@@ -197,8 +197,8 @@ import os
 
 storage_path = "${STORAGE_PATH}"
 
-print("\n📊 RESULTS SUMMARY")
-print("=" * 60)
+print("\n RESULTS SUMMARY")
+print("="* 60)
 
 n1_ttft = None
 try:
@@ -209,10 +209,10 @@ try:
     n1_llm = n1_data['avg_llm_ms']
 
     print(f"\nN=1 (Single Node, 8 prompts):")
-    print(f"  Cascade layer: {n1_cascade:.2f}ms")
-    print(f"  LLM overhead: {n1_llm:.2f}ms")
-    print(f"  Total TTFT: {n1_ttft:.2f}ms")
-    print(f"  P95 TTFT: {n1_data['p95_ttft_ms']:.2f}ms")
+    print(f"Cascade layer: {n1_cascade:.2f}ms")
+    print(f"LLM overhead: {n1_llm:.2f}ms")
+    print(f"Total TTFT: {n1_ttft:.2f}ms")
+    print(f"P95 TTFT: {n1_data['p95_ttft_ms']:.2f}ms")
 except Exception as e:
     print(f"N=1 results not found: {e}")
 
@@ -235,50 +235,50 @@ if n2_ttfts:
     n2_avg_llm = np.mean(n2_llm)
 
     print(f"\nN=2 (Two Nodes, 16 prompts):")
-    print(f"  Cascade layer: {n2_avg_cascade:.2f}ms")
-    print(f"  LLM overhead: {n2_avg_llm:.2f}ms")
-    print(f"  Total TTFT: {n2_avg_ttft:.2f}ms")
+    print(f"Cascade layer: {n2_avg_cascade:.2f}ms")
+    print(f"LLM overhead: {n2_avg_llm:.2f}ms")
+    print(f"Total TTFT: {n2_avg_ttft:.2f}ms")
     if len(n2_ttfts) == 2:
-        print(f"    Rank 0: {n2_ttfts[0]:.2f}ms")
-        print(f"    Rank 1: {n2_ttfts[1]:.2f}ms")
+        print(f"Rank 0: {n2_ttfts[0]:.2f}ms")
+        print(f"Rank 1: {n2_ttfts[1]:.2f}ms")
 
     if n1_ttft:
         ratio = n2_avg_ttft / n1_ttft
-        print(f"\n📈 WEAK SCALING ANALYSIS:")
-        print(f"  TTFT Ratio (N2/N1): {ratio:.3f}x")
+        print(f"\n WEAK SCALING ANALYSIS:")
+        print(f"TTFT Ratio (N2/N1): {ratio:.3f}x")
 
         if ratio < 1.2:
-            print(f"  ✓ EXCELLENT: TTFT increased only {(ratio-1)*100:.1f}%")
+            print(f"EXCELLENT: TTFT increased only {(ratio-1)*100:.1f}%")
         elif ratio < 1.5:
-            print(f"  ~ GOOD: TTFT increased {(ratio-1)*100:.1f}%")
+            print(f"~ GOOD: TTFT increased {(ratio-1)*100:.1f}%")
         else:
-            print(f"  ✗ POOR: TTFT increased {(ratio-1)*100:.1f}%")
+            print(f"POOR: TTFT increased {(ratio-1)*100:.1f}%")
 
         print(f"\n  Cascade scaling: {n2_avg_cascade/n1_cascade:.3f}x")
-        print(f"  LLM scaling: {n2_avg_llm/n1_llm:.3f}x")
+        print(f"LLM scaling: {n2_avg_llm/n1_llm:.3f}x")
 
-print("\n📚 COMPARISON WITH BASELINE:")
-print("  Storage-only (Job 50748461):")
-print("    N=1: 0.59ms, N=2: 0.62ms, Ratio: 1.05x")
+print("\n COMPARISON WITH BASELINE:")
+print("Storage-only (Job 50748461):")
+print("N=1: 0.59ms, N=2: 0.62ms, Ratio: 1.05x")
 
 if n1_ttft and n2_ttfts:
-    print(f"  End-to-end (this test):")
-    print(f"    N=1: {n1_ttft:.2f}ms, N=2: {n2_avg_ttft:.2f}ms, Ratio: {n2_avg_ttft/n1_ttft:.3f}x")
+    print(f"End-to-end (this test):")
+    print(f"N=1: {n1_ttft:.2f}ms, N=2: {n2_avg_ttft:.2f}ms, Ratio: {n2_avg_ttft/n1_ttft:.3f}x")
 
-    print(f"\n💡 KEY INSIGHTS:")
-    print(f"  1. Storage layer adds <1ms overhead (negligible)")
-    print(f"  2. LLM compute dominates TTFT (~{n1_llm:.0f}ms)")
-    print(f"  3. Cascade maintains excellent weak scaling")
-    print(f"  4. Production ready for vLLM integration")
+    print(f"\n KEY INSIGHTS:")
+    print(f"1. Storage layer adds <1ms overhead (negligible)")
+    print(f"2. LLM compute dominates TTFT (~{n1_llm:.0f}ms)")
+    print(f"3. Cascade maintains excellent weak scaling")
+    print(f"4. Production ready for vLLM integration")
 
-print("\n" + "=" * 60)
-print("✅ End-to-End Testing Complete!")
-print("=" * 60)
+print("\n"+ "="* 60)
+print("End-to-End Testing Complete!")
+print("="* 60)
 EOF
 
 echo ""
 echo "=========================================="
-echo "✓ All Tests Complete!"
+echo "All Tests Complete!"
 echo "=========================================="
 echo "Results saved to: $STORAGE_PATH"
 echo "Job completed at: $(date)"

@@ -20,12 +20,12 @@ echo "=== Tail Latency CDF - Cascade Only (64 Nodes) ==="
 
 for bs in $BLOCK_SIZES; do
     model_name="Llama"
-    if [ "$bs" -eq "320" ]; then model_name="Qwen"; fi
-    echo "▶ Testing $SYSTEM with $model_name ($bs MB blocks)"
+    if [ "$bs"-eq "320"]; then model_name="Qwen"; fi
+    echo "Testing $SYSTEM with $model_name ($bs MB blocks)"
     srun  -N $N -n $N --ntasks-per-node=1 \
         python3 script_example/02_tail_latency_burst/tail_driver.py \
         --system $SYSTEM --block-size-mb $bs --num-write-blocks 30 --num-read-ops 300
     sleep 5
 done
 
-echo "✅ Cascade 64N experiment completed"
+echo "Cascade 64N experiment completed"

@@ -23,7 +23,7 @@ for sys in $SYSTEMS; do
 
     if [ $SLURM_PROCID -eq 0 ]; then
         hostname > benchmark/tmp/hosts_$SLURM_JOB_ID/redis_host
-        redis-server --port 16379 --protected-mode no --save "" --appendonly no \
+        redis-server --port 16379 --protected-mode no --save ""--appendonly no \
             --maxmemory 200gb --maxmemory-policy allkeys-lru &
         REDIS_PID=$!
         echo "Redis started with PID $REDIS_PID"
@@ -33,8 +33,8 @@ for sys in $SYSTEMS; do
 
     for bs in $BLOCK_SIZES; do
         model_name="Llama"
-        if [ "$bs" -eq "320" ]; then model_name="Qwen"; fi
-        echo "▶ Testing $sys with $model_name ($bs MB blocks)"
+        if [ "$bs"-eq "320"]; then model_name="Qwen"; fi
+        echo "Testing $sys with $model_name ($bs MB blocks)"
         srun -N 64 -n 64 python3 script_example/02_tail_latency_burst/tail_driver.py \
             --system $sys --block-size-mb $bs --num-write-blocks 30 --num-read-ops 300
         sleep 10
@@ -46,4 +46,4 @@ for sys in $SYSTEMS; do
     rm -rf benchmark/tmp/hosts_$SLURM_JOB_ID
 done
 
-echo "✅ Redis-only experiment completed"
+echo "Redis-only experiment completed"

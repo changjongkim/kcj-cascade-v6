@@ -40,7 +40,7 @@ def worker_thread(adapter, block_data, key_prefix, num_ops, latencies, thread_id
         })
 
 def run_phase(adapter, block_data, phase_name, num_threads, ops_per_thread, key_prefix):
-    print_rank0(f"  Phase: {phase_name} ({num_threads} concurrent threads, {ops_per_thread} ops each)")
+    print_rank0(f"Phase: {phase_name} ({num_threads} concurrent threads, {ops_per_thread} ops each)")
 
     latencies = defaultdict(list)
     threads = []
@@ -91,7 +91,7 @@ def main():
     args = parser.parse_args()
 
     block_size = args.block_size_mb * 1024 * 1024
-    model_name = "Llama-2" if args.block_size_mb == 160 else "Qwen-2.5-72B"
+    model_name = "Llama-2"if args.block_size_mb == 160 else "Qwen-2.5-72B"
 
     config = {}
     if args.system.lower() == "cascade":
@@ -101,8 +101,8 @@ def main():
             "semantic_eviction": True,
             "lustre_path": f"${REPO_ROOT}/benchmark/cascade_bursty_{job_id}"
         }
-    elif "redis" in args.system.lower():
-        tmp_h_dir = REPO_ROOT / "benchmark" / "tmp" / f"hosts_{job_id}"
+    elif "redis"in args.system.lower():
+        tmp_h_dir = REPO_ROOT / "benchmark"/ "tmp"/ f"hosts_{job_id}"
         tmp_h_dir.mkdir(parents=True, exist_ok=True)
         wait_count = 0
         while not (tmp_h_dir / "redis_host").exists() and wait_count < 30:
@@ -115,7 +115,7 @@ def main():
         config = {"storage_path": f"${REPO_ROOT}/benchmark/lmcache_bursty_{job_id}"}
     elif args.system.lower() == "pdc":
         config = {"storage_path": f"${REPO_ROOT}/benchmark/pdc_bursty_{job_id}"}
-    elif "hdf5" in args.system.lower():
+    elif "hdf5"in args.system.lower():
         config = {"file_path": f"${REPO_ROOT}/benchmark/tmp/h5_bursty_{job_id}.h5", "use_mpi": True}
 
     adapter = get_adapter(args.system, config)
@@ -130,7 +130,7 @@ def main():
     block_data = (block_data_raw[:len(block_data_raw)//2], block_data_raw[len(block_data_raw)//2:])
 
     print_rank0(f"\n{'='*70}")
-    print_rank0(f"🌊 Bursty Traffic Benchmark: {args.system} | N={args.node_count} | {model_name} ({args.block_size_mb}MB)")
+    print_rank0(f"Bursty Traffic Benchmark: {args.system} | N={args.node_count} | {model_name} ({args.block_size_mb}MB)")
     print_rank0(f"{'='*70}")
 
     results = []
@@ -150,7 +150,7 @@ def main():
     adapter.flush()
     if hasattr(adapter, "barrier"): adapter.barrier()
 
-    res_dir = REPO_ROOT / "benchmark" / "tmp" / f"bursty_res_{job_id}"
+    res_dir = REPO_ROOT / "benchmark"/ "tmp"/ f"bursty_res_{job_id}"
     res_dir.mkdir(parents=True, exist_ok=True)
 
     with open(res_dir / f"rank_{rank}_n{args.node_count}.json", "w") as f:
@@ -182,7 +182,7 @@ def main():
             phase_stats[phase]['read_lats'].append(res['read_p99_ms'])
 
         print_rank0(f"\n{'='*70}")
-        print_rank0(f"📊 Aggregated Results: {args.system} @ {args.node_count} Nodes")
+        print_rank0(f"Aggregated Results: {args.system} @ {args.node_count} Nodes")
         print_rank0(f"{'='*70}")
 
         for phase in ['calm_baseline', 'burst_10x', 'calm_recovery']:
@@ -192,10 +192,10 @@ def main():
             read_p99 = np.mean(stats['read_lats'])
 
             print_rank0(f"\n[{phase.upper()}]")
-            print_rank0(f"  Total Ops: {stats['total_ops']}")
-            print_rank0(f"  Throughput: {avg_throughput:.2f} ops/s")
-            print_rank0(f"  Write P99: {write_p99:.2f} ms")
-            print_rank0(f"  Read P99: {read_p99:.2f} ms")
+            print_rank0(f"Total Ops: {stats['total_ops']}")
+            print_rank0(f"Throughput: {avg_throughput:.2f} ops/s")
+            print_rank0(f"Write P99: {write_p99:.2f} ms")
+            print_rank0(f"Read P99: {read_p99:.2f} ms")
 
         baseline_p99 = np.mean(phase_stats['calm_baseline']['read_lats'])
         burst_p99 = np.mean(phase_stats['burst_10x']['read_lats'])
@@ -205,10 +205,10 @@ def main():
         recovery_rate = ((baseline_p99 - recovery_p99) / baseline_p99 * 100) if baseline_p99 > 0 else 0
 
         print_rank0(f"\n{'='*70}")
-        print_rank0(f"🎯 Stability Analysis:")
-        print_rank0(f"  Burst Degradation: {degradation:+.1f}%")
-        print_rank0(f"  Recovery Quality: {recovery_rate:+.1f}% (vs baseline)")
-        print_rank0(f"  Status: {'✅ STABLE' if abs(degradation) < 50 else '⚠️ DEGRADED'}")
+        print_rank0(f"Stability Analysis:")
+        print_rank0(f"Burst Degradation: {degradation:+.1f}%")
+        print_rank0(f"Recovery Quality: {recovery_rate:+.1f}% (vs baseline)")
+        print_rank0(f"Status: {'STABLE'if abs(degradation) < 50 else 'DEGRADED'}")
         print_rank0(f"{'='*70}\n")
 
     adapter.close()

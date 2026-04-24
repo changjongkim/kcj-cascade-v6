@@ -20,19 +20,19 @@ export OUT_DIR="${REPO_ROOT}/benchmark/results/16n/cas_stream_${SLURM_JOB_ID}"
 mkdir -p $OUT_DIR
 
 echo "--------------------------------------------------------"
-echo "🚀 DeepCAM V16 16-Node Benchmark: CAS_STREAM"
+echo "DeepCAM V16 16-Node Benchmark: CAS_STREAM"
 echo "--------------------------------------------------------"
 
 srun python script_example/07_deepcam/streaming_driver.py \
        --system cascade \
-       --wireup_method "mpi" \
-       --run_tag "dc_repro_cas_stream_16n" \
+       --wireup_method "mpi"\
+       --run_tag "dc_repro_cas_stream_16n"\
        --data_dir_prefix ${DATA_DIR} \
        --output_dir ${OUT_DIR} \
-       --model_prefix "segmentation" \
-       --optimizer "Adam" \
+       --model_prefix "segmentation"\
+       --optimizer "Adam"\
        --start_lr 0.0055 \
-       --lr_schedule type="multistep",milestones="800",decay_rate="0.1" \
+       --lr_schedule type="multistep",milestones="800",decay_rate="0.1"\
        --lr_warmup_steps 400 \
        --lr_warmup_factor 1. \
        --weight_decay 1e-2 \
@@ -43,4 +43,4 @@ srun python script_example/07_deepcam/streaming_driver.py \
        --batchnorm_group_size 1 \
        --local_batch_size 2
 
-echo "✅ Done: dc_repro_cas_stream_16n"
+echo "Done: dc_repro_cas_stream_16n"

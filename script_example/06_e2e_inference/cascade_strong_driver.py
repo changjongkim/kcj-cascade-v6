@@ -104,7 +104,7 @@ def measure_inference(
 
     throughput_input = total_input_tokens / total_time if total_time > 0 else 0
     throughput_output = total_output_tokens / total_time if total_time > 0 else 0
-    avg_ttft = (total_time / len(prompts)) * 1000                  
+    avg_ttft = (total_time / len(prompts)) * 1000
 
     output_tokens_list = [m["output_tokens"] for m in request_metrics]
 
@@ -122,11 +122,11 @@ def measure_inference(
         "requests": request_metrics,
     }
 
-    print(f"  Requests: {len(prompts)}")
-    print(f"  Total time: {total_time:.3f}s")
-    print(f"  Input throughput:  {throughput_input:.1f} toks/s")
-    print(f"  Output throughput: {throughput_output:.1f} toks/s")
-    print(f"  Avg TTFT: {avg_ttft:.2f} ms/req")
+    print(f"Requests: {len(prompts)}")
+    print(f"Total time: {total_time:.3f}s")
+    print(f"Input throughput:  {throughput_input:.1f} toks/s")
+    print(f"Output throughput: {throughput_output:.1f} toks/s")
+    print(f"Avg TTFT: {avg_ttft:.2f} ms/req")
 
     return result
 
@@ -187,7 +187,7 @@ def run_rank(
     )
 
     stage_times["model_load_s"] = time.time() - t0
-    print(f"  Model load: {stage_times['model_load_s']:.2f}s")
+    print(f"Model load: {stage_times['model_load_s']:.2f}s")
 
     sampling_params = SamplingParams(
         temperature=0.8,
@@ -202,13 +202,13 @@ def run_rank(
             s = _sock.socket(_sock.AF_UNIX, _sock.SOCK_STREAM)
             s.connect(daemon_socket)
             s.close()
-            print(f"  [Rank {rank}] Daemon socket OK before warmup")
+            print(f"[Rank {rank}] Daemon socket OK before warmup")
         except Exception as e:
-            print(f"  [Rank {rank}] WARNING: Daemon socket DEAD before warmup: {e}")
+            print(f"[Rank {rank}] WARNING: Daemon socket DEAD before warmup: {e}")
     t0 = time.time()
     _ = llm.generate(["Hello world"], SamplingParams(max_tokens=1))
     stage_times["warmup_s"] = time.time() - t0
-    print(f"  Warmup: {stage_times['warmup_s']:.2f}s")
+    print(f"Warmup: {stage_times['warmup_s']:.2f}s")
 
     t0 = time.time()
     pass1 = measure_inference(llm, prompts, sampling_params, "Pass 1: Compute + Store")
@@ -219,12 +219,12 @@ def run_rank(
         try:
             from cascade_daemon import CascadeClient
             client = CascadeClient(daemon_socket)
-            print(f"  [Rank {rank}] Calling sync_metadata (MPI Allgatherv)...", flush=True)
+            print(f"[Rank {rank}] Calling sync_metadata (MPI Allgatherv)...", flush=True)
             client.sync_metadata()
-            print(f"  [Rank {rank}] sync_metadata done — global index updated", flush=True)
+            print(f"[Rank {rank}] sync_metadata done — global index updated", flush=True)
             client.close()
         except Exception as e:
-            print(f"  [Rank {rank}] WARNING: sync_metadata failed: {e}", flush=True)
+            print(f"[Rank {rank}] WARNING: sync_metadata failed: {e}", flush=True)
 
     if world_size > 1:
 
@@ -233,9 +233,9 @@ def run_rank(
         cross_prompts = generate_prompts(
             requests_per_rank, offset=other_offset,
             target_tokens=target_tokens,
-            rank_tag=other_rank,                                                  
+            rank_tag=other_rank,
         )
-        print(f"  [Rank {rank}] Pass 2 uses rank {other_rank}'s prompts "
+        print(f"[Rank {rank}] Pass 2 uses rank {other_rank}'s prompts "
               f"(rank_tag={other_rank}, forces RDMA cross-node fetch)")
     else:
 
@@ -265,11 +265,11 @@ def run_rank(
     }
 
     print(f"\n[Rank {rank}] Summary:")
-    print(f"  Pass 1: {pass1['total_time_s']:.3f}s "
+    print(f"Pass 1: {pass1['total_time_s']:.3f}s "
           f"({pass1['throughput_output_toks_s']:.1f} out toks/s)")
-    print(f"  Pass 2: {pass2['total_time_s']:.3f}s "
+    print(f"Pass 2: {pass2['total_time_s']:.3f}s "
           f"({pass2['throughput_output_toks_s']:.1f} out toks/s)")
-    print(f"  Cache speedup: {speedup:.2f}x")
+    print(f"Cache speedup: {speedup:.2f}x")
 
     return result
 
@@ -282,13 +282,13 @@ def aggregate_results(output_dir: str, world_size: int):
     for rank in range(world_size):
         path = Path(output_dir) / f"rank_{rank}.json"
         if not path.exists():
-            print(f"  WARNING: missing {path}")
+            print(f"WARNING: missing {path}")
             continue
         with open(path) as f:
             all_results.append(json.load(f))
 
     if not all_results:
-        print("  No results to aggregate")
+        print("No results to aggregate")
         return
 
     p1_times = [r["pass1"]["total_time_s"] for r in all_results]
@@ -344,14 +344,14 @@ def aggregate_results(output_dir: str, world_size: int):
     print(f"Requests per node: {TOTAL_REQUESTS // world_size}")
     print()
     print(f"Pass 1 (compute+store):")
-    print(f"  Wall time:   {p1_wall:.3f}s")
-    print(f"  Throughput:  {p1_agg_throughput:.1f} output toks/s (aggregate)")
-    print(f"  Avg TTFT:    {np.mean(p1_ttfts):.2f} ms/req")
+    print(f"Wall time:   {p1_wall:.3f}s")
+    print(f"Throughput:  {p1_agg_throughput:.1f} output toks/s (aggregate)")
+    print(f"Avg TTFT:    {np.mean(p1_ttfts):.2f} ms/req")
     print()
     print(f"Pass 2 (cache hit):")
-    print(f"  Wall time:   {p2_wall:.3f}s")
-    print(f"  Throughput:  {p2_agg_throughput:.1f} output toks/s (aggregate)")
-    print(f"  Avg TTFT:    {np.mean(p2_ttfts):.2f} ms/req")
+    print(f"Wall time:   {p2_wall:.3f}s")
+    print(f"Throughput:  {p2_agg_throughput:.1f} output toks/s (aggregate)")
+    print(f"Avg TTFT:    {np.mean(p2_ttfts):.2f} ms/req")
     print()
     print(f"Cache speedup: {aggregate['speedup']:.2f}x")
     print(f"\nSaved to {agg_path}")
@@ -417,17 +417,17 @@ def main():
                 )
 
                 store = daemon._store
-                print(f"  [Daemon] MPI rank={store.rank} world_size={store.world_size}"
-                      f" lustre={storage_path}", flush=True)
+                print(f"[Daemon] MPI rank={store.rank} world_size={store.world_size}"
+                      f"lustre={storage_path}", flush=True)
                 daemon.start()
-                daemon.barrier()                     
+                daemon.barrier()
                 ready_evt.set()
 
                 threading.Event().wait()
             except Exception as e:
                 print(f"DAEMON CRASH: {e}", file=sys.stderr, flush=True)
                 traceback.print_exc(file=sys.stderr)
-                ready_evt.set()                                  
+                ready_evt.set()
 
         daemon_proc = mp.Process(
             target=_run_daemon,
@@ -442,8 +442,8 @@ def main():
 
         daemon_socket = socket_path
         os.environ["CASCADE_DAEMON_SOCKET"] = socket_path
-        print(f"  [Rank {rank}] Cascade daemon started: {socket_path}")
-        print(f"  [Rank {rank}] All daemons ready")
+        print(f"[Rank {rank}] Cascade daemon started: {socket_path}")
+        print(f"[Rank {rank}] All daemons ready")
 
     result = run_rank(
         model_name=args.model,
@@ -467,25 +467,25 @@ def main():
     barrier_dir = Path(args.output_dir) / "_barrier"
     barrier_dir.mkdir(exist_ok=True)
     (barrier_dir / f"done_{rank}").touch()
-    print(f"  [Rank {rank}] Waiting for all ranks to finish...")
+    print(f"[Rank {rank}] Waiting for all ranks to finish...")
     for r in range(world_size):
-        deadline = time.time() + 300                 
+        deadline = time.time() + 300
         while not (barrier_dir / f"done_{r}").exists():
             if time.time() > deadline:
-                print(f"  [Rank {rank}] WARNING: Rank {r} did not finish in time")
+                print(f"[Rank {rank}] WARNING: Rank {r} did not finish in time")
                 break
             time.sleep(1)
-    print(f"  [Rank {rank}] All ranks done, cleaning up")
+    print(f"[Rank {rank}] All ranks done, cleaning up")
 
     if daemon_proc:
         try:
             from cascade_daemon import CascadeClient
             client = CascadeClient(daemon_socket)
             print(f"\n  [Rank {rank}] Cascade DistributedStore stats:")
-            print(f"  {client.get_stats()}")
+            print(f"{client.get_stats()}")
             client.close()
         except Exception as e:
-            print(f"  [Rank {rank}] Could not get daemon stats: {e}")
+            print(f"[Rank {rank}] Could not get daemon stats: {e}")
         daemon_proc.terminate()
         daemon_proc.join(timeout=5)
 

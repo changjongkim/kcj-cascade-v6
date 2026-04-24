@@ -21,7 +21,7 @@ cmake .. \
     -DCMAKE_C_COMPILER=cc \
     -DCMAKE_CXX_COMPILER=CC \
     -DCMAKE_CUDA_ARCHITECTURES=80 \
-    -DCMAKE_CUDA_FLAGS="-allow-unsupported-compiler" \
+    -DCMAKE_CUDA_FLAGS="-allow-unsupported-compiler"\
     -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config \
     -DUSE_SLINGSHOT=ON
 

@@ -18,11 +18,11 @@ sys.path.append(str(REPO_ROOT))
 from benchmark.run_benchmark import get_adapter
 
 def print_rank0(*args):
-    if rank == 0: 
+    if rank == 0:
         print(*args, flush=True)
 
 def file_barrier(name):
-    bar_dir = REPO_ROOT / "benchmark" / "tmp" / f"bar_{job_id}_{name}"
+    bar_dir = REPO_ROOT / "benchmark"/ "tmp"/ f"bar_{job_id}_{name}"
     bar_dir.mkdir(parents=True, exist_ok=True)
     (bar_dir / f"rank_{rank}").touch()
     while True:
@@ -49,8 +49,8 @@ def main():
     if args.system.lower() == "cascade":
         l_path = args.storage_path if args.storage_path else f"${REPO_ROOT}/benchmark/cascade_tail_{job_id}"
         config = {"gpu_capacity_gb": 32.0, "shm_capacity_gb": 64.0, "use_gpu": True, "lustre_path": l_path}
-    elif "redis" in args.system.lower():
-        tmp_h_dir = REPO_ROOT / "benchmark" / "tmp" / f"hosts_{job_id}"
+    elif "redis"in args.system.lower():
+        tmp_h_dir = REPO_ROOT / "benchmark"/ "tmp"/ f"hosts_{job_id}"
         wait_count = 0
 
         if args.system.lower() == "redis-dist":
@@ -73,7 +73,7 @@ def main():
     elif args.system.lower() == "pdc":
         l_path = args.storage_path if args.storage_path else f"${REPO_ROOT}/benchmark/pdc_tail_{job_id}"
         config = {"storage_path": l_path}
-    elif "hdf5" in args.system.lower():
+    elif "hdf5"in args.system.lower():
         l_path = args.storage_path if args.storage_path else f"${REPO_ROOT}/benchmark/tmp/h5_tail_{job_id}.h5"
         config = {"file_path": l_path, "use_mpi": True}
 
@@ -83,22 +83,22 @@ def main():
         return
 
     print_rank0(f"Phase 1: Writing {args.num_write_blocks} variable blocks (mean {args.block_size_mb} MB) with {args.system}...")
-    my_keys = [f"tail_r{rank}_b{i}" for i in range(args.num_write_blocks)]
+    my_keys = [f"tail_r{rank}_b{i}"for i in range(args.num_write_blocks)]
 
     np.random.seed(rank + 42)
 
     mu = np.log(args.block_size_mb) - (args.sigma**2 / 2)
     mb_sizes = np.random.lognormal(mu, args.sigma, args.num_write_blocks)
-    mb_sizes = np.clip(mb_sizes, 1.0, 1024.0)                           
+    mb_sizes = np.clip(mb_sizes, 1.0, 1024.0)
 
     max_bytes = int(np.max(mb_sizes) * 1024 * 1024)
     data_buffer = np.random.randint(0, 256, max_bytes, dtype=np.uint8).tobytes()
 
-    key_size_map = {}                                             
+    key_size_map = {}
 
     for i, key in enumerate(my_keys):
         s_bytes = int(mb_sizes[i] * 1024 * 1024)
-        s_bytes = (s_bytes // 8) * 8                                     
+        s_bytes = (s_bytes // 8) * 8
         mk, mv = data_buffer[:s_bytes//2], data_buffer[s_bytes//2:s_bytes]
         adapter.put(key, mk, mv)
         key_size_map[key] = s_bytes
@@ -133,7 +133,7 @@ def main():
 
         t0 = time.perf_counter()
         adapter.get(key)
-        t_lat = (time.perf_counter() - t0) * 1000     
+        t_lat = (time.perf_counter() - t0) * 1000
         latencies.append(t_lat)
 
     end_time = time.perf_counter()
@@ -152,14 +152,14 @@ def main():
     thru = args.num_read_ops / duration
     bw_gbps = (total_bytes_read / (1024.0**3)) / duration
 
-    res_dir = REPO_ROOT / "benchmark" / "tmp" / f"tail_res_{job_id}"
+    res_dir = REPO_ROOT / "benchmark"/ "tmp"/ f"tail_res_{job_id}"
     res_dir.mkdir(parents=True, exist_ok=True)
 
     with open(res_dir / f"rank_{rank}.json", "w") as f:
         json.dump({
             "avg": avg, "std": std, "p50": p50, "p95": p95, "p99": p99, "p999": p999, "max": mx,
             "thru": thru, "bw": bw_gbps,
-            "all_lats": local_lats.tolist() 
+            "all_lats": local_lats.tolist()
         }, f)
 
     file_barrier("results_gathered")
@@ -184,20 +184,20 @@ def main():
         agg_thru = np.sum(global_thrus)
         agg_bw = np.sum(global_bws)
 
-        print(f"\n" + "="*60)
-        print(f"📊 TTFT & BANDWIDTH DISTRIBUTION: {args.system} ({world} Nodes)")
+        print(f"\n"+ "="*60)
+        print(f"TTFT & BANDWIDTH DISTRIBUTION: {args.system} ({world} Nodes)")
         print(f"="*60)
-        print(f"  Samples:         {len(global_lats)}")
-        print(f"  Avg TTFT:        {gavg:8.2f} ms")
-        print(f"  P50 TTFT:        {gp50:8.2f} ms")
-        print(f"  P99 TTFT:        {gp99:8.2f} ms")
-        print(f"  P99.9 TTFT:      {gp999:8.2f} ms")
-        print(f"  Max TTFT:        {np.max(global_lats):8.2f} ms")
-        print(f"  --------------------------------------------------")
-        print(f"  Avg Throughput:  {agg_thru:8.2f} req/s")
-        print(f"  Aggregated BW:   {agg_bw:8.2f} GB/s")
+        print(f"Samples:         {len(global_lats)}")
+        print(f"Avg TTFT:        {gavg:8.2f} ms")
+        print(f"P50 TTFT:        {gp50:8.2f} ms")
+        print(f"P99 TTFT:        {gp99:8.2f} ms")
+        print(f"P99.9 TTFT:      {gp999:8.2f} ms")
+        print(f"Max TTFT:        {np.max(global_lats):8.2f} ms")
+        print(f"--------------------------------------------------")
+        print(f"Avg Throughput:  {agg_thru:8.2f} req/s")
+        print(f"Aggregated BW:   {agg_bw:8.2f} GB/s")
         print(f"="*60)
-        print("✅ Done")
+        print("Done")
 
     adapter.close()
 

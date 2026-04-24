@@ -12,7 +12,7 @@ SYSTEMS="cascade hdf5 lmcache pdc redis"
 
 for sys in $SYSTEMS; do
     script="benchmark/scripts/v17_bursty_${sys}_8n.slurm"
-    if [ -f "$script" ]; then
+    if [ -f "$script"]; then
         echo "Submitting: $script"
         sbatch "$script"
         sleep 1

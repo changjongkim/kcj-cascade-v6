@@ -43,4 +43,4 @@ for N in 1 2 4 8; do
     sleep 10
 done
 
-echo "✅ Done: v13 Cascade Weak Scaling 1-8N (prefix_replication)"
+echo "Done: v13 Cascade Weak Scaling 1-8N (prefix_replication)"

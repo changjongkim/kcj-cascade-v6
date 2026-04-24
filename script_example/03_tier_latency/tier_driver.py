@@ -27,21 +27,21 @@ def measure_tier_latency(store, block_size_mb, num_iterations=100, tier_name="un
 
         start = time.perf_counter()
         store.put(key, data)
-        write_time = (time.perf_counter() - start) * 1000                 
+        write_time = (time.perf_counter() - start) * 1000
         write_times.append(write_time)
 
         buffer = np.empty_like(data)
         start = time.perf_counter()
         found, size = store.get(key, buffer)
-        read_time = (time.perf_counter() - start) * 1000                 
+        read_time = (time.perf_counter() - start) * 1000
 
         if found:
             read_times.append(read_time)
 
         if (i + 1) % 10 == 0:
-            print(f"    Progress: {i+1}/{num_iterations}", end='\r', flush=True)
+            print(f"Progress: {i+1}/{num_iterations}", end='\r', flush=True)
 
-    print(f"    Progress: {num_iterations}/{num_iterations} ✓")
+    print(f"Progress: {num_iterations}/{num_iterations} ")
 
     results = {
         'tier': tier_name,
@@ -63,8 +63,8 @@ def measure_tier_latency(store, block_size_mb, num_iterations=100, tier_name="un
         }
     }
 
-    print(f"    Write: {results['write']['mean_ms']:.2f} ms (P95: {results['write']['p95_ms']:.2f} ms)")
-    print(f"    Read:  {results['read']['mean_ms']:.2f} ms (P95: {results['read']['p95_ms']:.2f} ms)")
+    print(f"Write: {results['write']['mean_ms']:.2f} ms (P95: {results['write']['p95_ms']:.2f} ms)")
+    print(f"Read:  {results['read']['mean_ms']:.2f} ms (P95: {results['read']['p95_ms']:.2f} ms)")
 
     return results
 
@@ -80,14 +80,14 @@ def run_tier_microbenchmark(args):
 
     if args.tier == 'gpu':
 
-        cfg.gpu_capacity_per_device = 10 * 1024**3         
+        cfg.gpu_capacity_per_device = 10 * 1024**3
         cfg.dram_capacity = 0
         tier_name = "GPU (Tier 1)"
 
     elif args.tier == 'dram':
 
         cfg.gpu_capacity_per_device = 0
-        cfg.dram_capacity = 10 * 1024**3         
+        cfg.dram_capacity = 10 * 1024**3
         tier_name = "DRAM (Tier 2)"
 
     elif args.tier == 'lustre':
@@ -102,7 +102,7 @@ def run_tier_microbenchmark(args):
         sys.exit(1)
 
     cfg.num_gpus_per_node = 1
-    cfg.dedup_enabled = False                                       
+    cfg.dedup_enabled = False
 
     print(f"\nInitializing CASCADE store for {tier_name}...")
     store = cascade_cpp.DistributedStore(cfg)
@@ -119,7 +119,7 @@ def run_tier_microbenchmark(args):
     with open(output_file, 'w') as f:
         json.dump(results, f, indent=2)
 
-    print(f"\n✅ Results saved to: {output_file}")
+    print(f"\n Results saved to: {output_file}")
     print(f"{'='*80}\n")
 
     return results
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     try:
         run_tier_microbenchmark(args)
     except Exception as e:
-        print(f"\n❌ ERROR: {e}")
+        print(f"\n ERROR: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

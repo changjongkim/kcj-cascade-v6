@@ -27,10 +27,10 @@ module load cudatoolkit/12.9
 
 MODEL="Qwen/Qwen2.5-32B"
 OUTPUT_DIR="$REPO_ROOT/vllm_integration/baseline_qwen32b_${NODES}N_${JOB_ID}"
-mkdir -p "$OUTPUT_DIR" "$REPO_ROOT/vllm_integration/logs"
+mkdir -p "$OUTPUT_DIR""$REPO_ROOT/vllm_integration/logs"
 
-srun python3 "$REPO_ROOT/script_example/06_e2e_inference/vllm_baseline_driver.py" \
-    --model "$MODEL" \
+srun python3 "$REPO_ROOT/script_example/06_e2e_inference/vllm_baseline_driver.py"\
+    --model "$MODEL"\
     --max-tokens 64 \
     --tensor-parallel-size 2 \
     --gpu-memory-utilization 0.90 \

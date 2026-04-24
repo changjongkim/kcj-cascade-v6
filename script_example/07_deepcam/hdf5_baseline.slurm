@@ -19,18 +19,18 @@ export DATA_DIR="${REPO_ROOT}/benchmark/tmp/deepcam_dummy_data"
 export OUT_DIR="${REPO_ROOT}/benchmark/results/deepcam_hdf5_${SLURM_JOB_ID}"
 
 echo "--------------------------------------------------------"
-echo "🚀 DeepCAM V16 Benchmark (HDF5 BASELINE)"
+echo "DeepCAM V16 Benchmark (HDF5 BASELINE)"
 echo "--------------------------------------------------------"
 
 srun python script_example/07_deepcam/deepcam_driver.py \
-       --wireup_method "mpi" \
-       --run_tag "deepcam_hdf5_8n" \
+       --wireup_method "mpi"\
+       --run_tag "deepcam_hdf5_8n"\
        --data_dir_prefix ${DATA_DIR} \
        --output_dir ${OUT_DIR} \
-       --model_prefix "segmentation" \
-       --optimizer "LAMB" \
+       --model_prefix "segmentation"\
+       --optimizer "LAMB"\
        --start_lr 0.0055 \
-       --lr_schedule type="multistep",milestones="800",decay_rate="0.1" \
+       --lr_schedule type="multistep",milestones="800",decay_rate="0.1"\
        --lr_warmup_steps 400 \
        --lr_warmup_factor 1. \
        --weight_decay 1e-2 \
@@ -41,4 +41,4 @@ srun python script_example/07_deepcam/deepcam_driver.py \
        --batchnorm_group_size 1 \
        --local_batch_size 2
 
-echo "✅ Done: v16_deepcam_hdf5"
+echo "Done: v16_deepcam_hdf5"

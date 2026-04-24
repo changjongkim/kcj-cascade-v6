@@ -25,8 +25,8 @@ srun -N $N -n $N --ntasks-per-node=1 \
     --node-count $N \
     --block-size-mb $BLOCK_SIZE
 
-echo "🧹 Cleaning up data..."
+echo "Cleaning up data..."
 rm -rf benchmark/pdc_bursty_${SLURM_JOB_ID}
 rm -rf benchmark/tmp/bursty_res_${SLURM_JOB_ID}
 
-echo "✅ Done"
+echo "Done"

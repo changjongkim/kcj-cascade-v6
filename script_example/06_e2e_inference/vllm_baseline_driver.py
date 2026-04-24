@@ -94,11 +94,11 @@ def measure_inference(llm, prompts, sampling_params, label):
         "avg_ttft_ms": avg_ttft,
     }
 
-    print(f"  Requests: {len(prompts)}")
-    print(f"  Total time: {total_time:.3f}s")
-    print(f"  Input throughput:  {throughput_in:.1f} toks/s")
-    print(f"  Output throughput: {throughput_out:.1f} toks/s")
-    print(f"  Avg TTFT: {avg_ttft:.2f} ms/req")
+    print(f"Requests: {len(prompts)}")
+    print(f"Total time: {total_time:.3f}s")
+    print(f"Input throughput:  {throughput_in:.1f} toks/s")
+    print(f"Output throughput: {throughput_out:.1f} toks/s")
+    print(f"Avg TTFT: {avg_ttft:.2f} ms/req")
 
     return result
 
@@ -145,7 +145,7 @@ def main():
         enforce_eager=args.enforce_eager,
     )
     model_load_s = time.time() - t0
-    print(f"  Model load: {model_load_s:.2f}s")
+    print(f"Model load: {model_load_s:.2f}s")
 
     sampling_params = SamplingParams(
         temperature=0.8, top_p=0.95, max_tokens=args.max_tokens,
@@ -154,7 +154,7 @@ def main():
     t0 = time.time()
     _ = llm.generate(["Hello world"], SamplingParams(max_tokens=1))
     warmup_s = time.time() - t0
-    print(f"  Warmup: {warmup_s:.2f}s")
+    print(f"Warmup: {warmup_s:.2f}s")
 
     prompts = generate_prompts(requests_per_rank, offset=prompt_offset,
                                target_tokens=args.target_tokens,
@@ -199,9 +199,9 @@ def main():
     }
 
     print(f"\n[Rank {rank}] Summary:")
-    print(f"  Pass 1: {pass1['total_time_s']:.3f}s ({pass1['throughput_output_toks_s']:.1f} out toks/s)")
-    print(f"  Pass 2: {pass2['total_time_s']:.3f}s ({pass2['throughput_output_toks_s']:.1f} out toks/s)")
-    print(f"  Speedup: {speedup:.2f}x")
+    print(f"Pass 1: {pass1['total_time_s']:.3f}s ({pass1['throughput_output_toks_s']:.1f} out toks/s)")
+    print(f"Pass 2: {pass2['total_time_s']:.3f}s ({pass2['throughput_output_toks_s']:.1f} out toks/s)")
+    print(f"Speedup: {speedup:.2f}x")
 
     rank_path = Path(args.output_dir) / f"rank_{rank}.json"
     with open(rank_path, "w") as f:

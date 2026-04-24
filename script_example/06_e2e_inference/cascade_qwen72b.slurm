@@ -47,10 +47,10 @@ echo "Storage: $STORAGE_PATH"
 echo "Output: $OUTPUT_DIR"
 echo ""
 
-mkdir -p "$STORAGE_PATH" "$OUTPUT_DIR" "$REPO_ROOT/vllm_integration/logs"
+mkdir -p "$STORAGE_PATH""$OUTPUT_DIR""$REPO_ROOT/vllm_integration/logs"
 
-srun python3 "$REPO_ROOT/script_example/06_e2e_inference/cascade_strong_driver.py" \
-    --model "$MODEL" \
+srun python3 "$REPO_ROOT/script_example/06_e2e_inference/cascade_strong_driver.py"\
+    --model "$MODEL"\
     --max-tokens 64 \
     --tensor-parallel-size 4 \
     --gpu-memory-utilization 0.90 \
@@ -58,7 +58,7 @@ srun python3 "$REPO_ROOT/script_example/06_e2e_inference/cascade_strong_driver.p
     --max-model-len 576 \
     --max-num-seqs 16 \
     --enforce-eager \
-    --storage-path "$STORAGE_PATH" \
+    --storage-path "$STORAGE_PATH"\
     --output-dir "$OUTPUT_DIR"
 
 EXIT_CODE=$?
@@ -67,7 +67,7 @@ echo ""
 echo "=========================================="
 if [ $EXIT_CODE -eq 0 ]; then
     echo "SUCCESS: ${NODES}N strong scaling (Qwen2.5-72B TP=4)"
-    if [ -f "$OUTPUT_DIR/aggregate.json" ]; then
+    if [ -f "$OUTPUT_DIR/aggregate.json"]; then
         echo ""
         python3 -c "
 import json
