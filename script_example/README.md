@@ -60,12 +60,13 @@ get_adapter` resolves to the adapters shipped in this directory.
 
 ## Baselines
 
-- LMCache-Disk — LMCache with Lustre file backend
-- LMCache-Redis — LMCache with centralized 128GB Redis backend
-- HDF5 — parallel I/O with independent mode
-- PDC — object-centric data management
-- vLLM — APC and LMCache-backed modes (end-to-end inference only;
-  invoked directly, not through the shared adapter layer)
+- LMCache-Disk: LMCache with Lustre file backend
+- LMCache-Redis: LMCache with centralized 128GB Redis backend
+- HDF5: parallel I/O with independent mode
+- PDC: object-centric data management
+- vLLM: APC and LMCache-backed modes. Used only in end-to-end
+  inference, invoked directly rather than through the shared adapter
+  layer.
 - CASCADE
 
 ## Notes
@@ -73,6 +74,6 @@ get_adapter` resolves to the adapters shipped in this directory.
 - DeepCAM ($T_{10}$) requires the MLPerf HPC benchmark source and
   dataset (https://github.com/mlcommons/hpc/tree/main/deepcam).
   Clone the repo and export `DEEPCAM_SRC=/path/to/mlcommons_hpc/deepcam/src/deepCam`
-  before submission; stage the 512GB dataset per MLCommons instructions.
+  before submission. Stage the 512GB dataset per MLCommons instructions.
 - To test a different node count, edit the Slurm file directly
   (`#SBATCH -N` and any per-script node list).
