@@ -18,7 +18,7 @@ and paper figure/table.
 | `05_sensitivity/dedup/` | $T_8$ | Fig 12 | 5 Slurm + `dedup_driver.py` |
 | `06_e2e_inference/` | $T_9$ | Fig 13 | 5 Slurm + e2e drivers + `cascade_vllm_engine.py` |
 | `07_deepcam/` | $T_{10}$ | Fig 14 | 8 Slurm + 4 drivers |
-| `benchmark/` | shared | — | `run_benchmark.py`, `config.py`, `adapters/` (CASCADE, HDF5, LMCache, PDC, Redis, vLLM) |
+| `benchmark/` | shared | — | `run_benchmark.py`, `config.py`, `adapters/` (CASCADE, HDF5, LMCache-Disk, LMCache-Redis, PDC) |
 
 ## Environment
 
@@ -45,11 +45,12 @@ get_adapter` resolves to the adapters shipped inside this directory.
 
 ## Baselines
 
-- LMCache — Disk (Lustre) and Redis (centralized 128GB) backends
+- LMCache-Disk — LMCache with Lustre file backend
+- LMCache-Redis — LMCache with centralized 128GB Redis backend
 - HDF5 — parallel I/O with independent mode
 - PDC — object-centric data management
-- vLLM — APC and LMCache-backed modes (used only in end-to-end
-  inference and DeepCAM tasks)
+- vLLM — APC and LMCache-backed modes (end-to-end inference only;
+  invoked directly, not through the shared adapter layer)
 - CASCADE — this work
 
 ## Notes
