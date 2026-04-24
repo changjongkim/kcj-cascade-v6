@@ -10,7 +10,7 @@
 #SBATCH -o benchmark/logs/v17_bursty_cascade_8n_%j.out
 #SBATCH -e benchmark/logs/v17_bursty_cascade_8n_%j.err
 
-cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
+cd ${REPO_ROOT}
 source setup_env.sh
 
 SYSTEM="cascade"

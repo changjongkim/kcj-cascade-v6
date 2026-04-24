@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -A m1248_g
+#SBATCH -A <account>
 #SBATCH -C gpu
 #SBATCH -q regular
 #SBATCH -t 00:30:00
@@ -10,7 +10,7 @@
 #SBATCH -o benchmark/logs/v9_lmcache_disk_32n_%j.out
 #SBATCH -e benchmark/logs/v9_lmcache_disk_32n_%j.err
 
-cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
+cd ${REPO_ROOT}
 source setup_env.sh
 
 SYSTEM="lmcache"

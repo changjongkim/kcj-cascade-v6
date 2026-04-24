@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -A m1248
+#SBATCH -A <account>
 #SBATCH -C gpu
 #SBATCH -q debug
 #SBATCH -t 00:30:00
@@ -23,15 +23,15 @@ module load python/3.11
 module load cudatoolkit/12.2
 module load cray-mpich
 
-cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
+cd ${REPO_ROOT}
 
-export PYTHONPATH=/pscratch/sd/s/sgkim/kcj/Cascade-kcj:$PYTHONPATH
+export PYTHONPATH=${REPO_ROOT}:$PYTHONPATH
 
 export FI_CXI_RX_MATCH_MODE=software
 export MPICH_OFI_STARTUP_CONNECT=1
 
 mkdir -p vllm_integration/logs
-STORAGE_PATH="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/vllm_integration/cascade_e2e_${SLURM_JOB_ID}"
+STORAGE_PATH="${REPO_ROOT}/vllm_integration/cascade_e2e_${SLURM_JOB_ID}"
 mkdir -p $STORAGE_PATH
 
 echo ""

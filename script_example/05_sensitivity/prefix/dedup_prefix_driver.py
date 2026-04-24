@@ -90,13 +90,11 @@ def run_dedup_benchmark():
             shared_redis_host = f.read().strip()
         config = {"host": shared_redis_host, "port": r_port}
     elif name.lower() == "lmcache":
-        config = {"storage_path": f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/lmcache_store_dedup_{rid}"}
-    elif name.lower() == "llm-gpu" or name.lower() == "vllm-gpu":
-        config = {"storage_path": f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/vllm_store_dedup_{rid}"}
+        config = {"storage_path": f"${REPO_ROOT}/benchmark/lmcache_store_dedup_{rid}"}
     elif name.lower() == "pdc":
-        config = {"storage_path": f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/pdc_store_dedup_{rid}"}
+        config = {"storage_path": f"${REPO_ROOT}/benchmark/pdc_store_dedup_{rid}"}
     elif "hdf5" in name.lower():
-        config = {"file_path": f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/h5_dedup_{rid}.h5", "use_mpi": True}
+        config = {"file_path": f"${REPO_ROOT}/benchmark/tmp/h5_dedup_{rid}.h5", "use_mpi": True}
 
     adapter = get_adapter(name, config)
     if not adapter.initialize():

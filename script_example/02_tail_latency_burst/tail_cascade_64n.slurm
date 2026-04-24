@@ -9,7 +9,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
 
-cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
+cd ${REPO_ROOT}
 source setup_env.sh
 
 SYSTEM="cascade"

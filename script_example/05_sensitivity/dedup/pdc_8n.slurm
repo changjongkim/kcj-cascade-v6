@@ -9,7 +9,7 @@
 #SBATCH -J v16_dedup_sens_pdc_8n
 #SBATCH -o benchmark/logs/v16_dedup_sens_pdc_8n_%j.out
 
-cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
+cd ${REPO_ROOT}
 source setup_env.sh
 
 RATES="0.1 0.3 0.5 0.7"

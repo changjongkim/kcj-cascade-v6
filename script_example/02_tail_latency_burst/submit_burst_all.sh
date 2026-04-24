@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
+cd ${REPO_ROOT}
 
 echo "=========================================="
 echo "Submitting V17 Bursty Traffic Experiments"
@@ -8,7 +8,7 @@ echo "=========================================="
 
 mkdir -p benchmark/logs
 
-SYSTEMS="cascade hdf5 lmcache pdc llm_gpu redis"
+SYSTEMS="cascade hdf5 lmcache pdc redis"
 
 for sys in $SYSTEMS; do
     script="benchmark/scripts/v17_bursty_${sys}_8n.slurm"

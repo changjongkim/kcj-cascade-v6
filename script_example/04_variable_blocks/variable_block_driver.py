@@ -47,7 +47,7 @@ def main():
 
     config = {}
     if args.system.lower() == "cascade":
-        l_path = args.storage_path if args.storage_path else f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/cascade_tail_{job_id}"
+        l_path = args.storage_path if args.storage_path else f"${REPO_ROOT}/benchmark/cascade_tail_{job_id}"
         config = {"gpu_capacity_gb": 32.0, "shm_capacity_gb": 64.0, "use_gpu": True, "lustre_path": l_path}
     elif "redis" in args.system.lower():
         tmp_h_dir = REPO_ROOT / "benchmark" / "tmp" / f"hosts_{job_id}"
@@ -68,16 +68,13 @@ def main():
                 shared_redis_host = f.read().strip()
             config = {"host": shared_redis_host, "port": args.redis_port}
     elif args.system.lower() == "lmcache":
-        l_path = args.storage_path if args.storage_path else f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/lmcache_tail_{job_id}"
-        config = {"storage_path": l_path}
-    elif args.system.lower() in ["llm-gpu", "vllm-gpu"]:
-        l_path = args.storage_path if args.storage_path else f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/vllm_tail_{job_id}"
+        l_path = args.storage_path if args.storage_path else f"${REPO_ROOT}/benchmark/lmcache_tail_{job_id}"
         config = {"storage_path": l_path}
     elif args.system.lower() == "pdc":
-        l_path = args.storage_path if args.storage_path else f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/pdc_tail_{job_id}"
+        l_path = args.storage_path if args.storage_path else f"${REPO_ROOT}/benchmark/pdc_tail_{job_id}"
         config = {"storage_path": l_path}
     elif "hdf5" in args.system.lower():
-        l_path = args.storage_path if args.storage_path else f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/h5_tail_{job_id}.h5"
+        l_path = args.storage_path if args.storage_path else f"${REPO_ROOT}/benchmark/tmp/h5_tail_{job_id}.h5"
         config = {"file_path": l_path, "use_mpi": True}
 
     adapter = get_adapter(args.system, config=config)

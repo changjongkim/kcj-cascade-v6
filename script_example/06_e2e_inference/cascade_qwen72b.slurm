@@ -22,9 +22,9 @@ echo "GPUs per node: 4 (tensor_parallel_size=4)"
 echo "Date: $(date)"
 echo "=========================================="
 
-REPO_ROOT="/pscratch/sd/s/sgkim/kcj/Cascade-kcj"
+REPO_ROOT="${REPO_ROOT}"
 export PATH="$REPO_ROOT/conda_env/bin:$PATH"
-export HF_HOME=/pscratch/sd/s/sgkim/kcj/hf_cache
+export HF_HOME=${SCRATCH}/hf_cache
 export PYTHONPATH="$REPO_ROOT/vllm_integration:$REPO_ROOT/ml_workspace/build_ml_311:$PYTHONPATH"
 export LD_LIBRARY_PATH="$REPO_ROOT/conda_env/lib/python3.11/site-packages/nvidia/cuda_runtime/lib:$LD_LIBRARY_PATH"
 

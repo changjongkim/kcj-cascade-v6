@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -A m1248_g
+#SBATCH -A <account>
 #SBATCH -C gpu
 #SBATCH -q regular
 #SBATCH -t 00:30:00
@@ -9,14 +9,14 @@
 #SBATCH -J dc_repro_cas_orig_16n
 #SBATCH -o benchmark/logs/v16_deepcam_repro_cas_orig_16n_%j.out
 
-cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
+cd ${REPO_ROOT}
 source ml_workspace/setup_ml_isolated.sh
 
 export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
 export MASTER_PORT=$(expr 10000 + $RANDOM % 20000)
 
-export DATA_DIR="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/deepcam_dummy_data_512gb"
-export OUT_DIR="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/16n/cas_orig_${SLURM_JOB_ID}"
+export DATA_DIR="${REPO_ROOT}/benchmark/tmp/deepcam_dummy_data_512gb"
+export OUT_DIR="${REPO_ROOT}/benchmark/results/16n/cas_orig_${SLURM_JOB_ID}"
 mkdir -p $OUT_DIR
 
 echo "--------------------------------------------------------"

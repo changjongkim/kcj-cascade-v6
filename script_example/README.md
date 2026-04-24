@@ -9,13 +9,13 @@ and paper figure/table.
 | Directory | Task | Paper | Contents |
 |---|---|---|---|
 | `00_setup/` | $T_1$, $T_3$ | — | `setup_env.sh`, `build_cpp.sh` |
-| `01_throughput_scalability/` | $T_4$ | Fig 6 | 6 Slurm (CASCADE + 5 baselines) + `throughput_driver.py` |
+| `01_throughput_scalability/` | $T_4$ | Fig 6 | 5 Slurm (CASCADE + 4 baselines) + `throughput_driver.py` |
 | `02_tail_latency_burst/` | $T_5$ | Fig 7, Table 2 | 7 Slurm (tail + burst) + `tail_driver.py`, `burst_driver.py` |
 | `03_tier_latency/` | $T_6$ | Fig 8 | GPU/DRAM tier Slurm + `tier_driver.py` |
 | `04_variable_blocks/` | $T_7$ | Fig 9 | 5 Slurm + `variable_block_driver.py` |
 | `05_sensitivity/prefix/` | $T_8$ | Fig 10 | Prefix Slurm + `throughput_driver.py`, `dedup_prefix_driver.py` |
 | `05_sensitivity/oversubscription/` | $T_8$ | Fig 11 | `oversubscription_driver.py` |
-| `05_sensitivity/dedup/` | $T_8$ | Fig 12 | 6 Slurm + `dedup_driver.py` |
+| `05_sensitivity/dedup/` | $T_8$ | Fig 12 | 5 Slurm + `dedup_driver.py` |
 | `06_e2e_inference/` | $T_9$ | Fig 13 | 5 Slurm + `cascade_e2e_driver.py`, `cascade_strong_driver.py`, `vllm_baseline_driver.py`, `cascade_vllm_engine.py` |
 | `07_deepcam/` | $T_{10}$ | Fig 14 | 8 Slurm + `original_driver.py`, `nodedup_driver.py`, `streaming_driver.py`, `deepcam_driver.py` |
 
@@ -31,7 +31,7 @@ and paper figure/table.
 - **LMCache** — Disk (Lustre) and Redis (centralized 128GB) backends
 - **HDF5** — parallel I/O with independent mode
 - **PDC** — object-centric data management
-- **vLLM** — APC and LMCache-backed modes
+- **vLLM** — APC and LMCache-backed modes (used only in end-to-end inference and DeepCAM tasks)
 - **CASCADE** — this work
 
 ## Notes

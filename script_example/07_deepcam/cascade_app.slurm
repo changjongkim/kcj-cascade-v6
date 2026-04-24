@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -A m1248_g
+#SBATCH -A <account>
 #SBATCH -C gpu
 #SBATCH -q regular
 #SBATCH -t 00:30:00
@@ -9,7 +9,7 @@
 #SBATCH -J v16_deepcam_cascade
 #SBATCH -o benchmark/logs/v16_deepcam_cascade_%j.out
 
-cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
+cd ${REPO_ROOT}
 source setup_env.sh
 
 export FI_CXI_RX_MATCH_MODE=software
@@ -29,9 +29,9 @@ export MPICH_GPU_SUPPORT_ENABLED=1
 export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
 export MASTER_PORT=29500
 
-export DATA_DIR="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/deepcam_dummy_data"
-export OUT_DIR="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/results/deepcam_cascade_${SLURM_JOB_ID}"
-export CASCADE_STORE_DIR="/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/cascade_store_${SLURM_JOB_ID}"
+export DATA_DIR="${REPO_ROOT}/benchmark/tmp/deepcam_dummy_data"
+export OUT_DIR="${REPO_ROOT}/benchmark/results/deepcam_cascade_${SLURM_JOB_ID}"
+export CASCADE_STORE_DIR="${REPO_ROOT}/benchmark/tmp/cascade_store_${SLURM_JOB_ID}"
 
 echo "--------------------------------------------------------"
 echo "🚀 DeepCAM V16 Benchmark (CASCADE HOT)"

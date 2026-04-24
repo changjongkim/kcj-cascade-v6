@@ -102,7 +102,7 @@ def run_benchmark():
     else:
 
         real_loader = type('RealKVLoader', (), {})()
-        real_loader.base_dir = Path("/pscratch/sd/s/sgkim/cascade_kv_cache")
+        real_loader.base_dir = Path("${SCRATCH}/cascade_kv_cache")
         real_loader.all_blocks = {}
         real_loader.block_ids = []
         index_path = real_loader.base_dir / "global_index.json"
@@ -154,14 +154,12 @@ def run_benchmark():
 
         time.sleep(10)
     elif name.lower() == "lmcache":
-        config = {"storage_path": f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/lmcache_store_{rid}"}
-    elif name.lower() == "llm-gpu" or name.lower() == "vllm-gpu":
-        config = {"storage_path": f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/vllm_store_{rid}"}
+        config = {"storage_path": f"${REPO_ROOT}/benchmark/lmcache_store_{rid}"}
     elif name.lower() == "pdc":
-        config = {"storage_path": f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/pdc_store_{rid}"}
+        config = {"storage_path": f"${REPO_ROOT}/benchmark/pdc_store_{rid}"}
     elif "hdf5" in name.lower():
         config = {
-            "file_path": f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/h5_store_{rid}.h5",
+            "file_path": f"${REPO_ROOT}/benchmark/tmp/h5_store_{rid}.h5",
             "use_mpi": args.use_mpi_io
         }
 

@@ -37,7 +37,7 @@ def main():
             "gpu_capacity_gb": 32.0,           
             "shm_capacity_gb": 64.0,
             "semantic_eviction": True,
-            "lustre_path": f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/cascade_10x_{job_id}"
+            "lustre_path": f"${REPO_ROOT}/benchmark/cascade_10x_{job_id}"
         }
     elif "redis" in args.system.lower():
         tmp_h_dir = REPO_ROOT / "benchmark" / "tmp" / f"hosts_{job_id}"
@@ -50,13 +50,11 @@ def main():
             shared_redis_host = f.read().strip()
         config = {"host": shared_redis_host, "port": 16379}
     elif args.system.lower() == "lmcache":
-        config = {"storage_path": f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/lmcache_10x_{job_id}"}
-    elif args.system.lower() in ["llm-gpu", "vllm-gpu"]:
-        config = {"storage_path": f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/vllm_10x_{job_id}"}
+        config = {"storage_path": f"${REPO_ROOT}/benchmark/lmcache_10x_{job_id}"}
     elif args.system.lower() == "pdc":
-        config = {"storage_path": f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/pdc_10x_{job_id}"}
+        config = {"storage_path": f"${REPO_ROOT}/benchmark/pdc_10x_{job_id}"}
     elif "hdf5" in args.system.lower():
-        config = {"file_path": f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/h5_10x_{job_id}.h5", "use_mpi": True}
+        config = {"file_path": f"${REPO_ROOT}/benchmark/tmp/h5_10x_{job_id}.h5", "use_mpi": True}
 
     adapter = get_adapter(args.system, config)
     if not adapter.initialize():

@@ -155,7 +155,7 @@ def main():
     )
     parser.add_argument(
         "--storage-path", type=str,
-        default="/pscratch/sd/s/sgkim/kcj/cascade_kv_store",
+        default="${SCRATCH}/cascade_kv_store",
         help="Lustre path for Cascade KV storage",
     )
     parser.add_argument(

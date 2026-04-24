@@ -53,7 +53,7 @@ class CascadeKVCacheManager:
         self.cascade_config = CascadeConfig(
             gpu_capacity_gb=gpu_capacity_gb,
             shm_capacity_gb=shm_capacity_gb,
-            lustre_path="/pscratch/cascade_vllm_engine",
+            lustre_path="${SCRATCH}/cascade_vllm_engine",
             enable_dedup=enable_dedup,
             enable_compression=True,
             semantic_eviction=True,

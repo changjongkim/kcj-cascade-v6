@@ -9,7 +9,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
 
-cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
+cd ${REPO_ROOT}
 source setup_env.sh
 
 echo "=== 🏁 Variable Block 16-Node Only: redis ==="
@@ -17,7 +17,7 @@ echo "=== 🏁 Variable Block 16-Node Only: redis ==="
 if [ "redis" == "redis" ]; then
     mkdir -p benchmark/tmp/hosts_$SLURM_JOB_ID
     hostname > benchmark/tmp/hosts_$SLURM_JOB_ID/redis_host
-    /global/homes/s/sgkim/.conda/envs/kcj_qsim_mpi/bin/redis-server --port 16379 --protected-mode no --save "" --appendonly no --maxmemory 100gb --maxmemory-policy allkeys-lru &
+    ${HOME}/.conda/envs/cascade_env/bin/redis-server --port 16379 --protected-mode no --save "" --appendonly no --maxmemory 100gb --maxmemory-policy allkeys-lru &
     REDIS_PID=$!
     sleep 30
 fi

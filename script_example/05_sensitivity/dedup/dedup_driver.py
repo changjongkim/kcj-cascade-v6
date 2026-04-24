@@ -85,19 +85,16 @@ def run_sensitivity():
     config = {}
     if name.lower() == "cascade":
         config = {"gpu_capacity_gb": 38.0, "shm_capacity_gb": 128.0, "use_gpu": True, 
-                  "lustre_path": f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/cas_dedup_{rid}"}
+                  "lustre_path": f"${REPO_ROOT}/benchmark/tmp/cas_dedup_{rid}"}
         store_path = config["lustre_path"]
     elif name.lower() == "lmcache":
-        store_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/lmcache_dedup_{rid}"
-        config = {"storage_path": store_path}
-    elif name.lower() in ["llm-gpu", "vllm-gpu"]:
-        store_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/vllm_dedup_{rid}"
+        store_path = f"${REPO_ROOT}/benchmark/tmp/lmcache_dedup_{rid}"
         config = {"storage_path": store_path}
     elif name.lower() == "pdc":
-        store_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/pdc_dedup_{rid}"
+        store_path = f"${REPO_ROOT}/benchmark/tmp/pdc_dedup_{rid}"
         config = {"storage_path": store_path}
     elif "hdf5" in name.lower():
-        store_path = f"/pscratch/sd/s/sgkim/kcj/Cascade-kcj/benchmark/tmp/hdf5_dedup_{rid}.h5"
+        store_path = f"${REPO_ROOT}/benchmark/tmp/hdf5_dedup_{rid}.h5"
         config = {"file_path": store_path, "use_mpi": True}
 
     adapter = get_adapter(name, config)

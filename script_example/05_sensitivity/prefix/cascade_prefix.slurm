@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -A m1248_g
+#SBATCH -A <account>
 #SBATCH -C gpu
 #SBATCH -q debug
 #SBATCH -t 00:30:00
@@ -10,7 +10,7 @@
 #SBATCH -o benchmark/logs/v13_cascade_weak_prefixrep_%j.out
 #SBATCH -e benchmark/logs/v13_cascade_weak_prefixrep_%j.err
 
-cd /pscratch/sd/s/sgkim/kcj/Cascade-kcj
+cd ${REPO_ROOT}
 source setup_env.sh
 
 export FI_CXI_RX_MATCH_MODE=software

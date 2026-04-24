@@ -19,13 +19,13 @@ echo "Nodes: $SLURM_NNODES"
 echo "Date: $(date)"
 echo "=========================================="
 
-REPO_ROOT="/pscratch/sd/s/sgkim/kcj/Cascade-kcj"
+REPO_ROOT="${REPO_ROOT}"
 CONDA_ENV="$REPO_ROOT/conda_env"
 export PATH="$CONDA_ENV/bin:$PATH"
 
 module load cudatoolkit/12.2
 
-export HF_HOME=/pscratch/sd/s/sgkim/kcj/hf_cache
+export HF_HOME=${SCRATCH}/hf_cache
 
 echo ""
 echo "Environment:"

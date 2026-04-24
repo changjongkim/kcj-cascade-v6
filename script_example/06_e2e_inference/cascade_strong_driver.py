@@ -10,7 +10,7 @@ import numpy as np
 
 SCRIPT_DIR = Path(__file__).parent
 sys.path.insert(0, str(SCRIPT_DIR))
-sys.path.insert(0, "/pscratch/sd/s/sgkim/kcj/Cascade-kcj/ml_workspace/build_ml_311")
+sys.path.insert(0, "${REPO_ROOT}/ml_workspace/build_ml_311")
 
 TOTAL_REQUESTS = 128
 
