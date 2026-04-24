@@ -1,14 +1,14 @@
 # CASCADE — Example Scripts
 
-Self-contained Slurm scripts, drivers, adapters, and data generators
-for reproducing CASCADE paper results. Each subdirectory maps to an
-AD task ($T_i$) and paper figure/table.
+Self-contained Slurm scripts, drivers, and adapters for reproducing
+CASCADE paper results. Each subdirectory maps to an AD task ($T_i$)
+and paper figure/table.
 
 ## Layout
 
 | Directory | Task | Paper |
 |---|---|---|
-| `00_setup/` | $T_1$, $T_3$ | — |
+| `00_setup/` | $T_1$, $T_2$, $T_3$ | — |
 | `01_throughput_scalability/` | $T_4$ | Fig 6 |
 | `02_tail_latency_burst/` | $T_5$ | Fig 7, Table 2 |
 | `03_tier_latency/` | $T_6$ | Fig 8 |
@@ -19,7 +19,6 @@ AD task ($T_i$) and paper figure/table.
 | `06_e2e_inference/` | $T_9$ | Fig 13 |
 | `07_deepcam/` | $T_{10}$ | Fig 14 |
 | `benchmark/` | shared | — |
-| `data_generation/` | trace prep | — |
 
 ## Environment
 
@@ -46,7 +45,7 @@ get_adapter` resolves to the adapters shipped in this directory.
 ## Reproduction Workflow
 
 1. **Setup** ($T_1$, $T_3$): `bash 00_setup/setup_env.sh && bash 00_setup/build_cpp.sh`
-2. **Trace generation** ($T_2$): `python3 data_generation/data_generator.py` (see the script for dataset-specific flags)
+2. **Trace generation** ($T_2$): `python3 00_setup/generate_traces.py` (see the script for dataset-specific flags)
 3. **Per-figure reproduction**:
    - Fig 6: `sbatch 01_throughput_scalability/cascade_full.slurm` (and baselines)
    - Fig 7: `sbatch 02_tail_latency_burst/tail_{1,8,32,64}n.slurm`

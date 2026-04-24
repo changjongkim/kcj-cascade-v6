@@ -52,21 +52,12 @@ def main():
     elif "redis"in args.system.lower():
         tmp_h_dir = REPO_ROOT / "benchmark"/ "tmp"/ f"hosts_{job_id}"
         wait_count = 0
-
-        if args.system.lower() == "redis-dist":
-            while not (tmp_h_dir / "all_hosts").exists() and wait_count < 30:
-                time.sleep(1)
-                wait_count += 1
-            with open(tmp_h_dir / "all_hosts", 'r') as f:
-                hosts = [line.strip() for line in f if line.strip()]
-            config = {"hosts": hosts, "port": args.redis_port}
-        else:
-            while not (tmp_h_dir / "redis_host").exists() and wait_count < 30:
-                time.sleep(1)
-                wait_count += 1
-            with open(tmp_h_dir / "redis_host", 'r') as f:
-                shared_redis_host = f.read().strip()
-            config = {"host": shared_redis_host, "port": args.redis_port}
+        while not (tmp_h_dir / "redis_host").exists() and wait_count < 30:
+            time.sleep(1)
+            wait_count += 1
+        with open(tmp_h_dir / "redis_host", 'r') as f:
+            shared_redis_host = f.read().strip()
+        config = {"host": shared_redis_host, "port": args.redis_port}
     elif args.system.lower() == "lmcache":
         l_path = args.storage_path if args.storage_path else f"${REPO_ROOT}/benchmark/lmcache_tail_{job_id}"
         config = {"storage_path": l_path}

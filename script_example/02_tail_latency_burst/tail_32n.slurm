@@ -13,18 +13,7 @@ cd ${REPO_ROOT}
 source setup_env.sh
 export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"
 
-export FI_CXI_RX_MATCH_MODE=software
-export MPICH_OFI_STARTUP_CONNECT=1
-export FI_CXI_DEFAULT_CQ_SIZE=131072
-export FI_CXI_OFLOW_BUF_SIZE=8388608
-export FI_CXI_CQ_FILL_PERCENT=20
-export FI_CXI_RETRY_COUNT=100
-export FI_CXI_RETRY_WAIT=200
-export FI_CXI_RDZV_PROTO=alt_read
-export FI_CXI_OFLOW_BUF_COUNT=7
-export FI_CXI_REQ_BUF_SIZE=16777216
 export FI_MR_CACHE_MONITOR=disabled
-export MPICH_OFI_NUM_NICS=1
 
 SYSTEMS="cascade pdc lmcache hdf5"
 BLOCK_SIZES="160 320"

@@ -13,9 +13,6 @@ cd ${REPO_ROOT}
 source setup_env.sh
 export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"
 
-export FI_CXI_RX_MATCH_MODE=software
-export MPICH_OFI_STARTUP_CONNECT=1
-
 RATES="0.1 0.3 0.5 0.7"
 SYSTEM="cascade"
 BLOCK_SIZE=320

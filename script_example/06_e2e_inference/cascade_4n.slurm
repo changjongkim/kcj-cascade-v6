@@ -21,16 +21,13 @@ echo "=========================================="
 
 module load python/3.11
 module load cudatoolkit/12.2
-module load cray-mpich
+module load <mpi-module>
 
 cd ${REPO_ROOT}
 export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"
 
 export PYTHONPATH=${REPO_ROOT}:$PYTHONPATH
 export PYTHONPATH=${REPO_ROOT}/vllm_integration:$PYTHONPATH
-
-export FI_CXI_RX_MATCH_MODE=software
-export MPICH_OFI_STARTUP_CONNECT=1
 
 STORAGE_PATH="${REPO_ROOT}/vllm_integration/cascade_llama_${SLURM_JOB_ID}"
 mkdir -p $STORAGE_PATH

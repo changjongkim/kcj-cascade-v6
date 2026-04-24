@@ -15,7 +15,7 @@ from .config import BENCHMARK_CONFIG, LLAMA_CONFIG
 from .adapters import (
     StorageAdapter, BenchmarkStats, CascadeAdapter,
     HDF5IndependentIOAdapter, HDF5CollectiveIOAdapter,
-    LMCacheAdapter, RedisAdapter, RedisDistAdapter, PDCAdapter
+    LMCacheAdapter, RedisAdapter, PDCAdapter
 )
 
 def get_adapter(name: str, config: Dict = None) -> StorageAdapter:
@@ -30,7 +30,6 @@ def get_adapter(name: str, config: Dict = None) -> StorageAdapter:
         "lmcache": LMCacheAdapter,
         "lmcache-redis": RedisAdapter,
         "redis": RedisAdapter,
-        "redis-dist": RedisDistAdapter,
         "pdc": PDCAdapter,
     }
 

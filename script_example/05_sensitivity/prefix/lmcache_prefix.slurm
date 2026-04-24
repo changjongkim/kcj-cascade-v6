@@ -14,14 +14,6 @@ cd ${REPO_ROOT}
 source setup_env.sh
 export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"
 
-export FI_CXI_RX_MATCH_MODE=software
-export MPICH_OFI_STARTUP_CONNECT=1
-export FI_CXI_DEFAULT_CQ_SIZE=65536
-export FI_CXI_OFLOW_BUF_SIZE=4194304
-export FI_CXI_CQ_FILL_PERCENT=10
-export FI_CXI_RETRY_COUNT=50
-export FI_CXI_RETRY_WAIT=100
-
 SYSTEM="lmcache"
 JOB_UID=${SLURM_JOB_ID}
 

@@ -7,11 +7,11 @@ CONDA_BASE=$(conda info --base 2>/dev/null || echo "")
 source "$CONDA_BASE/etc/profile.d/conda.sh"
 conda activate cascade_env
 
-module load PrgEnv-gnu
+module load <prgenv-module>
 module load gcc-native/12.3
-module load cray-mpich
-module load cudatoolkit/12.4
-module load craype-accel-nvidia80
+module load <mpi-module>
+module load cuda/12.4
+module load <gpu-accel-module>
 module load cmake
 
 module unload darshan
@@ -27,7 +27,7 @@ export PYTHONPATH=$REPO_ROOT/cascade_Code/cpp/build_cascade_cpp:$PYTHONPATH
 export PYTHONPATH=$REPO_ROOT:$PYTHONPATH
 
 echo "--------------------------------------------------------"
-echo "Cascade GPU-Aware MPI Environment Loaded"
+echo "CASCADE GPU-Aware MPI Environment Loaded"
 echo "--------------------------------------------------------"
 echo "Python: $(which python3)"
 echo "C++: $(which g++) ($(g++ --version | head -n 1))"
