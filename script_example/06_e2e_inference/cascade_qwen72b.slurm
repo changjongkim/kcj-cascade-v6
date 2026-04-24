@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -A m5320_g
+#SBATCH -A <account>
 #SBATCH -C gpu
 #SBATCH -q debug
 #SBATCH -t 00:30:00
@@ -8,6 +8,8 @@
 #SBATCH --cpus-per-task=64
 #SBATCH -o vllm_integration/logs/cascade_qwen72b_%N_%j.out
 #SBATCH -e vllm_integration/logs/cascade_qwen72b_%N_%j.err
+
+export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"
 
 NODES=$SLURM_NNODES
 JOB_ID=$SLURM_JOB_ID

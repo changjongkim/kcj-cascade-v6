@@ -12,6 +12,7 @@
 
 cd ${REPO_ROOT}
 source setup_env.sh
+export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"
 
 echo "Starting Redis on 32 nodes..."
 srun --overlap -N 4 -n 4 --ntasks-per-node=1 redis-server --port 16379 --bind 0.0.0.0 --protected-mode no --save ""&

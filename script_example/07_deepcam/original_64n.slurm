@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -A m5320_g
+#SBATCH -A <account>
 #SBATCH -C gpu
 #SBATCH -q regular
 #SBATCH -t 01:00:00
@@ -10,6 +10,7 @@
 #SBATCH -o benchmark/logs/v16_deepcam_repro_cas_orig_64n_%j.out
 
 cd ${REPO_ROOT}
+export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"
 source ml_workspace/setup_ml_isolated.sh
 
 export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)

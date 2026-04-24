@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -A m5320_g
+#SBATCH -A <account>
 #SBATCH -C gpu
 #SBATCH -q debug
 #SBATCH -t 00:30:00
@@ -12,6 +12,7 @@
 
 cd ${REPO_ROOT}
 source setup_env.sh
+export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"
 
 SYSTEM="redis"
 N=8

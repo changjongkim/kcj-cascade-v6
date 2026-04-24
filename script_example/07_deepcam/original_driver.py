@@ -79,7 +79,7 @@ def patch_dataset(system, adapter):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(conflict_handler='resolve')
     parser.add_argument('--system', type=str, default='hdf5',
-                        choices=['hdf5', 'cascade', 'llm_gpu', 'lmcache_disk', 'lmcache_redis', 'pdc', 'redis'])
+                        choices=['hdf5', 'cascade', 'lmcache_disk', 'lmcache_redis', 'pdc', 'redis'])
     parser.add_argument('--use_cascade', action='store_true', help="Use Cascade cache")
     parser.add_argument('--cascade_lustre_path', type=str, default='')
     parser.add_argument('--aggregated_io', action='store_true', default=True)
@@ -115,9 +115,6 @@ if __name__ == "__main__":
                     return True
                 return super().initialize()
         adapter = MLProxyAdapter({"lustre_path": args.cascade_lustre_path})
-    elif args.system == 'llm_gpu':
-        from adapters.vllm_adapter import vLLMGPUAdapter
-        adapter = vLLMGPUAdapter({"storage_path": args.storage_path, "device": f"cuda:{os.environ.get('LOCAL_RANK', '0')}"})
     elif args.system == 'lmcache_disk':
         from adapters.lmcache_adapter import LMCacheAdapter
         adapter = LMCacheAdapter({"storage_path": args.storage_path})

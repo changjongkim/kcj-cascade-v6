@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -A m5320_g
+#SBATCH -A <account>
 #SBATCH -C gpu
 #SBATCH -q regular
 #SBATCH -t 01:00:00
@@ -11,6 +11,7 @@
 
 cd ${REPO_ROOT}
 source setup_env.sh
+export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"
 
 export FI_CXI_RX_MATCH_MODE=software
 export MPICH_OFI_STARTUP_CONNECT=1

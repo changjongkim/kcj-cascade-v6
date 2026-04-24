@@ -24,6 +24,7 @@ module load cudatoolkit/12.2
 module load cray-mpich
 
 cd ${REPO_ROOT}
+export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"
 
 export PYTHONPATH=${REPO_ROOT}:$PYTHONPATH
 

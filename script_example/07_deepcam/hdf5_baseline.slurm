@@ -11,6 +11,7 @@
 
 cd ${REPO_ROOT}
 source setup_env.sh
+export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"
 
 export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
 export MASTER_PORT=29500

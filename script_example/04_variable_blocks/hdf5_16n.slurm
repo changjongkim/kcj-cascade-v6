@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -A m5320_g
+#SBATCH -A <account>
 #SBATCH -C gpu
 #SBATCH -J v20_16n_hdf5
 #SBATCH -o benchmark/logs/v20_var_16n_hdf5_%j.out
@@ -11,6 +11,7 @@
 
 cd ${REPO_ROOT}
 source setup_env.sh
+export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"
 
 echo "===  Variable Block 16-Node Only: hdf5 ==="
 

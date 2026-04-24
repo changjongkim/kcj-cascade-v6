@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -A m5320_g
+#SBATCH -A <account>
 #SBATCH -C gpu
 #SBATCH -q debug
 #SBATCH -t 00:30:00
@@ -10,6 +10,8 @@
 #SBATCH -o vllm_integration/logs/cascade_e2e_%j.out
 #SBATCH -e vllm_integration/logs/cascade_e2e_%j.err
 #SBATCH -J cascade_e2e
+
+export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"
 
 echo "=========================================="
 echo "Cascade+vLLM E2E Integration Test"

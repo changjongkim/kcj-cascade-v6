@@ -12,6 +12,7 @@
 
 cd ${REPO_ROOT}
 source setup_env.sh
+export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"
 
 SYSTEM="pdc"
 NODES_LIST=(1 2 4)

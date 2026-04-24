@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -A m5320_g
+#SBATCH -A <account>
 #SBATCH -C gpu
 #SBATCH -q debug
 #SBATCH -t 0:15:00
@@ -12,6 +12,7 @@
 
 module load python cudatoolkit
 source setup_env.sh
+export PYTHONPATH="${REPO_ROOT}/script_example:${PYTHONPATH}"
 
 echo "========================================"
 echo "Tier Latency Microbenchmark: GPU"
